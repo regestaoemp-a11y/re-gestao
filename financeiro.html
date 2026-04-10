@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RE Gestão — Painel Financeiro</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --navy:    #0A2350;
+  --navy2:   #132D5E;
+  --navy3:   #1A3A6B;
+  --gold:    #C9A84C;
+  --goldL:   #E8C96A;
+  --white:   #FFFFFF;
+  --bg:      #060F1E;
+  --bg2:     #0D1B2E;
+  --bg3:     #112039;
+  --card:    #0F1F35;
+  --border:  rgba(201,168,76,0.15);
+  --border2: rgba(255,255,255,0.06);
+  --text:    #E8EDF5;
+  --muted:   #7A8BA0;
+  --green:   #00C896;
+  --greenD:  #00A07A;
+  --red:     #FF4C6A;
+  --redD:    #CC3355;
+  --amber:   #FFB020;
+  --blue:    #4A9EFF;
+  --teal:    #0D9488;
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text);
+  min-height:100vh; font-size:14px; }
+
+/* ── HEADER ── */
+.header {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 64px;
+  display: flex; align-items:center; justify-content:space-between;
+  position: sticky; top:0; z-index:200;
+}
+.logo-area { display:flex; align-items:center; gap:14px; }
+.logo-shield {
+  width:40px; height:40px;
+  background: var(--gold);
+  clip-path: polygon(50% 0%, 100% 15%, 100% 65%, 50% 100%, 0% 65%, 0% 15%);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Syne',sans-serif; font-weight:800; font-size:14px; color:var(--navy);
+}
+.logo-text { font-family:'Syne',sans-serif; }
+.logo-text h1 { font-size:16px; font-weight:800; color:var(--white); letter-spacing:.5px; }
+.logo-text p  { font-size:10px; color:var(--gold); letter-spacing:2px; text-transform:uppercase; }
+
+.header-right { display:flex; align-items:center; gap:12px; }
+.last-update { font-size:11px; color:var(--muted); }
+.btn-refresh {
+  background: var(--gold); color:var(--navy); border:none; border-radius:8px;
+  padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer;
+  font-family:'DM Sans',sans-serif; transition:all .2s; display:flex; align-items:center; gap:6px;
+}
+.btn-refresh:hover { background:var(--goldL); transform:scale(1.02); }
+.btn-refresh.loading { opacity:.7; pointer-events:none; }
+.spin { display:inline-block; animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── LAYOUT ── */
+.content { padding:20px 24px; max-width:1400px; margin:0 auto; }
+
+/* ── DATA HOJE ── */
+.today-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:20px; padding:12px 16px;
+  background:var(--card); border:1px solid var(--border2); border-radius:12px;
+}
+.today-date { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:var(--gold); }
+.today-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
+
+/* ── KPI GRID PRINCIPAL ── */
+.kpi-grid {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px;
+}
+.kpi-card {
+  background:var(--card); border:1px solid var(--border2); border-radius:14px;
+  padding:18px; position:relative; overflow:hidden; transition:transform .2s;
+}
+.kpi-card:hover { transform:translateY(-2px); }
+.kpi-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+}
+.kpi-card.green::before  { background:var(--green); }
+.kpi-card.red::before    { background:var(--red); }
+.kpi-card.amber::before  { background:var(--amber); }
+.kpi-card.blue::before   { background:var(--blue); }
+.kpi-card.gold::before   { background:var(--gold); }
+.kpi-card.teal::before   { background:var(--teal); }
+
+.kpi-icon { font-size:24px; margin-bottom:10px; }
+.kpi-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px; }
+.kpi-value { font-family:'Syne',sans-serif; font-size:22px; font-weight:700; color:var(--white); line-height:1.2; }
+.kpi-value.green  { color:var(--green); }
+.kpi-value.red    { color:var(--red); }
+.kpi-value.amber  { color:var(--amber); }
+.kpi-value.blue   { color:var(--blue); }
+.kpi-value.gold   { color:var(--gold); }
+.kpi-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+.kpi-sub.warn { color:var(--amber); }
+.kpi-sub.danger { color:var(--red); }
+.kpi-sub.good   { color:var(--green); }
+
+/* ── GRID PRINCIPAL ── */
+.main-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;
+}
+.main-grid.three { grid-template-columns:1fr 1fr 1fr; }
+.full-width { grid-column:1/-1; }
+
+/* ── CARDS ── */
+.card {
+  background:var(--card); border:1px solid var(--border2); border-radius:14px;
+  overflow:hidden;
+}
+.card-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; border-bottom:1px solid var(--border2);
+}
+.card-title {
+  font-family:'Syne',sans-serif; font-size:12px; font-weight:700;
+  color:var(--white); text-transform:uppercase; letter-spacing:.08em;
+  display:flex; align-items:center; gap:8px;
+}
+.card-title .dot { width:8px; height:8px; border-radius:50%; }
+.dot-green  { background:var(--green); }
+.dot-red    { background:var(--red); }
+.dot-amber  { background:var(--amber); }
+.dot-blue   { background:var(--blue); }
+.dot-gold   { background:var(--gold); }
+.card-badge {
+  font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px;
+  background:rgba(255,255,255,0.08); color:var(--muted);
+}
+.card-badge.red    { background:rgba(255,76,106,0.15); color:var(--red); }
+.card-badge.green  { background:rgba(0,200,150,0.15); color:var(--green); }
+.card-badge.amber  { background:rgba(255,176,32,0.15); color:var(--amber); }
+.card-body { padding:14px 16px; }
+
+/* ── CONTAS ATRASADAS ── */
+.conta-item {
+  display:flex; align-items:center; gap:10px; padding:8px 0;
+  border-bottom:1px solid var(--border2);
+}
+.conta-item:last-child { border:none; }
+.conta-avatar {
+  width:34px; height:34px; border-radius:8px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:12px; color:var(--white);
+}
+.conta-info { flex:1; min-width:0; }
+.conta-nome { font-size:12px; font-weight:600; color:var(--text); 
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conta-meta { font-size:10px; color:var(--muted); margin-top:1px; }
+.conta-right { text-align:right; flex-shrink:0; }
+.conta-valor { font-size:13px; font-weight:700; }
+.conta-valor.red   { color:var(--red); }
+.conta-valor.amber { color:var(--amber); }
+.conta-dias { font-size:10px; margin-top:1px; }
+.conta-dias.red   { color:var(--red); }
+.conta-dias.amber { color:var(--amber); }
+
+/* ── CATEGORIAS ── */
+.cat-item { margin-bottom:10px; }
+.cat-header { display:flex; justify-content:space-between; margin-bottom:4px; }
+.cat-nome { font-size:11px; color:var(--muted); }
+.cat-valor { font-size:11px; font-weight:600; color:var(--text); }
+.cat-bar { height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; }
+.cat-fill { height:100%; border-radius:2px; }
+
+/* ── FLUXO 10 DIAS ── */
+.fluxo-grid {
+  display:grid; grid-template-columns:repeat(10,1fr); gap:6px;
+}
+.fluxo-col { text-align:center; }
+.fluxo-data { font-size:9px; color:var(--muted); margin-bottom:4px; }
+.fluxo-bars { display:flex; flex-direction:column; gap:2px; align-items:center; }
+.fluxo-bar-wrap { width:100%; display:flex; justify-content:center; }
+.fluxo-bar { width:18px; border-radius:2px; transition:height .3s; }
+.fluxo-bar.pagar   { background:var(--red);   }
+.fluxo-bar.receber { background:var(--green); }
+.fluxo-saldo { font-size:9px; margin-top:4px; font-weight:600; }
+.fluxo-saldo.pos { color:var(--green); }
+.fluxo-saldo.neg { color:var(--red); }
+
+/* ── CONTAS BANCÁRIAS ── */
+.banco-item {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:8px 0; border-bottom:1px solid var(--border2);
+}
+.banco-item:last-child { border:none; }
+.banco-nome { font-size:12px; color:var(--muted); }
+.banco-val  { font-size:13px; font-weight:700; color:var(--green); }
+
+/* ── SALDO PROJETADO ── */
+.projecao-row {
+  display:flex; justify-content:space-between; padding:8px 0;
+  border-bottom:1px solid var(--border2); font-size:12px;
+}
+.projecao-row:last-child { border:none; }
+.projecao-label { color:var(--muted); }
+.projecao-val { font-weight:600; }
+.projecao-val.green  { color:var(--green); }
+.projecao-val.red    { color:var(--red); }
+.projecao-val.gold   { color:var(--gold); }
+.projecao-total {
+  margin-top:8px; padding:10px 12px; border-radius:8px;
+  background:rgba(201,168,76,0.08); border:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.projecao-total-label { font-size:11px; font-weight:700; color:var(--gold); text-transform:uppercase; }
+.projecao-total-val   { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; }
+
+/* ── LOADING / EMPTY ── */
+.loading-state { text-align:center; padding:40px; color:var(--muted); }
+.loading-spin { font-size:28px; animation:spin .7s linear infinite; display:block; margin-bottom:10px; }
+.empty-state { padding:24px; text-align:center; color:var(--muted); font-size:13px; }
+
+/* ── PROXY CONFIG ── */
+.proxy-bar {
+  display:flex; align-items:center; gap:8px; padding:10px 16px;
+  background:rgba(201,168,76,0.05); border:1px solid var(--border);
+  border-radius:10px; margin-bottom:16px;
+}
+.proxy-bar input {
+  flex:1; background:transparent; border:none; outline:none;
+  color:var(--text); font-size:12px; font-family:'DM Sans',sans-serif;
+}
+.proxy-bar input::placeholder { color:var(--muted); }
+.proxy-label { font-size:11px; color:var(--gold); font-weight:700; white-space:nowrap; }
+.proxy-status { font-size:11px; }
+.proxy-status.ok  { color:var(--green); }
+.proxy-status.err { color:var(--red); }
+
+/* ── RESPONSIVE ── */
+@media (max-width:1024px) {
+  .kpi-grid { grid-template-columns:repeat(2,1fr); }
+  .main-grid { grid-template-columns:1fr; }
+  .main-grid.three { grid-template-columns:1fr; }
+  .fluxo-grid { grid-template-columns:repeat(5,1fr); }
+}
+@media (max-width:600px) {
+  .content { padding:12px; }
+  .kpi-grid { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo-area">
+    <div class="logo-shield">RE</div>
+    <div class="logo-text">
+      <h1>RE GESTÃO EMPRESARIAL</h1>
+      <p>Painel Financeiro · Exclusivo</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-update" id="last-update">Não atualizado</span>
+    <button class="btn-refresh" id="btn-refresh" onclick="loadDashboard()">
+      <span id="refresh-icon">↻</span> Atualizar
+    </button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- PROXY CONFIG -->
+  <div class="proxy-bar">
+    <span class="proxy-label">PROXY URL</span>
+    <input type="text" id="proxy-url" placeholder="Cole aqui a URL do Google Apps Script..."
+      value="" oninput="saveProxy()">
+    <span class="proxy-status" id="proxy-status"></span>
+  </div>
+
+  <!-- HOJE -->
+  <div class="today-bar">
+    <div>
+      <div class="today-date" id="today-label">—</div>
+      <div class="today-sub">Posição em tempo real — RE Gestão Empresarial</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted)" id="today-sub-right">Clique em Atualizar para buscar dados do Omie</div>
+  </div>
+
+  <!-- KPIs PRINCIPAIS -->
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card green" style="position:relative">
+      <div class="kpi-icon">🏦</div>
+      <div class="kpi-label">Saldo em Bancos — hoje</div>
+      <div style="display:flex;align-items:center;gap:6px;margin:4px 0 2px">
+        <span style="font-size:13px;color:var(--muted)">R$</span>
+        <input type="text" id="saldo-input"
+          placeholder="0,00"
+          style="background:transparent;border:none;border-bottom:1.5px solid var(--gold);
+                 outline:none;color:var(--green);font-family:Syne,sans-serif;font-size:20px;
+                 font-weight:700;width:140px;padding:2px 4px"
+          oninput="updateSaldoManual(this.value)"
+          onblur="saveSaldo(this.value)">
+      </div>
+      <div class="kpi-sub good" id="k-saldo-sub">Digite o saldo atual e pressione Enter</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">📤</div>
+      <div class="kpi-label">CAP — Total em Aberto</div>
+      <div class="kpi-value red" id="k-cap">—</div>
+      <div class="kpi-sub danger" id="k-cap-sub">aguardando...</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-icon">📥</div>
+      <div class="kpi-label">CAR — Total em Aberto</div>
+      <div class="kpi-value blue" id="k-car">—</div>
+      <div class="kpi-sub warn" id="k-car-sub">aguardando...</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-label">Inadimplência</div>
+      <div class="kpi-value amber" id="k-inadimpl">—</div>
+      <div class="kpi-sub danger" id="k-inadimpl-sub">aguardando...</div>
+    </div>
+    <div class="kpi-card gold">
+      <div class="kpi-icon">📅</div>
+      <div class="kpi-label">Pagar no Mês</div>
+      <div class="kpi-value gold" id="k-cap-mes">—</div>
+      <div class="kpi-sub" id="k-cap-mes-sub">aguardando...</div>
+    </div>
+    <div class="kpi-card teal">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-label">Receber no Mês</div>
+      <div class="kpi-value" style="color:var(--teal)" id="k-car-mes">—</div>
+      <div class="kpi-sub" id="k-car-mes-sub">aguardando...</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">📈</div>
+      <div class="kpi-label">Saldo Projetado Fim do Mês</div>
+      <div class="kpi-value green" id="k-proj">—</div>
+      <div class="kpi-sub good" id="k-proj-sub">entradas - saídas previstas</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">🔴</div>
+      <div class="kpi-label">Vencer Hoje</div>
+      <div class="kpi-value red" id="k-hoje">—</div>
+      <div class="kpi-sub danger" id="k-hoje-sub">aguardando...</div>
+    </div>
+  </div>
+
+  <!-- LINHA 1: ATRASADOS CAP + INADIMPLENTES CAR -->
+  <div class="main-grid" style="margin-bottom:16px">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="dot dot-red"></span>Contas a Pagar — Maiores Atrasos</div>
+        <span class="card-badge red" id="badge-cap-atr">0</span>
+      </div>
+      <div class="card-body" id="lista-cap-atrasado">
+        <div class="loading-state"><span class="loading-spin">⟳</span>Carregando...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="dot dot-amber"></span>Inadimplência — CAR Atrasado</div>
+        <span class="card-badge amber" id="badge-inadimpl">0</span>
+      </div>
+      <div class="card-body" id="lista-inadimpl">
+        <div class="loading-state"><span class="loading-spin">⟳</span>Carregando...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LINHA 2: CATEGORIAS + FLUXO -->
+  <div class="main-grid three" style="margin-bottom:16px">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="dot dot-red"></span>CAP por Categoria</div>
+      </div>
+      <div class="card-body" id="cat-cap">
+        <div class="loading-state"><span class="loading-spin">⟳</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="dot dot-blue"></span>CAR por Categoria</div>
+      </div>
+      <div class="card-body" id="cat-car">
+        <div class="loading-state"><span class="loading-spin">⟳</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="dot dot-gold"></span>Projeção até Fim do Mês</div>
+      </div>
+      <div class="card-body" id="projecao">
+        <div class="loading-state"><span class="loading-spin">⟳</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LINHA 3: FLUXO 10 DIAS + CONTAS BANCÁRIAS -->
+  <div class="main-grid" style="margin-bottom:16px">
+
+    <div class="card full-width">
+      <div class="card-header">
+        <div class="card-title"><span class="dot dot-green"></span>Fluxo de Caixa — Próximos 10 dias</div>
+        <span style="font-size:11px;color:var(--muted)">🟢 Receber &nbsp; 🔴 Pagar</span>
+      </div>
+      <div class="card-body" id="fluxo-10dias">
+        <div class="loading-state"><span class="loading-spin">⟳</span>Carregando...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="main-grid">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="dot dot-green"></span>Saldo por Conta Bancária</div>
+      </div>
+      <div class="card-body" id="contas-bancarias">
+        <div class="loading-state"><span class="loading-spin">⟳</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="dot dot-blue"></span>Resumo Geral do Mês</div>
+      </div>
+      <div class="card-body" id="resumo-mes">
+        <div class="loading-state"><span class="loading-spin">⟳</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const fmtR = v => 'R$ ' + Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN = v => Number(v||0).toLocaleString('pt-BR');
+
+function saveProxy() {
+  localStorage.setItem('re_proxy_fin', document.getElementById('proxy-url').value.trim());
+}
+
+function getProxy() {
+  return localStorage.getItem('re_proxy_fin') || document.getElementById('proxy-url').value.trim();
+}
+
+function avatarColor(name) {
+  const colors = ['#C9A84C','#0D9488','#4A9EFF','#FF4C6A','#00C896','#FFB020','#8B5CF6'];
+  let hash = 0;
+  for (let i=0; i<(name||'').length; i++) hash += name.charCodeAt(i);
+  return colors[hash % colors.length];
+}
+
+function initials(name) {
+  if (!name || name === '—') return '?';
+  return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+
+function renderContas(items, tipo) {
+  if (!items || !items.length) return '<div class="empty-state">Nenhum registro</div>';
+  return items.map(item => {
+    const nome = tipo==='cap' ? item.fornecedor : item.cliente;
+    const cor = avatarColor(nome);
+    const ini = initials(nome);
+    const diasCls = item.dias_atraso > 30 ? 'red' : 'amber';
+    const valCls  = item.dias_atraso > 30 ? 'red' : 'amber';
+    return `<div class="conta-item">
+      <div class="conta-avatar" style="background:${cor}">${ini}</div>
+      <div class="conta-info">
+        <div class="conta-nome">${nome || '—'}</div>
+        <div class="conta-meta">${item.vencimento||'—'} · ${item.categoria||''}</div>
+      </div>
+      <div class="conta-right">
+        <div class="conta-valor ${valCls}">${fmtR(item.valor)}</div>
+        <div class="conta-dias ${diasCls}">${item.dias_atraso}d em atraso</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCategorias(cats, cor) {
+  if (!cats || !cats.length) return '<div class="empty-state">Sem dados</div>';
+  const max = cats[0].valor;
+  const cores = {'red':['#FF4C6A','#CC3355'],'blue':['#4A9EFF','#2280CC'],'green':['#00C896','#00A07A']};
+  const c = cores[cor] || cores['blue'];
+  return cats.map((cat,i) => {
+    const pct = max > 0 ? (cat.valor/max*100).toFixed(0) : 0;
+    const opacity = 1 - i*0.08;
+    return `<div class="cat-item">
+      <div class="cat-header">
+        <span class="cat-nome">${cat.categoria}</span>
+        <span class="cat-valor">${fmtR(cat.valor)}</span>
+      </div>
+      <div class="cat-bar">
+        <div class="cat-fill" style="width:${pct}%;background:${c[0]};opacity:${opacity}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderFluxo(fluxo) {
+  if (!fluxo || !fluxo.length) return '<div class="empty-state">Sem dados</div>';
+  const maxVal = Math.max(...fluxo.map(f=>Math.max(f.pagar,f.receber,1)));
+  const maxH = 60;
+  return `<div class="fluxo-grid">${fluxo.map(f => {
+    const hP = f.pagar   > 0 ? Math.max(4, (f.pagar/maxVal)*maxH)   : 0;
+    const hR = f.receber > 0 ? Math.max(4, (f.receber/maxVal)*maxH) : 0;
+    const saldoCls = f.saldo >= 0 ? 'pos' : 'neg';
+    const dataStr = f.data.substring(0,5);
+    return `<div class="fluxo-col">
+      <div class="fluxo-data">${dataStr}</div>
+      <div class="fluxo-bars" style="height:${maxH+10}px;justify-content:flex-end">
+        <div style="display:flex;gap:2px;align-items:flex-end">
+          <div class="fluxo-bar pagar"  style="height:${hP}px;min-height:${f.pagar>0?4:0}px" title="Pagar: ${fmtR(f.pagar)}"></div>
+          <div class="fluxo-bar receber" style="height:${hR}px;min-height:${f.receber>0?4:0}px" title="Receber: ${fmtR(f.receber)}"></div>
+        </div>
+      </div>
+      <div class="fluxo-saldo ${saldoCls}">${f.saldo>=0?'+':''}${(f.saldo/1000).toFixed(1)}k</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function loadDashboard() {
+  const url = getProxy();
+  if (!url || url.includes('SEU_') || !url.includes('script.google')) {
+    document.getElementById('proxy-status').textContent = '⚠️ Configure a URL do proxy';
+    document.getElementById('proxy-status').className = 'proxy-status err';
+    return;
+  }
+
+  const btn = document.getElementById('btn-refresh');
+  const icon = document.getElementById('refresh-icon');
+  btn.classList.add('loading');
+  icon.className = 'spin'; icon.textContent = '⟳';
+
+  try {
+    const res = await fetch(url + '?action=dashboard');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error || 'Erro no proxy');
+
+    // ── KPIs ──────────────────────────────────────────────────
+    document.getElementById('k-saldo').textContent = fmtR(d.saldo?.total);
+    document.getElementById('k-saldo-sub').textContent = (d.saldo?.contas?.length||0) + ' contas bancárias';
+
+    document.getElementById('k-cap').textContent = fmtR(d.cap?.total_aberto);
+    document.getElementById('k-cap-sub').textContent = `⚠️ ${d.cap?.count_atrasado||0} atrasados · ${fmtR(d.cap?.total_atrasado)}`;
+
+    document.getElementById('k-car').textContent = fmtR(d.car?.total_aberto);
+    document.getElementById('k-car-sub').textContent = `${d.car?.count_aberto||0} títulos em aberto`;
+
+    document.getElementById('k-inadimpl').textContent = fmtR(d.car?.total_inadimpl);
+    document.getElementById('k-inadimpl-sub').textContent = `${d.car?.count_inadimpl||0} clientes inadimplentes`;
+
+    document.getElementById('k-cap-mes').textContent = fmtR(d.cap?.total_mes);
+    document.getElementById('k-cap-mes-sub').textContent = `${d.cap?.count_mes||0} títulos no mês`;
+
+    document.getElementById('k-car-mes').textContent = fmtR(d.car?.total_mes);
+    document.getElementById('k-car-mes-sub').textContent = `${d.car?.count_mes||0} títulos no mês`;
+
+    const proj = d.saldo?.projetado_fim_mes || 0;
+    document.getElementById('k-proj').textContent = fmtR(proj);
+    document.getElementById('k-proj').className = 'kpi-value ' + (proj >= 0 ? 'green' : 'red');
+    document.getElementById('k-proj-sub').textContent = proj >= 0 ? '✅ Projeção positiva' : '⚠️ Projeção negativa';
+
+    const hojeCap = (d.cap?.total_hoje||0) + (d.car?.total_hoje||0);
+    document.getElementById('k-hoje').textContent = fmtR(d.cap?.total_hoje);
+    document.getElementById('k-hoje-sub').textContent = `${d.cap?.count_hoje||0} CAP + ${d.car?.count_hoje||0} CAR vencem hoje`;
+
+    // ── BADGES ──────────────────────────────────────────────────
+    document.getElementById('badge-cap-atr').textContent = (d.cap?.count_atrasado||0) + ' atrasados';
+    document.getElementById('badge-inadimpl').textContent = (d.car?.count_inadimpl||0) + ' inadimplentes';
+
+    // ── LISTAS ATRASADOS ────────────────────────────────────────
+    document.getElementById('lista-cap-atrasado').innerHTML =
+      renderContas(d.cap?.top_atrasados, 'cap') || '<div class="empty-state">✅ Sem atrasos!</div>';
+    document.getElementById('lista-inadimpl').innerHTML =
+      renderContas(d.car?.top_inadimplentes, 'car') || '<div class="empty-state">✅ Sem inadimplência!</div>';
+
+    // ── CATEGORIAS ───────────────────────────────────────────────
+    document.getElementById('cat-cap').innerHTML = renderCategorias(d.cap?.por_categoria, 'red');
+    document.getElementById('cat-car').innerHTML = renderCategorias(d.car?.por_categoria, 'blue');
+
+    // ── PROJEÇÃO ─────────────────────────────────────────────────
+    const entMes = d.car?.total_mes || 0;
+    const saidMes = d.cap?.total_mes || 0;
+    const saldoAtual = d.saldo?.total || 0;
+    const resultado = saldoAtual + entMes - saidMes;
+    document.getElementById('projecao').innerHTML = `
+      <div class="projecao-row">
+        <span class="projecao-label">Saldo atual em bancos</span>
+        <span class="projecao-val green">${fmtR(saldoAtual)}</span>
+      </div>
+      <div class="projecao-row">
+        <span class="projecao-label">+ CAR previsto no mês</span>
+        <span class="projecao-val green">+ ${fmtR(entMes)}</span>
+      </div>
+      <div class="projecao-row">
+        <span class="projecao-label">- CAP previsto no mês</span>
+        <span class="projecao-val red">- ${fmtR(saidMes)}</span>
+      </div>
+      <div class="projecao-row">
+        <span class="projecao-label">Inadimplência em risco</span>
+        <span class="projecao-val" style="color:var(--amber)">- ${fmtR(d.car?.total_inadimpl)}</span>
+      </div>
+      <div class="projecao-total">
+        <span class="projecao-total-label">Projeção fim do mês</span>
+        <span class="projecao-total-val" style="color:${resultado>=0?'var(--green)':'var(--red)'}">${fmtR(resultado)}</span>
+      </div>`;
+
+    // ── FLUXO 10 DIAS ─────────────────────────────────────────────
+    document.getElementById('fluxo-10dias').innerHTML = renderFluxo(d.fluxo_10dias);
+
+    // ── CONTAS BANCÁRIAS ──────────────────────────────────────────
+    const contas = d.saldo?.contas || [];
+    document.getElementById('contas-bancarias').innerHTML = contas.length
+      ? contas.map(c => `<div class="banco-item">
+          <span class="banco-nome">${c.nome}</span>
+          <span class="banco-val ${c.saldo<0?'red':'green'}">${fmtR(c.saldo)}</span>
+        </div>`).join('')
+      : '<div class="empty-state">Configure as contas no Omie</div>';
+
+    // ── RESUMO MÊS ────────────────────────────────────────────────
+    document.getElementById('resumo-mes').innerHTML = `
+      <div class="projecao-row">
+        <span class="projecao-label">CAP — Total atrasado</span>
+        <span class="projecao-val red">${fmtR(d.cap?.total_atrasado)}</span>
+      </div>
+      <div class="projecao-row">
+        <span class="projecao-label">CAP — A vencer</span>
+        <span class="projecao-val gold">${fmtR(d.cap?.total_aberto - d.cap?.total_atrasado)}</span>
+      </div>
+      <div class="projecao-row">
+        <span class="projecao-label">CAR — Inadimplência</span>
+        <span class="projecao-val red">${fmtR(d.car?.total_inadimpl)}</span>
+      </div>
+      <div class="projecao-row">
+        <span class="projecao-label">CAR — A receber</span>
+        <span class="projecao-val green">${fmtR(d.car?.total_aberto - d.car?.total_inadimpl)}</span>
+      </div>
+      <div class="projecao-row">
+        <span class="projecao-label">Resultado líquido projetado</span>
+        <span class="projecao-val ${resultado>=0?'green':'red'}" style="font-weight:800">${fmtR(resultado)}</span>
+      </div>`;
+
+    // Atualiza status
+    window._lastData = d;
+    document.getElementById('last-update').textContent = '✅ ' + d.gerado_em;
+    document.getElementById('proxy-status').textContent = '● Conectado';
+    document.getElementById('proxy-status').className = 'proxy-status ok';
+    document.getElementById('today-sub-right').textContent = 'Próxima atualização: manual ou automática';
+
+  } catch(err) {
+    document.getElementById('proxy-status').textContent = '● Erro: ' + err.message;
+    document.getElementById('proxy-status').className = 'proxy-status err';
+    document.getElementById('last-update').textContent = 'Erro ao carregar';
+  } finally {
+    btn.classList.remove('loading');
+    icon.className = ''; icon.textContent = '↻';
+  }
+}
+
+// SALDO MANUAL
+function updateSaldoManual(val) {
+  var n = parseFloat(val.replace(/\./g,'').replace(',','.')) || 0;
+  var projeEl = document.getElementById('k-proj');
+  if (projeEl && window._lastData) {
+    var entMes = window._lastData.car?.total_mes || 0;
+    var saidMes = window._lastData.cap?.total_mes || 0;
+    var proj = n + entMes - saidMes;
+    projeEl.textContent = fmtR(proj);
+    projeEl.className = 'kpi-value ' + (proj >= 0 ? 'green' : 'red');
+  }
+}
+function saveSaldo(val) {
+  localStorage.setItem('re_saldo_manual', val);
+  document.getElementById('k-saldo-sub').textContent = '✅ Salvo — ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+
+// INIT
+(function() {
+  const d = new Date();
+  const dias = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                 'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  document.getElementById('today-label').textContent =
+    `${dias[d.getDay()]}, ${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+
+  const saved = localStorage.getItem('re_proxy_fin') || localStorage.getItem('re_proxy_url') || 'https://script.google.com/macros/s/AKfycbxnuTLKUK0We-vRj7NaZc7mXqx09U9FMHCH4DQufWi80vBMq04DPWEIup1rWDff2aX7Sw/exec';
+  if (saved) document.getElementById('proxy-url').value = saved;
+})();
+</script>
+</body>
+</html>

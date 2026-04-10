@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RE Gestão — Sistema de Gestão</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A2350;--gold:#C9A84C;--goldL:#E8C96A;--bg:#060F1E;--card:#0F1F35;--border:rgba(201,168,76,.15);--text:#E8EDF5;--muted:#7A8BA0;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+
+.shield{width:72px;height:72px;background:var(--gold);clip-path:polygon(50% 0%,100% 15%,100% 65%,50% 100%,0% 65%,0% 15%);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--navy);margin:0 auto 20px}
+
+h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--gold);text-align:center;margin-bottom:6px}
+.sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:48px}
+
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;max-width:560px}
+@media(max-width:500px){.cards{grid-template-columns:1fr}}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px 24px;text-align:center;text-decoration:none;color:var(--text);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:12px}
+.card:hover{transform:translateY(-4px);border-color:var(--gold);box-shadow:0 12px 40px rgba(201,168,76,.15)}
+.card-icon{font-size:36px}
+.card-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--gold)}
+.card-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.card-btn{margin-top:8px;height:36px;padding:0 20px;background:var(--gold);color:var(--navy);border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;width:100%}
+
+.footer{margin-top:40px;font-size:11px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+
+<div class="shield">RE</div>
+<h1>RE GESTÃO EMPRESARIAL</h1>
+<p class="sub">Sistema de Gestão Interno · Acesso restrito</p>
+
+<div class="cards">
+  <a class="card" href="gestor.html">
+    <span class="card-icon">🏠</span>
+    <div class="card-title">Cockpit do Gestor</div>
+    <div class="card-desc">Painel exclusivo do Robson — financeiro, equipe, inadimplência e projeções</div>
+    <div class="card-btn">Acessar →</div>
+  </a>
+  <a class="card" href="colaboradora.html">
+    <span class="card-icon">✅</span>
+    <div class="card-title">Portal da Equipe</div>
+    <div class="card-desc">Registro diário de atividades, Kanban e atividades extras pontuadas</div>
+    <div class="card-btn">Entrar →</div>
+  </a>
+  <a class="card" href="financeiro.html">
+    <span class="card-icon">📊</span>
+    <div class="card-title">Painel Financeiro</div>
+    <div class="card-desc">CAP, CAR, inadimplência e fluxo de caixa integrados ao Omie</div>
+    <div class="card-btn">Abrir →</div>
+  </a>
+  <div class="card" style="opacity:.4;cursor:default">
+    <span class="card-icon">🚀</span>
+    <div class="card-title">Em breve</div>
+    <div class="card-desc">Novos módulos em desenvolvimento</div>
+  </div>
+</div>
+
+<div class="footer">
+  RE Gestão Empresarial · Sistema interno · v2.0<br>
+  <span id="dt"></span>
+</div>
+<script>
+const d=new Date();
+document.getElementById("dt").textContent=d.toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+</script>
+</body>
+</html>

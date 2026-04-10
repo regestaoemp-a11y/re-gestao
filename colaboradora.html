@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RE Gestão — Portal da Colaboradora</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0A2350;--navy2:#132D5E;--gold:#C9A84C;--goldL:#E8C96A;
+  --bg:#F0F4FA;--card:#fff;--border:#E2E8F4;
+  --text:#1A1A2E;--muted:#64748B;
+  --green:#16A34A;--greenB:#DCFCE7;
+  --red:#DC2626;--redB:#FEE2E2;
+  --amber:#D97706;--amberB:#FEF3C7;
+  --blue:#2563EB;--blueB:#EFF6FF;
+  --radius:12px;--shadow:0 2px 8px rgba(10,35,80,.09);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* LOGIN */
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%)}
+.login-box{background:#fff;border-radius:20px;padding:40px 36px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.login-shield{width:52px;height:52px;background:var(--gold);clip-path:polygon(50% 0%,100% 15%,100% 65%,50% 100%,0% 65%,0% 15%);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--navy);margin:0 auto 16px}
+.login-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--navy);text-align:center;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:24px}
+.field{margin-bottom:14px}
+.field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px}
+.field input{width:100%;height:42px;padding:0 14px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border .2s}
+.field input:focus{border-color:var(--navy)}
+.login-btn{width:100%;height:44px;background:var(--navy);color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s;margin-top:4px}
+.login-btn:hover{background:var(--navy2)}
+.login-err{background:var(--redB);color:var(--red);font-size:12px;padding:8px 12px;border-radius:8px;margin-top:10px;display:none;text-align:center}
+
+/* APP */
+.app{display:none}
+.header{background:var(--navy);height:58px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.logo{display:flex;align-items:center;gap:9px}
+.shield-sm{width:30px;height:30px;background:var(--gold);clip-path:polygon(50% 0%,100% 15%,100% 65%,50% 100%,0% 65%,0% 15%);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:11px;color:var(--navy)}
+.logo h1{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#fff;letter-spacing:.4px}
+.user-info{display:flex;align-items:center;gap:10px}
+.user-name{font-size:13px;color:rgba(255,255,255,.8);font-weight:600}
+.btn-logout{font-size:11px;color:var(--gold);background:none;border:1px solid rgba(201,168,76,.4);border-radius:6px;padding:4px 10px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.pontos-badge{background:var(--gold);color:var(--navy);font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px}
+
+/* BARRA SELETORA */
+.top-bar{background:#fff;border-bottom:1px solid var(--border);padding:12px 20px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.sel-grp{display:flex;flex-direction:column;gap:4px}
+.sel-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+select,input[type=date]{height:36px;padding:0 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:#fff;outline:none;min-width:150px}
+select:focus,input[type=date]:focus{border-color:var(--navy)}
+
+/* PROGRESSO */
+.prog-bar{background:#fff;border-bottom:2px solid var(--border);padding:10px 20px}
+.prog-top{display:flex;justify-content:space-between;margin-bottom:5px}
+.prog-lbl{font-size:12px;font-weight:600;color:var(--navy)}
+.prog-pct{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--navy)}
+.prog-track{height:7px;background:var(--border);border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;transition:width .5s,background .3s}
+.prog-nums{display:flex;gap:14px;margin-top:5px}
+.pn{font-size:11px;color:var(--muted)}
+.pn b{color:var(--text)}
+
+/* MAIN GRID */
+.main{display:grid;grid-template-columns:1fr 340px;gap:14px;padding:14px 20px;align-items:start}
+@media(max-width:960px){.main{grid-template-columns:1fr}}
+
+/* KANBAN */
+.kanban{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:960px){.kanban{grid-template-columns:1fr}}
+.kcol{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden}
+.kcol-hdr{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.kcol-hdr.d{border-top:3px solid var(--navy)}
+.kcol-hdr.s{border-top:3px solid var(--gold)}
+.kcol-hdr.m{border-top:3px solid var(--green)}
+.kcol-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--navy)}
+.kcol-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.kcol-bdg{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--blueB);color:var(--blue)}
+.kcol-bdg.ok{background:var(--greenB);color:var(--green)}
+.kcol-body{padding:8px}
+.task{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:9px;border:1.5px solid var(--border);margin-bottom:6px;cursor:pointer;transition:all .15s;background:#fff}
+.task:last-child{margin-bottom:0}
+.task:hover{border-color:var(--navy);box-shadow:0 1px 6px rgba(10,35,80,.07)}
+.task.done{background:var(--greenB);border-color:#86EFAC}
+.task.done .task-lbl{color:var(--green);text-decoration:line-through}
+.task-cb{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s}
+.task.done .task-cb{background:var(--green);border-color:var(--green);color:#fff}
+.task-lbl{font-size:12px;font-weight:500;color:var(--text);flex:1}
+.task-pts{font-size:10px;color:var(--muted);flex-shrink:0}
+.task.done .task-pts{color:var(--green)}
+
+/* COLUNA DIREITA */
+.right-col{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden}
+.panel-hdr{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--navy)}
+.panel-body{padding:10px 12px}
+
+/* EXTRAS */
+.extra-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;margin-bottom:6px;cursor:pointer;transition:all .15s;background:#fff}
+.extra-item:hover{border-color:var(--gold);box-shadow:0 1px 6px rgba(201,168,76,.15)}
+.extra-item.added{background:var(--amberB);border-color:#FCD34D}
+.extra-item.added .extra-lbl{color:var(--amber)}
+.extra-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0}
+.extra-lbl{font-size:12px;font-weight:500;color:var(--text);flex:1;line-height:1.3}
+.extra-pts{font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0;background:var(--blueB);color:var(--blue);padding:2px 7px;border-radius:20px}
+.extra-item.added .extra-pts{background:var(--amberB);color:var(--amber)}
+.extra-count{font-size:10px;color:var(--muted);background:var(--greenB);color:var(--green);padding:1px 6px;border-radius:10px;margin-left:4px}
+
+/* PONTUAÇÃO */
+.pts-total{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--navy);text-align:center;margin:10px 0 4px}
+.pts-sub{font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px}
+.pts-breakdown{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.pts-tag{font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;background:var(--blueB);color:var(--blue)}
+.bonus-info{margin-top:10px;padding:10px;border-radius:9px;background:var(--greenB);text-align:center}
+.bonus-info.no{background:var(--amberB)}
+.bonus-lbl{font-size:12px;font-weight:700;color:var(--green)}
+.bonus-info.no .bonus-lbl{color:var(--amber)}
+.bonus-meta{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* OBS */
+.obs-area{width:100%;height:65px;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);resize:none;outline:none}
+.obs-area:focus{border-color:var(--navy)}
+
+/* FOOTER */
+.footer{padding:11px 20px;background:#fff;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;bottom:0}
+.save-msg{font-size:12px;color:var(--muted)}
+.save-msg.ok{color:var(--green)}
+.btn-save{height:40px;padding:0 24px;background:var(--navy);color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .2s}
+.btn-save:hover{background:var(--navy2)}
+.btn-save:disabled{opacity:.6;pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-page" class="login-page">
+  <div class="login-box">
+    <div class="login-shield">RE</div>
+    <div class="login-title">RE Gestão</div>
+    <div class="login-sub">Portal da Colaboradora</div>
+    <div class="field">
+      <label>Usuário</label>
+      <input type="text" id="inp-user" placeholder="seu.usuario" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="inp-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="login-err">Usuário ou senha incorretos</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="app">
+
+  <div class="header">
+    <div class="logo">
+      <div class="shield-sm">RE</div>
+      <h1>RE GESTÃO EMPRESARIAL</h1>
+    </div>
+    <div class="user-info">
+      <span class="user-name" id="user-name-hdr">—</span>
+      <span class="pontos-badge" id="pts-badge">0 pts</span>
+      <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="top-bar">
+    <div class="sel-grp">
+      <span class="sel-lbl">Cliente</span>
+      <select id="sel-client" onchange="loadState()">
+        <option value="">Selecione o cliente...</option>
+      </select>
+    </div>
+    <div class="sel-grp">
+      <span class="sel-lbl">Data de referência</span>
+      <input type="date" id="sel-date" onchange="loadState()">
+    </div>
+  </div>
+
+  <div class="prog-bar" id="prog-bar" style="display:none">
+    <div class="prog-top">
+      <span class="prog-lbl" id="prog-lbl">Progresso do dia</span>
+      <span class="prog-pct" id="prog-pct">0%</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="prog-nums">
+      <span class="pn">Diário: <b id="pn-d">0/8</b></span>
+      <span class="pn">Semanal: <b id="pn-s">0/6</b></span>
+      <span class="pn">Mensal: <b id="pn-m">0/6</b></span>
+    </div>
+  </div>
+
+  <div id="main-content" style="display:none">
+    <div class="main">
+
+      <!-- KANBAN -->
+      <div>
+        <div class="kanban" id="kanban"></div>
+        <div style="margin-top:12px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:12px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px">Observações do dia</div>
+          <textarea class="obs-area" id="obs-txt" placeholder="Pendências, problemas ou informações importantes sobre este cliente hoje..."></textarea>
+        </div>
+      </div>
+
+      <!-- DIREITA -->
+      <div class="right-col">
+
+        <!-- PONTUAÇÃO -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">🏆 Pontuação do Dia</span>
+            <span style="font-size:10px;color:var(--muted)" id="pts-meta">meta: 90pts</span>
+          </div>
+          <div class="panel-body">
+            <div class="pts-total" id="pts-total">0</div>
+            <div class="pts-sub">pontos acumulados hoje</div>
+            <div class="pts-breakdown" id="pts-breakdown"></div>
+            <div class="bonus-info" id="bonus-info">
+              <div class="bonus-lbl" id="bonus-lbl">—</div>
+              <div class="bonus-meta" id="bonus-meta"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EXTRAS -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">⭐ Atividades Extras</span>
+            <span style="font-size:10px;color:var(--muted)">+pontos ao fazer mais</span>
+          </div>
+          <div class="panel-body" id="extras-list"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="footer" id="footer" style="display:none">
+    <span class="save-msg" id="save-msg">Preencha e salve seu registro</span>
+    <button class="btn-save" id="btn-save" onclick="saveRecord()">
+      💾 Salvar Registro
+    </button>
+  </div>
+</div>
+
+<script>
+// ── DADOS DO SISTEMA ────────────────────────────────────────────
+// Colaboradoras e senhas (gerenciados pelo gestor via gestor.html)
+function getUsers(){
+  const def = [
+    {user:"kenia",   pwd:"kenia123",   name:"Kênia Paiva",    role:"Coord. Operacional", clientes:["ANCHIETA PULVERIZACOES","ATLETAS CLUB","BRASIL SOLOS","BUILD PARK","ESCOLA VISCONDE SABUGOSA","FAI CONSULTORIA","FORT PARK EMPREITEIRA","GIOVANNI FRANCISCO","IAGO ROCHA","IZABEL MARIA LEAL","MARQUES COMUNICACAO"]},
+    {user:"cassia",  pwd:"cassia123",  name:"Cássia Martins", role:"Analista Sênior",    clientes:["AEC FRANQUEADORA","ECONTABILIZA CONTABILIDADE","FORT PARK EMPREITEIRA","GIOVANI FRANCISCO","TITO MATERIAIS CONSTRUCAO","TACYANA LARA"]},
+    {user:"marjore", pwd:"marjore123", name:"Marjore Oliveira",role:"Analista Apoio",    clientes:["MACIEL BARROS DE QUEIROZ","KAROLINA DE FATIMA","BARBARA NICOLI SANTOS","JONATHAN ALEXANDER","AEC FRANQUEADORA"]},
+    {user:"willy",   pwd:"willy123",   name:"Willy Reis",     role:"CAP + MEIs",         clientes:["MEI ROBSON","MEI GIOVANA","MEI KENIA","MEI CASSIA","MEI MARJORE"]},
+  ];
+  const saved = localStorage.getItem("re_users");
+  return saved ? JSON.parse(saved) : def;
+}
+
+const TAREFAS = {
+  diario: [
+    {id:"d1",label:"Lançamento CAP/CAR",pontos:2},
+    {id:"d2",label:"Conferência de extratos",pontos:2},
+    {id:"d3",label:"Verificar boletos vencendo (3 dias)",pontos:1},
+    {id:"d4",label:"Responder clientes (e-mail/WhatsApp)",pontos:1},
+    {id:"d5",label:"Atualizar status de pagamentos",pontos:2},
+    {id:"d6",label:"Cobrança de inadimplentes",pontos:2},
+    {id:"d7",label:"Envio de posição diária ao cliente",pontos:3},
+    {id:"d8",label:"Registrar ocorrências no sistema",pontos:1},
+  ],
+  semanal: [
+    {id:"s1",label:"Relatório semanal CAP/CAR",pontos:3},
+    {id:"s2",label:"Revisão e cobrança ativa de inadimplência",pontos:3},
+    {id:"s3",label:"Conferência saldo vs sistema",pontos:2},
+    {id:"s4",label:"Atualizar fluxo de caixa projetado",pontos:3},
+    {id:"s5",label:"Envio de resumo semanal ao gestor",pontos:2},
+    {id:"s6",label:"Verificar documentos pendentes",pontos:1},
+  ],
+  mensal: [
+    {id:"m1",label:"Fechamento mensal CAP/CAR",pontos:5},
+    {id:"m2",label:"Relatório gerencial mensal (DRE)",pontos:5},
+    {id:"m3",label:"Conciliação bancária mensal completa",pontos:4},
+    {id:"m4",label:"Relatório de inadimplência / aging list",pontos:4},
+    {id:"m5",label:"Apresentação/reunião mensal com cliente",pontos:5},
+    {id:"m6",label:"Verificar e renovar documentos expirados",pontos:2},
+  ]
+};
+
+const EXTRAS = [
+  {id:"e1", label:"Emissão de nota fiscal",                 pontos:3, icon:"🧾"},
+  {id:"e2", label:"Reunião presencial/online com cliente",  pontos:5, icon:"🤝"},
+  {id:"e3", label:"Resolução de caso/problema crítico",     pontos:8, icon:"🔧"},
+  {id:"e4", label:"Cobrança que resultou em pagamento",     pontos:6, icon:"💰"},
+  {id:"e5", label:"Conciliação bancária extra",             pontos:4, icon:"🏦"},
+  {id:"e6", label:"Cadastro/atualização no Omie",           pontos:3, icon:"⚙️"},
+  {id:"e7", label:"Envio de relatório extra",               pontos:4, icon:"📊"},
+  {id:"e8", label:"Atendimento emergencial ao cliente",     pontos:7, icon:"🚨"},
+  {id:"e9", label:"Recuperação de documentos atrasados",    pontos:4, icon:"📂"},
+  {id:"e10",label:"Atualização de fluxo de caixa extra",    pontos:3, icon:"📈"},
+  {id:"e11",label:"Treinamento ou capacitação realizada",   pontos:5, icon:"📚"},
+  {id:"e12",label:"Proposta de melhoria de processo",       pontos:6, icon:"💡"},
+];
+
+const META_PONTOS = 90;
+
+// ── ESTADO ──────────────────────────────────────────────────────
+let currentUser = null;
+let state = {};
+
+// ── LOGIN ────────────────────────────────────────────────────────
+function doLogin(){
+  const u = document.getElementById("inp-user").value.trim().toLowerCase();
+  const p = document.getElementById("inp-pwd").value;
+  const users = getUsers();
+  const found = users.find(x=>x.user===u&&x.pwd===p);
+  if(!found){
+    document.getElementById("login-err").style.display="block";
+    return;
+  }
+  currentUser = found;
+  // Registra acesso
+  const log = JSON.parse(localStorage.getItem("re_access_log")||"[]");
+  log.push({user:u,name:found.name,action:"login",ts:new Date().toISOString()});
+  localStorage.setItem("re_access_log",JSON.stringify(log.slice(-500)));
+
+  document.getElementById("login-page").style.display="none";
+  document.getElementById("app").style.display="block";
+  document.getElementById("user-name-hdr").textContent=found.name;
+  initApp();
+}
+
+function doLogout(){
+  const log = JSON.parse(localStorage.getItem("re_access_log")||"[]");
+  log.push({user:currentUser.user,name:currentUser.name,action:"logout",ts:new Date().toISOString()});
+  localStorage.setItem("re_access_log",JSON.stringify(log.slice(-500)));
+  currentUser=null;
+  document.getElementById("app").style.display="none";
+  document.getElementById("login-page").style.display="flex";
+  document.getElementById("inp-user").value="";
+  document.getElementById("inp-pwd").value="";
+}
+
+// ── INIT APP ─────────────────────────────────────────────────────
+function initApp(){
+  const today=new Date();
+  const pad=n=>String(n).padStart(2,"0");
+  const ds=today.getFullYear()+"-"+pad(today.getMonth()+1)+"-"+pad(today.getDate());
+  document.getElementById("sel-date").value=ds;
+
+  const sel=document.getElementById("sel-client");
+  sel.innerHTML='<option value="">Selecione o cliente...</option>';
+  (currentUser.clientes||[]).forEach(c=>{
+    const o=document.createElement("option");o.value=c;o.textContent=c;sel.appendChild(o);
+  });
+}
+
+// ── CARREGAR ESTADO ──────────────────────────────────────────────
+function loadState(){
+  const cli=document.getElementById("sel-client").value;
+  const date=document.getElementById("sel-date").value;
+  if(!cli||!date){
+    document.getElementById("prog-bar").style.display="none";
+    document.getElementById("main-content").style.display="none";
+    document.getElementById("footer").style.display="none";
+    return;
+  }
+  const key=`re_tasks_${currentUser.user}_${cli}_${date}`;
+  const saved=localStorage.getItem(key);
+  state=saved?JSON.parse(saved):{daily:{},weekly:{},monthly:{},extras:{}};
+
+  document.getElementById("prog-bar").style.display="block";
+  document.getElementById("main-content").style.display="block";
+  document.getElementById("footer").style.display="flex";
+
+  const obsKey=`re_obs_${currentUser.user}_${cli}_${date}`;
+  document.getElementById("obs-txt").value=localStorage.getItem(obsKey)||"";
+
+  renderKanban();
+  renderExtras();
+  updateProgress();
+  updatePontos();
+}
+
+// ── KANBAN ───────────────────────────────────────────────────────
+function renderKanban(){
+  const kb=document.getElementById("kanban");
+  kb.innerHTML="";
+  [
+    {key:"diario", tipo:"daily", label:"DIÁRIO", sub:"A cada atendimento", cls:"d", bdgId:"pn-d"},
+    {key:"semanal",tipo:"weekly",label:"SEMANAL",sub:"Uma vez por semana",  cls:"s", bdgId:"pn-s"},
+    {key:"mensal", tipo:"monthly",label:"MENSAL",sub:"Uma vez por mês",    cls:"m", bdgId:"pn-m"},
+  ].forEach(col=>{
+    const tasks=TAREFAS[col.key];
+    let done=0;
+    let items="";
+    tasks.forEach(t=>{
+      const chk=!!(state[col.tipo]&&state[col.tipo][t.id]);
+      if(chk)done++;
+      items+=`<div class="task${chk?" done":""}" onclick="toggleTask('${col.tipo}','${t.id}',this)">
+        <div class="task-cb">${chk?"✓":""}</div>
+        <span class="task-lbl">${t.label}</span>
+        <span class="task-pts">+${t.pontos}pt</span>
+      </div>`;
+    });
+    const bdgCls=done===tasks.length?" ok":"";
+    const colHtml=`<div class="kcol">
+      <div class="kcol-hdr ${col.cls}">
+        <div><div class="kcol-title">${col.label}</div><div class="kcol-sub">${col.sub}</div></div>
+        <span class="kcol-bdg${bdgCls}">${done}/${tasks.length}</span>
+      </div>
+      <div class="kcol-body">${items}</div>
+    </div>`;
+    kb.insertAdjacentHTML("beforeend",colHtml);
+  });
+}
+
+function toggleTask(tipo,id,card){
+  if(!state[tipo])state[tipo]={};
+  state[tipo][id]=!state[tipo][id];
+  card.classList.toggle("done",!!state[tipo][id]);
+  card.querySelector(".task-cb").textContent=state[tipo][id]?"✓":"";
+  autoSave();
+  updateProgress();
+  updatePontos();
+  // Atualiza badge
+  const typeMap={daily:"diario",weekly:"semanal",monthly:"mensal"};
+  const tasks=TAREFAS[typeMap[tipo]||tipo];
+  const done=tasks.filter(t=>state[tipo]&&state[tipo][t.id]).length;
+  const bdgMap={daily:"pn-d",weekly:"pn-s",monthly:"pn-m"};
+  document.getElementById(bdgMap[tipo]).textContent=done+"/"+tasks.length;
+}
+
+// ── EXTRAS ───────────────────────────────────────────────────────
+function renderExtras(){
+  const list=document.getElementById("extras-list");
+  list.innerHTML="";
+  EXTRAS.forEach(e=>{
+    const cnt=(state.extras&&state.extras[e.id])||0;
+    list.insertAdjacentHTML("beforeend",`
+      <div class="extra-item${cnt>0?" added":""}" onclick="addExtra('${e.id}',this)">
+        <span class="extra-icon">${e.icon}</span>
+        <span class="extra-lbl">${e.label}${cnt>1?`<span class="extra-count">×${cnt}</span>`:""}</span>
+        <span class="extra-pts">+${e.pontos}pt${cnt>0?" ✓":""}</span>
+      </div>`);
+  });
+}
+
+function addExtra(id,el){
+  if(!state.extras)state.extras={};
+  state.extras[id]=(state.extras[id]||0)+1;
+  autoSave();
+  updatePontos();
+  renderExtras();
+}
+
+// ── PROGRESSO ────────────────────────────────────────────────────
+function updateProgress(){
+  const dT=TAREFAS.diario.length,sT=TAREFAS.semanal.length,mT=TAREFAS.mensal.length;
+  const dD=Object.values(state.daily||{}).filter(Boolean).length;
+  const sD=Object.values(state.weekly||{}).filter(Boolean).length;
+  const mD=Object.values(state.monthly||{}).filter(Boolean).length;
+  const total=dT+sT+mT, done=dD+sD+mD;
+  const pct=total>0?Math.round(done/total*100):0;
+  document.getElementById("prog-pct").textContent=pct+"%";
+  const fill=document.getElementById("prog-fill");
+  fill.style.width=pct+"%";
+  fill.style.background=pct>=90?"linear-gradient(90deg,#16A34A,#22C55E)":
+                         pct>=70?"linear-gradient(90deg,#D97706,#F59E0B)":
+                                 "linear-gradient(90deg,#0A2350,#C9A84C)";
+  document.getElementById("prog-lbl").textContent=
+    pct>=90?"🎯 Meta atingida! Parabéns!":
+    pct>=70?"⚡ Quase lá — continue!":"📋 Progresso do dia";
+  document.getElementById("pn-d").textContent=dD+"/"+dT;
+  document.getElementById("pn-s").textContent=sD+"/"+sT;
+  document.getElementById("pn-m").textContent=mD+"/"+mT;
+}
+
+// ── PONTUAÇÃO ────────────────────────────────────────────────────
+function updatePontos(){
+  let pts=0;
+  // Tarefas
+  ["diario","semanal","mensal"].forEach((k,i)=>{
+    const tipo=["daily","weekly","monthly"][i];
+    TAREFAS[k].forEach(t=>{
+      if(state[tipo]&&state[tipo][t.id])pts+=t.pontos;
+    });
+  });
+  // Extras
+  EXTRAS.forEach(e=>{
+    const cnt=(state.extras&&state.extras[e.id])||0;
+    pts+=e.pontos*cnt;
+  });
+
+  document.getElementById("pts-total").textContent=pts;
+  document.getElementById("pts-badge").textContent=pts+" pts";
+
+  // Bônus
+  const pct=Math.round(pts/META_PONTOS*100);
+  const bInfo=document.getElementById("bonus-info");
+  const bLbl=document.getElementById("bonus-lbl");
+  const bMeta=document.getElementById("bonus-meta");
+  if(pct>=90){
+    bInfo.className="bonus-info";
+    bLbl.textContent="🎯 Elegível ao Bônus!";
+    bMeta.textContent=pts+" pts de "+META_PONTOS+" necessários ("+pct+"%)";
+  } else {
+    bInfo.className="bonus-info no";
+    bLbl.textContent="⏳ "+Math.max(0,META_PONTOS-pts)+" pts para o bônus";
+    bMeta.textContent="Você está em "+pct+"% da meta";
+  }
+}
+
+// ── AUTO SAVE ────────────────────────────────────────────────────
+function autoSave(){
+  const cli=document.getElementById("sel-client").value;
+  const date=document.getElementById("sel-date").value;
+  const key=`re_tasks_${currentUser.user}_${cli}_${date}`;
+  localStorage.setItem(key,JSON.stringify(state));
+}
+
+// ── SALVAR REGISTRO ──────────────────────────────────────────────
+async function saveRecord(){
+  const btn=document.getElementById("btn-save");
+  const msg=document.getElementById("save-msg");
+  btn.disabled=true;btn.innerHTML="⏳ Salvando...";
+
+  const cli=document.getElementById("sel-client").value;
+  const date=document.getElementById("sel-date").value;
+  const obs=document.getElementById("obs-txt").value;
+
+  // Salva obs
+  localStorage.setItem(`re_obs_${currentUser.user}_${cli}_${date}`,obs);
+
+  // Calcula pontos
+  let pts=0;
+  ["diario","semanal","mensal"].forEach((k,i)=>{
+    const tipo=["daily","weekly","monthly"][i];
+    TAREFAS[k].forEach(t=>{if(state[tipo]&&state[tipo][t.id])pts+=t.pontos;});
+  });
+  EXTRAS.forEach(e=>{
+    const cnt=(state.extras&&state.extras[e.id])||0;
+    pts+=e.pontos*cnt;
+  });
+
+  const dD=Object.values(state.daily||{}).filter(Boolean).length;
+  const sD=Object.values(state.weekly||{}).filter(Boolean).length;
+  const mD=Object.values(state.monthly||{}).filter(Boolean).length;
+  const total=TAREFAS.diario.length+TAREFAS.semanal.length+TAREFAS.mensal.length;
+  const done=dD+sD+mD;
+
+  const payload={
+    date,time:new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),
+    user:currentUser.user,colab:currentUser.name,client:cli,
+    pontos:pts,metaPontos:META_PONTOS,
+    doneDaily:dD,totalDaily:TAREFAS.diario.length,
+    doneWeekly:sD,totalWeekly:TAREFAS.semanal.length,
+    doneMonthly:mD,totalMonthly:TAREFAS.mensal.length,
+    pctTarefas:Math.round(done/total*100),
+    extras:Object.entries(state.extras||{}).map(([id,cnt])=>{
+      const e=EXTRAS.find(x=>x.id===id);
+      return e?{id,label:e.label,cnt,pontos:e.pontos*cnt}:null;
+    }).filter(Boolean),
+    obs,
+    elegivel_bonus:pts>=META_PONTOS
+  };
+
+  // Grava para o gestor ler
+  const regKey=`re_reg_${currentUser.user}_${date}`;
+  const existing=JSON.parse(localStorage.getItem(regKey)||"[]");
+  const idx=existing.findIndex(r=>r.client===cli);
+  if(idx>=0)existing[idx]=payload;else existing.push(payload);
+  localStorage.setItem(regKey,JSON.stringify(existing));
+
+  // Tenta enviar para proxy/planilha
+  const proxyUrl=localStorage.getItem("re_proxy_sheets")||"";
+  if(proxyUrl){
+    try{await fetch(proxyUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});}
+    catch(e){}
+  }
+
+  msg.textContent="✅ Salvo! "+pts+" pontos registrados";
+  msg.className="save-msg ok";
+  btn.innerHTML="✅ Salvo!";
+  setTimeout(()=>{
+    btn.disabled=false;btn.innerHTML="💾 Salvar Registro";
+    msg.textContent="";msg.className="save-msg";
+  },2500);
+}
+</script>
+</body>
+</html>

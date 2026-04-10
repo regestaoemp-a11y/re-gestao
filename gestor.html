@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RE Gestão — Cockpit do Gestor</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0A2350;--navy2:#132D5E;--navy3:#1A3A6B;
+  --gold:#C9A84C;--goldL:#E8C96A;
+  --bg:#060F1E;--bg2:#0D1B2E;--bg3:#112039;
+  --card:#0F1F35;--card2:#162846;
+  --border:rgba(201,168,76,.13);--border2:rgba(255,255,255,.06);
+  --text:#E8EDF5;--muted:#7A8BA0;
+  --green:#00C896;--red:#FF4C6A;--amber:#FFB020;--blue:#4A9EFF;--teal:#0D9488;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* LOGIN */
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#060F1E 0%,#0A2350 100%)}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:40px 36px;width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.l-shield{width:54px;height:54px;background:var(--gold);clip-path:polygon(50% 0%,100% 15%,100% 65%,50% 100%,0% 65%,0% 15%);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:19px;color:var(--navy);margin:0 auto 16px}
+.l-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--gold);margin-bottom:4px}
+.l-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+.l-input{width:100%;height:44px;padding:0 16px;border:1.5px solid var(--border2);border-radius:10px;background:var(--bg3);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;margin-bottom:12px}
+.l-input:focus{border-color:var(--gold)}
+.l-btn{width:100%;height:44px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s}
+.l-btn:hover{background:var(--goldL)}
+.l-err{font-size:12px;color:var(--red);margin-top:10px;display:none}
+
+/* APP */
+.app{display:none}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,var(--navy),var(--navy2));border-bottom:1px solid var(--border);height:62px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.hdr-logo{display:flex;align-items:center;gap:12px}
+.h-shield{width:38px;height:38px;background:var(--gold);clip-path:polygon(50% 0%,100% 15%,100% 65%,50% 100%,0% 65%,0% 15%);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:var(--navy)}
+.h-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;letter-spacing:.5px}
+.h-sub{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.h-date{font-size:12px;color:var(--muted)}
+.h-time{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gold)}
+.btn-atualizar{background:var(--gold);color:var(--navy);border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;gap:6px}
+.btn-atualizar:hover{background:var(--goldL)}
+.btn-atualizar.spin svg{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TABS */
+.tabs{background:var(--navy2);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:4px}
+.tab{padding:12px 18px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+/* CONTENT */
+.tab-content{display:none;padding:20px 24px;max-width:1600px;margin:0 auto}
+.tab-content.active{display:block}
+
+/* ── TAB 1: COCKPIT ── */
+
+/* SALDO */
+.saldo-strip{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.saldo-lbl{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
+.saldo-wrap{display:flex;align-items:center;gap:6px}
+.saldo-r{font-size:15px;color:var(--muted);font-weight:600}
+.saldo-in{background:transparent;border:none;border-bottom:2px solid var(--gold);outline:none;color:var(--green);font-family:'Syne',sans-serif;font-size:28px;font-weight:800;width:190px;padding:2px 6px}
+.saldo-in::placeholder{color:rgba(0,200,150,.3)}
+.saldo-ok{font-size:11px;color:var(--green);opacity:0;transition:opacity .3s}
+.saldo-ok.show{opacity:1}
+.saldo-info{font-size:11px;color:var(--muted)}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;transition:transform .2s}
+.kpi:hover{transform:translateY(-2px)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.g::before{background:var(--green)}
+.kpi.r::before{background:var(--red)}
+.kpi.a::before{background:var(--amber)}
+.kpi.b::before{background:var(--blue)}
+.kpi.t::before{background:var(--teal)}
+.kpi.gold::before{background:var(--gold)}
+.kpi-icon{font-size:22px;margin-bottom:8px}
+.kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-bottom:4px}
+.kpi-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);line-height:1.2}
+.kpi-val.g{color:var(--green)}.kpi-val.r{color:var(--red)}.kpi-val.a{color:var(--amber)}.kpi-val.b{color:var(--blue)}.kpi-val.gold{color:var(--gold)}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.kpi-sub.g{color:var(--green)}.kpi-sub.r{color:var(--red)}.kpi-sub.a{color:var(--amber)}
+
+/* DOIS PAINÉIS */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:1000px){.two-col{grid-template-columns:1fr}}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:1100px){.three-col{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.three-col{grid-template-columns:1fr}}
+
+/* PAINÉIS */
+.panel{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden}
+.ph{padding:12px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between}
+.ph-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
+.ph-dot{width:7px;height:7px;border-radius:50%}
+.ph-dot.g{background:var(--green)}.ph-dot.r{background:var(--red)}.ph-dot.a{background:var(--amber)}
+.ph-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.07);color:var(--muted)}
+.ph-badge.r{background:rgba(255,76,106,.15);color:var(--red)}
+.ph-badge.g{background:rgba(0,200,150,.15);color:var(--green)}
+.ph-badge.a{background:rgba(255,176,32,.15);color:var(--amber)}
+.pb{padding:12px 14px}
+
+/* COLAB CARDS */
+.colab-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:1px solid var(--border2);margin-bottom:7px;cursor:default;transition:all .15s}
+.colab-row:hover{background:rgba(255,255,255,.02)}
+.c-avatar{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0}
+.c-info{flex:1;min-width:0}
+.c-name{font-size:13px;font-weight:600;color:var(--text)}
+.c-role{font-size:10px;color:var(--muted);margin-top:1px}
+.c-right{text-align:right;flex-shrink:0}
+.c-pct{font-family:'Syne',sans-serif;font-size:16px;font-weight:800}
+.c-pct.g{color:var(--green)}.c-pct.a{color:var(--amber)}.c-pct.r{color:var(--red)}.c-pct.gray{color:var(--muted)}
+.c-pts{font-size:10px;color:var(--muted);margin-top:1px}
+.semaf{width:8px;height:8px;border-radius:50%;margin-left:6px;flex-shrink:0}
+.semaf.g{background:var(--green);box-shadow:0 0 5px rgba(0,200,150,.5)}
+.semaf.a{background:var(--amber);box-shadow:0 0 5px rgba(255,176,32,.5)}
+.semaf.r{background:var(--red);box-shadow:0 0 5px rgba(255,76,106,.5)}
+.semaf.gray{background:var(--muted)}
+.c-track{height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;margin-top:3px}
+.c-fill{height:100%;border-radius:2px}
+.c-fill.g{background:var(--green)}.c-fill.a{background:var(--amber)}.c-fill.r{background:var(--red)}.c-fill.gray{background:var(--muted)}
+.bonus-tag{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-top:2px;display:inline-block}
+.bonus-tag.yes{background:rgba(0,200,150,.15);color:var(--green)}
+.bonus-tag.no{background:rgba(255,76,106,.15);color:var(--red)}
+
+/* DETALHE COLAB */
+.cli-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.05);margin:2px;color:var(--muted)}
+.cli-chip.g{background:rgba(0,200,150,.1);color:var(--green)}
+.cli-chip.a{background:rgba(255,176,32,.1);color:var(--amber)}
+.cli-chip.r{background:rgba(255,76,106,.1);color:var(--red)}
+
+/* LOG ACESSO */
+.log-row{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:8px;border-bottom:1px solid var(--border2);font-size:12px}
+.log-row:last-child{border:none}
+.log-user{font-weight:600;color:var(--text);min-width:100px}
+.log-action{padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700}
+.log-action.login{background:rgba(0,200,150,.15);color:var(--green)}
+.log-action.logout{background:rgba(255,76,106,.15);color:var(--red)}
+.log-ts{color:var(--muted);margin-left:auto}
+
+/* OMIE */
+.conta-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;border:1px solid var(--border2);margin-bottom:6px}
+.c-ini{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}
+.c-iinfo{flex:1;min-width:0}
+.c-iname{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-imeta{font-size:10px;color:var(--muted);margin-top:1px}
+.c-ival{text-align:right;flex-shrink:0}
+.c-ival-num{font-size:13px;font-weight:700}
+.c-ival-num.r{color:var(--red)}.c-ival-num.a{color:var(--amber)}
+.c-dias{font-size:10px;color:var(--muted);margin-top:1px}
+
+/* FLUXO */
+.fluxo-wrap{overflow-x:auto;padding-bottom:4px}
+.fluxo-grid{display:flex;gap:6px;min-width:600px}
+.fluxo-day{flex:1;text-align:center}
+.fluxo-lbl{font-size:9px;color:var(--muted);margin-bottom:4px}
+.fluxo-bars{display:flex;justify-content:center;gap:2px;align-items:flex-end;height:60px}
+.fluxo-bar{width:14px;border-radius:2px;min-height:3px;transition:height .3s}
+.fluxo-bar.p{background:var(--red)}
+.fluxo-bar.r{background:var(--green)}
+.fluxo-saldo{font-size:9px;font-weight:700;margin-top:3px}
+.fluxo-saldo.pos{color:var(--green)}.fluxo-saldo.neg{color:var(--red)}
+
+/* PROXY CONFIG */
+.cfg-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.cfg-lbl{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.cfg-in{flex:1;min-width:200px;height:34px;padding:0 10px;border:1px solid var(--border2);border-radius:8px;background:var(--bg3);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;outline:none}
+.cfg-in:focus{border-color:var(--gold)}
+.btn-sm{height:34px;padding:0 14px;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:var(--gold);color:var(--navy);transition:all .2s}
+.btn-sm:hover{background:var(--goldL)}
+.btn-sm.danger{background:rgba(255,76,106,.15);color:var(--red)}
+
+/* TAB 2: EQUIPE DETALHADA */
+.colab-detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.cd-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden}
+.cd-header{padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:10px}
+.cd-avatar{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0}
+.cd-name{font-size:15px;font-weight:700;color:var(--text)}
+.cd-role{font-size:11px;color:var(--muted)}
+.cd-pct-big{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;margin-left:auto}
+.cd-body{padding:14px 16px}
+.cd-stat-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border2);font-size:12px}
+.cd-stat-row:last-child{border:none}
+.cd-stat-lbl{color:var(--muted)}
+.cd-stat-val{font-weight:600;color:var(--text)}
+.cd-extras-wrap{padding:10px 16px;border-top:1px solid var(--border2)}
+.cd-extras-title{font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+.cd-extra-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:10px;background:rgba(255,176,32,.12);color:var(--amber);margin:2px}
+.cd-clientes{padding:10px 16px;border-top:1px solid var(--border2)}
+
+/* TAB 3: CONFIG */
+.cfg-section{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);padding:16px 20px;margin-bottom:14px}
+.cfg-section-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--gold);margin-bottom:14px;text-transform:uppercase;letter-spacing:.08em}
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border2);border-radius:10px;margin-bottom:8px;flex-wrap:wrap}
+.user-row-info{flex:1;min-width:150px}
+.user-row-name{font-size:13px;font-weight:700;color:var(--text)}
+.user-row-user{font-size:11px;color:var(--muted)}
+.user-row input{height:32px;padding:0 10px;border:1px solid var(--border2);border-radius:7px;background:var(--bg3);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;min-width:100px}
+.user-row input:focus{border-color:var(--gold)}
+.clientes-input{width:100%;height:32px;padding:0 10px;border:1px solid var(--border2);border-radius:7px;background:var(--bg3);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;margin-top:5px}
+.clientes-input:focus{border-color:var(--gold)}
+.input-hint{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* EMPTY */
+.empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-page" class="login-page">
+  <div class="login-box">
+    <div class="l-shield">RE</div>
+    <div class="l-title">Cockpit do Gestor</div>
+    <div class="l-sub">RE Gestão Empresarial — Acesso exclusivo</div>
+    <input type="password" class="l-input" id="l-pwd" placeholder="Senha do gestor" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="l-btn" onclick="doLogin()">Entrar</button>
+    <div class="l-err" id="l-err">Senha incorreta</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="app">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-logo">
+      <div class="h-shield">RE</div>
+      <div>
+        <div class="h-title">RE GESTÃO EMPRESARIAL</div>
+        <div class="h-sub">Cockpit do Gestor</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <span class="h-date" id="h-date">—</span>
+      <span class="h-time" id="h-time">—</span>
+      <button class="btn-atualizar" id="btn-atualizar" onclick="loadAll()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+        Atualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab(0,this)">🏠 Cockpit</div>
+    <div class="tab" onclick="switchTab(1,this)">👥 Equipe Detalhada</div>
+    <div class="tab" onclick="switchTab(2,this)">📋 Registros e Acessos</div>
+    <div class="tab" onclick="switchTab(3,this)">⚙️ Configurações</div>
+  </div>
+
+  <!-- ── TAB 0: COCKPIT ── -->
+  <div class="tab-content active" id="tab0">
+
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Data de referência</div>
+        <input type="date" id="view-date" style="height:36px;padding:0 12px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none" onchange="loadAll()">
+      </div>
+      <div style="font-size:11px;color:var(--muted)" id="last-update">Não atualizado</div>
+    </div>
+
+    <!-- SALDO MANUAL -->
+    <div class="saldo-strip">
+      <span class="saldo-lbl">🏦 Saldo em Bancos</span>
+      <div class="saldo-wrap">
+        <span class="saldo-r">R$</span>
+        <input type="text" class="saldo-in" id="saldo-in" placeholder="0,00" oninput="fmtSaldo(this)" onblur="saveSaldo()">
+        <span class="saldo-ok" id="saldo-ok">✅ Salvo</span>
+      </div>
+      <span class="saldo-info" id="saldo-info">Digite o saldo atual e pressione Tab</span>
+    </div>
+
+    <!-- KPIs FINANCEIROS + EQUIPE -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi g"><div class="kpi-icon">🏦</div><div class="kpi-lbl">Saldo em Bancos</div><div class="kpi-val g" id="k-saldo">—</div><div class="kpi-sub">hoje</div></div>
+      <div class="kpi r"><div class="kpi-icon">📤</div><div class="kpi-lbl">CAP em Aberto</div><div class="kpi-val r" id="k-cap">—</div><div class="kpi-sub r" id="k-cap-sub">aguardando Omie</div></div>
+      <div class="kpi b"><div class="kpi-icon">📥</div><div class="kpi-lbl">CAR em Aberto</div><div class="kpi-val b" id="k-car">—</div><div class="kpi-sub" id="k-car-sub">aguardando Omie</div></div>
+      <div class="kpi a"><div class="kpi-icon">⚠️</div><div class="kpi-lbl">Inadimplência</div><div class="kpi-val a" id="k-inad">—</div><div class="kpi-sub a" id="k-inad-sub">aguardando Omie</div></div>
+      <div class="kpi gold"><div class="kpi-icon">📅</div><div class="kpi-lbl">Pagar no Mês</div><div class="kpi-val gold" id="k-cap-mes">—</div><div class="kpi-sub" id="k-cap-mes-sub">—</div></div>
+      <div class="kpi t"><div class="kpi-icon">💰</div><div class="kpi-lbl">Receber no Mês</div><div class="kpi-val" style="color:var(--teal)" id="k-car-mes">—</div><div class="kpi-sub" id="k-car-mes-sub">—</div></div>
+      <div class="kpi g"><div class="kpi-icon">📈</div><div class="kpi-lbl">Projeção Fim do Mês</div><div class="kpi-val g" id="k-proj">—</div><div class="kpi-sub g" id="k-proj-sub">—</div></div>
+      <div class="kpi g"><div class="kpi-icon">👥</div><div class="kpi-lbl">Equipe Produtiva</div><div class="kpi-val g" id="k-prod">—</div><div class="kpi-sub" id="k-prod-sub">colaboradoras acima de 90%</div></div>
+    </div>
+
+    <!-- EQUIPE + MAIORES ATRASOS -->
+    <div class="two-col">
+
+      <div class="panel">
+        <div class="ph">
+          <span class="ph-title"><span class="ph-dot g"></span>Status da Equipe Hoje</span>
+          <span class="ph-badge" id="eq-badge">0 registros</span>
+        </div>
+        <div class="pb" id="equipe-overview"></div>
+      </div>
+
+      <div class="panel">
+        <div class="ph">
+          <span class="ph-title"><span class="ph-dot r"></span>Maiores Atrasos CAP</span>
+          <span class="ph-badge r" id="cap-badge">—</span>
+        </div>
+        <div class="pb" id="cap-lista"><div class="empty">Clique em Atualizar para buscar dados do Omie</div></div>
+      </div>
+
+    </div>
+
+    <!-- INADIMPLENTES + FLUXO -->
+    <div class="two-col">
+
+      <div class="panel">
+        <div class="ph">
+          <span class="ph-title"><span class="ph-dot a"></span>Inadimplência — CAR Atrasado</span>
+          <span class="ph-badge a" id="inad-badge">—</span>
+        </div>
+        <div class="pb" id="inad-lista"><div class="empty">Aguardando dados do Omie</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="ph">
+          <span class="ph-title"><span class="ph-dot g"></span>Fluxo de Caixa — Próximos 10 dias</span>
+          <span style="font-size:10px;color:var(--muted)">🟢 Receber  🔴 Pagar</span>
+        </div>
+        <div class="pb">
+          <div class="fluxo-wrap"><div class="fluxo-grid" id="fluxo-grid"><div class="empty">Aguardando Omie</div></div></div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ── TAB 1: EQUIPE DETALHADA ── -->
+  <div class="tab-content" id="tab1">
+    <div class="colab-detail-grid" id="colab-detail-grid"></div>
+  </div>
+
+  <!-- ── TAB 2: REGISTROS E ACESSOS ── -->
+  <div class="tab-content" id="tab2">
+    <div class="two-col">
+      <div class="panel">
+        <div class="ph"><span class="ph-title">📋 Últimos Registros de Atividades</span></div>
+        <div class="pb" id="registros-lista"><div class="empty">Nenhum registro encontrado</div></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="ph-title">🔐 Log de Acessos</span><span class="ph-badge" id="log-badge">—</span></div>
+        <div class="pb" id="log-lista"><div class="empty">Nenhum acesso registrado</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 3: CONFIGURAÇÕES ── -->
+  <div class="tab-content" id="tab3">
+
+    <div class="cfg-section">
+      <div class="cfg-section-title">🌐 Integração Omie (Proxy)</div>
+      <div class="cfg-row">
+        <span class="cfg-lbl">URL do Proxy</span>
+        <input type="text" class="cfg-in" id="proxy-omie" placeholder="https://script.google.com/macros/s/...">
+        <button class="btn-sm" onclick="saveProxyOmie()">Salvar</button>
+        <button class="btn-sm" onclick="testProxy()" style="background:rgba(74,158,255,.15);color:var(--blue)">Testar</button>
+        <span id="proxy-status" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+      <div class="cfg-row">
+        <span class="cfg-lbl">URL Planilha (registros equipe)</span>
+        <input type="text" class="cfg-in" id="proxy-sheets" placeholder="https://script.google.com/macros/s/...">
+        <button class="btn-sm" onclick="saveProxySheets()">Salvar</button>
+      </div>
+    </div>
+
+    <div class="cfg-section">
+      <div class="cfg-section-title">👥 Colaboradoras — Senhas e Carteiras de Clientes</div>
+      <div id="users-cfg"></div>
+      <button class="btn-sm" onclick="saveUsers()" style="margin-top:10px">💾 Salvar Alterações</button>
+      <span id="users-save-msg" style="font-size:11px;color:var(--green);margin-left:10px"></span>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const SENHA_GESTOR = "RE2025";
+const fmtR = v => 'R$ ' + Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+const COLABS_DEFAULT = [
+  {user:"kenia",   name:"Kênia Paiva",    role:"Coord. Operacional", color:"#C9A84C", pwd:"kenia123",   clientes:"ANCHIETA PULVERIZACOES,ATLETAS CLUB,BRASIL SOLOS,BUILD PARK,ESCOLA VISCONDE SABUGOSA,FAI CONSULTORIA,FORT PARK EMPREITEIRA,IAGO ROCHA,IZABEL MARIA LEAL,MARQUES COMUNICACAO"},
+  {user:"cassia",  name:"Cássia Martins", role:"Analista Sênior",    color:"#0D9488", pwd:"cassia123",  clientes:"AEC FRANQUEADORA,ECONTABILIZA CONTABILIDADE,FORT PARK EMPREITEIRA,TITO MATERIAIS CONSTRUCAO,TACYANA LARA"},
+  {user:"marjore", name:"Marjore Oliveira",role:"Analista Apoio",    color:"#4A9EFF", pwd:"marjore123", clientes:"MACIEL BARROS DE QUEIROZ,KAROLINA DE FATIMA,BARBARA NICOLI SANTOS,JONATHAN ALEXANDER,AEC FRANQUEADORA"},
+  {user:"willy",   name:"Willy Reis",     role:"CAP + MEIs",         color:"#8B5CF6", pwd:"willy123",   clientes:"MEI ROBSON,MEI GIOVANA,MEI KENIA,MEI CASSIA"},
+];
+
+const TAREFAS_TOTAL = 8+6+6;
+
+function getUsers(){
+  const s = localStorage.getItem("re_users");
+  return s ? JSON.parse(s) : COLABS_DEFAULT;
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────────
+function doLogin(){
+  if(document.getElementById("l-pwd").value === SENHA_GESTOR){
+    document.getElementById("login-page").style.display="none";
+    document.getElementById("app").style.display="block";
+    initApp();
+  } else {
+    document.getElementById("l-err").style.display="block";
+  }
+}
+
+function initApp(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,"0");
+  const ds=d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate());
+  document.getElementById("view-date").value=ds;
+  const dias=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  const meses=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  document.getElementById("h-date").textContent=dias[d.getDay()]+", "+d.getDate()+" de "+meses[d.getMonth()];
+
+  // Atualiza relógio
+  setInterval(()=>{
+    const n=new Date();
+    document.getElementById("h-time").textContent=
+      p(n.getHours())+":"+p(n.getMinutes())+":"+p(n.getSeconds());
+  },1000);
+
+  loadSaldo();
+  loadCfg();
+  buildUsersCfg();
+  loadAll();
+}
+
+// ── TABS ─────────────────────────────────────────────────────────
+function switchTab(idx, el){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
+  document.getElementById("tab"+idx).classList.add("active");
+  if(idx===1) renderColabDetail();
+  if(idx===2) renderRegistrosLog();
+}
+
+// ── SALDO ─────────────────────────────────────────────────────────
+function fmtSaldo(el){
+  el.value=el.value.replace(/[^\d,.]/g,"");
+}
+function saveSaldo(){
+  const v=document.getElementById("saldo-in").value;
+  const d=document.getElementById("view-date").value;
+  localStorage.setItem("re_saldo_"+d,v);
+  const ok=document.getElementById("saldo-ok");
+  ok.classList.add("show");
+  const n=parseFloat(v.replace(",","."))||0;
+  document.getElementById("k-saldo").textContent=fmtR(n);
+  document.getElementById("saldo-info").textContent="Salvo às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  setTimeout(()=>ok.classList.remove("show"),2000);
+  updateProjecao();
+}
+function loadSaldo(){
+  const d=document.getElementById("view-date").value;
+  const v=localStorage.getItem("re_saldo_"+d)||"";
+  document.getElementById("saldo-in").value=v;
+  const n=parseFloat(v.replace(",","."))||0;
+  document.getElementById("k-saldo").textContent=v?fmtR(n):"—";
+  if(v) document.getElementById("saldo-info").textContent="Saldo registrado";
+}
+
+function updateProjecao(){
+  const saldo=parseFloat((document.getElementById("saldo-in").value||"0").replace(",","."))||0;
+  const capMes=parseFloat(document.getElementById("k-cap-mes").dataset.val||0);
+  const carMes=parseFloat(document.getElementById("k-car-mes").dataset.val||0);
+  if(!capMes&&!carMes) return;
+  const proj=saldo+carMes-capMes;
+  document.getElementById("k-proj").textContent=fmtR(proj);
+  document.getElementById("k-proj").className="kpi-val "+(proj>=0?"g":"r");
+  document.getElementById("k-proj-sub").textContent=proj>=0?"✅ Projeção positiva":"⚠️ Atenção: projeção negativa";
+  document.getElementById("k-proj-sub").className="kpi-sub "+(proj>=0?"g":"r");
+}
+
+// ── LOAD ALL ──────────────────────────────────────────────────────
+async function loadAll(){
+  const btn=document.getElementById("btn-atualizar");
+  btn.classList.add("spin");
+  const date=document.getElementById("view-date").value;
+  loadSaldo();
+  loadEquipe(date);
+  await loadOmie();
+  loadRegistrosLog();
+  btn.classList.remove("spin");
+  document.getElementById("last-update").textContent="✅ Atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+}
+
+// ── EQUIPE ────────────────────────────────────────────────────────
+function loadEquipe(date){
+  const users=getUsers();
+  const container=document.getElementById("equipe-overview");
+  container.innerHTML="";
+  let comReg=0, produtivos=0;
+
+  users.forEach(u=>{
+    const regs=JSON.parse(localStorage.getItem("re_reg_"+u.user+"_"+date)||"[]");
+    const {pct,pontos,done,total}=calcColab(regs);
+    const cls=regs.length>0?(pct>=90?"g":pct>=70?"a":"r"):"gray";
+    if(regs.length>0){comReg++;if(pct>=90)produtivos++;}
+    const ini=u.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+    container.insertAdjacentHTML("beforeend",`
+      <div class="colab-row">
+        <div class="c-avatar" style="background:${u.color}">${ini}</div>
+        <div class="c-info">
+          <div class="c-name">${u.name}</div>
+          <div class="c-role">${u.role}</div>
+          <div class="c-track"><div class="c-fill ${cls}" style="width:${pct}%"></div></div>
+        </div>
+        <div class="c-right">
+          <div class="c-pct ${cls}">${regs.length>0?pct+"%":"—"}</div>
+          <div class="c-pts">${regs.length>0?pontos+" pts":"sem registro"}</div>
+          <div class="bonus-tag ${regs.length>0&&pontos>=90?"yes":regs.length>0?"no":""}">
+            ${regs.length>0&&pontos>=90?"🎯 Bônus":regs.length>0?"❌ Abaixo":"—"}
+          </div>
+        </div>
+        <div class="semaf ${cls}"></div>
+      </div>`);
+  });
+
+  document.getElementById("eq-badge").textContent=comReg+" registros";
+  document.getElementById("k-prod").textContent=produtivos+"/"+users.length;
+  document.getElementById("k-prod-sub").textContent=produtivos===users.length?"✅ Toda equipe acima de 90%":"colaboradoras ≥ 90%";
+  document.getElementById("k-prod").className="kpi-val "+(produtivos===users.length?"g":produtivos>0?"a":"r");
+}
+
+function calcColab(regs){
+  if(!regs.length) return {pct:0,pontos:0,done:0,total:TAREFAS_TOTAL};
+  let done=0,pontos=0;
+  regs.forEach(r=>{
+    done+=(r.doneDaily||0)+(r.doneWeekly||0)+(r.doneMonthly||0);
+    pontos+=(r.pontos||0);
+  });
+  const total=TAREFAS_TOTAL*regs.length;
+  return {pct:Math.round(done/total*100),pontos,done,total};
+}
+
+// ── OMIE ──────────────────────────────────────────────────────────
+async function loadOmie(){
+  const url=localStorage.getItem("re_proxy_omie")||"";
+  if(!url){
+    document.getElementById("proxy-status").textContent="Configure a URL do proxy na aba Configurações";
+    return;
+  }
+  try{
+    const res=await fetch(url+"?action=dashboard");
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const d=await res.json();
+    if(!d.ok) throw new Error(d.error||"Erro");
+
+    // KPIs
+    document.getElementById("k-cap").textContent=fmtR(d.cap?.total_aberto);
+    document.getElementById("k-cap-sub").textContent=`⚠️ ${d.cap?.count_atrasado||0} atrasados · ${fmtR(d.cap?.total_atrasado)}`;
+    document.getElementById("k-cap-sub").className="kpi-sub r";
+
+    document.getElementById("k-car").textContent=fmtR(d.car?.total_aberto);
+    document.getElementById("k-car-sub").textContent=`${d.car?.count_aberto||0} títulos em aberto`;
+
+    document.getElementById("k-inad").textContent=fmtR(d.car?.total_inadimpl);
+    document.getElementById("k-inad-sub").textContent=`${d.car?.count_inadimpl||0} clientes`;
+    document.getElementById("k-inad-sub").className="kpi-sub a";
+
+    const capMesEl=document.getElementById("k-cap-mes");
+    capMesEl.textContent=fmtR(d.cap?.total_mes);
+    capMesEl.dataset.val=d.cap?.total_mes||0;
+    document.getElementById("k-cap-mes-sub").textContent=`${d.cap?.count_mes||0} títulos no mês`;
+
+    const carMesEl=document.getElementById("k-car-mes");
+    carMesEl.textContent=fmtR(d.car?.total_mes);
+    carMesEl.dataset.val=d.car?.total_mes||0;
+    document.getElementById("k-car-mes-sub").textContent=`${d.car?.count_mes||0} títulos no mês`;
+
+    updateProjecao();
+
+    // Lista CAP atrasados
+    const caps=d.cap?.top_atrasados||[];
+    document.getElementById("cap-badge").textContent=(d.cap?.count_atrasado||0)+" atrasados";
+    renderContasList("cap-lista", caps, "fornecedor");
+
+    // Lista inadimplentes
+    const inads=d.car?.top_inadimplentes||[];
+    document.getElementById("inad-badge").textContent=(d.car?.count_inadimpl||0)+" clientes";
+    renderContasList("inad-lista", inads, "cliente");
+
+    // Fluxo 10 dias
+    renderFluxo(d.fluxo_10dias||[]);
+
+  }catch(e){
+    document.getElementById("proxy-status").textContent="Erro: "+e.message;
+  }
+}
+
+function renderContasList(elId, items, nomeKey){
+  const el=document.getElementById(elId);
+  if(!items||!items.length){el.innerHTML='<div class="empty">Nenhum registro</div>';return;}
+  const colors=["#C9A84C","#0D9488","#4A9EFF","#FF4C6A","#00C896","#FFB020","#8B5CF6"];
+  el.innerHTML=items.slice(0,8).map(item=>{
+    const nome=item[nomeKey]||"—";
+    const hash=nome.split("").reduce((a,c)=>a+c.charCodeAt(0),0);
+    const color=colors[hash%colors.length];
+    const ini=nome.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+    const cls=item.dias_atraso>30?"r":"a";
+    return `<div class="conta-item">
+      <div class="c-ini" style="background:${color}">${ini}</div>
+      <div class="c-iinfo">
+        <div class="c-iname">${nome}</div>
+        <div class="c-imeta">${item.vencimento||"—"} · ${item.categoria||""}</div>
+      </div>
+      <div class="c-ival">
+        <div class="c-ival-num ${cls}">${fmtR(item.valor)}</div>
+        <div class="c-dias">${item.dias_atraso||0}d em atraso</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderFluxo(fluxo){
+  const el=document.getElementById("fluxo-grid");
+  if(!fluxo||!fluxo.length){el.innerHTML='<div class="empty">Sem dados</div>';return;}
+  const maxV=Math.max(...fluxo.map(f=>Math.max(f.pagar||0,f.receber||0,1)));
+  const maxH=55;
+  el.innerHTML=fluxo.map(f=>{
+    const hP=f.pagar>0?Math.max(3,(f.pagar/maxV)*maxH):0;
+    const hR=f.receber>0?Math.max(3,(f.receber/maxV)*maxH):0;
+    const pos=(f.saldo||0)>=0;
+    return `<div class="fluxo-day">
+      <div class="fluxo-lbl">${f.dia||f.data?.substring(0,5)||"—"}</div>
+      <div class="fluxo-bars">
+        <div class="fluxo-bar p" style="height:${hP}px" title="Pagar: ${fmtR(f.pagar)}"></div>
+        <div class="fluxo-bar r" style="height:${hR}px" title="Receber: ${fmtR(f.receber)}"></div>
+      </div>
+      <div class="fluxo-saldo ${pos?"pos":"neg"}">${pos?"+":""}${((f.saldo||0)/1000).toFixed(1)}k</div>
+    </div>`;
+  }).join("");
+}
+
+// ── COLAB DETAIL ──────────────────────────────────────────────────
+function renderColabDetail(){
+  const date=document.getElementById("view-date").value;
+  const users=getUsers();
+  const grid=document.getElementById("colab-detail-grid");
+  grid.innerHTML="";
+
+  users.forEach(u=>{
+    const regs=JSON.parse(localStorage.getItem("re_reg_"+u.user+"_"+date)||"[]");
+    const {pct,pontos}=calcColab(regs);
+    const cls=regs.length>0?(pct>=90?"g":pct>=70?"a":"r"):"gray";
+    const ini=u.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+
+    // Extras
+    const allExtras={};
+    regs.forEach(r=>(r.extras||[]).forEach(e=>{allExtras[e.label]=(allExtras[e.label]||0)+e.cnt;}));
+    const extraTags=Object.entries(allExtras).map(([label,cnt])=>
+      `<span class="cd-extra-tag">${label}${cnt>1?" ×"+cnt:""}</span>`).join("");
+
+    // Clientes
+    const cliChips=regs.map(r=>{
+      const p=Math.round(((r.doneDaily||0)+(r.doneWeekly||0)+(r.doneMonthly||0))/
+        ((r.totalDaily||8)+(r.totalWeekly||6)+(r.totalMonthly||6))*100);
+      const cc=p>=90?"g":p>=70?"a":"r";
+      return `<span class="cli-chip ${cc}">${r.client} ${p}%</span>`;
+    }).join("");
+
+    const dD=regs.reduce((s,r)=>s+(r.doneDaily||0),0);
+    const dS=regs.reduce((s,r)=>s+(r.doneWeekly||0),0);
+    const dM=regs.reduce((s,r)=>s+(r.doneMonthly||0),0);
+    const tD=regs.length*8,tS=regs.length*6,tM=regs.length*6;
+
+    const log=JSON.parse(localStorage.getItem("re_access_log")||"[]")
+      .filter(l=>l.user===u.user).slice(-2);
+    const lastLogin=log.findLast(l=>l.action==="login");
+    const lastLogout=log.findLast(l=>l.action==="logout");
+
+    grid.insertAdjacentHTML("beforeend",`
+      <div class="cd-card">
+        <div class="cd-header">
+          <div class="cd-avatar" style="background:${u.color}">${ini}</div>
+          <div><div class="cd-name">${u.name}</div><div class="cd-role">${u.role}</div></div>
+          <div class="cd-pct-big" style="color:var(--${cls==="g"?"green":cls==="a"?"amber":cls==="r"?"red":"muted"})">${regs.length>0?pct+"%":"—"}</div>
+        </div>
+        <div class="cd-body">
+          <div class="cd-stat-row"><span class="cd-stat-lbl">Pontos acumulados</span><span class="cd-stat-val">${pontos} pts ${pontos>=90?"🎯 Bônus":"❌ Abaixo da meta"}</span></div>
+          <div class="cd-stat-row"><span class="cd-stat-lbl">Clientes atendidos</span><span class="cd-stat-val">${regs.length}</span></div>
+          ${regs.length>0?`
+          <div class="cd-stat-row"><span class="cd-stat-lbl">Tarefas diárias</span><span class="cd-stat-val">${dD}/${tD}</span></div>
+          <div class="cd-stat-row"><span class="cd-stat-lbl">Tarefas semanais</span><span class="cd-stat-val">${dS}/${tS}</span></div>
+          <div class="cd-stat-row"><span class="cd-stat-lbl">Tarefas mensais</span><span class="cd-stat-val">${dM}/${tM}</span></div>
+          `:""}
+          <div class="cd-stat-row"><span class="cd-stat-lbl">Último login</span><span class="cd-stat-val">${lastLogin?new Date(lastLogin.ts).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"—"}</span></div>
+          <div class="cd-stat-row"><span class="cd-stat-lbl">Último logout</span><span class="cd-stat-val">${lastLogout?new Date(lastLogout.ts).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"—"}</span></div>
+        </div>
+        ${extraTags?`<div class="cd-extras-wrap"><div class="cd-extras-title">⭐ Atividades Extras</div>${extraTags}</div>`:""}
+        ${cliChips?`<div class="cd-clientes">${cliChips}</div>`:""}
+      </div>`);
+  });
+}
+
+// ── REGISTROS E LOG ───────────────────────────────────────────────
+function renderRegistrosLog(){
+  loadRegistrosLog();
+}
+function loadRegistrosLog(){
+  const date=document.getElementById("view-date").value;
+  const users=getUsers();
+
+  // Registros
+  let regHtml="";
+  users.forEach(u=>{
+    const regs=JSON.parse(localStorage.getItem("re_reg_"+u.user+"_"+date)||"[]");
+    regs.forEach(r=>{
+      const p=Math.round(((r.doneDaily||0)+(r.doneWeekly||0)+(r.doneMonthly||0))/
+        ((r.totalDaily||8)+(r.totalWeekly||6)+(r.totalMonthly||6))*100);
+      regHtml+=`<div class="log-row">
+        <span class="log-user">${r.colab||u.name}</span>
+        <span style="font-size:11px;color:var(--muted)">${r.client}</span>
+        <span class="log-action ${p>=90?"login":"logout"}">${r.pontos||0}pts · ${p}%</span>
+        <span class="log-ts">${r.time||"—"}</span>
+      </div>`;
+    });
+  });
+  document.getElementById("registros-lista").innerHTML=regHtml||'<div class="empty">Nenhum registro para esta data</div>';
+
+  // Log de acessos
+  const log=JSON.parse(localStorage.getItem("re_access_log")||"[]").slice(-50).reverse();
+  document.getElementById("log-badge").textContent=log.length+" entradas";
+  document.getElementById("log-lista").innerHTML=log.length?
+    log.map(l=>`<div class="log-row">
+      <span class="log-user">${l.name||l.user}</span>
+      <span class="log-action ${l.action}">${l.action==="login"?"🔓 Entrou":"🔒 Saiu"}</span>
+      <span class="log-ts">${new Date(l.ts).toLocaleString("pt-BR",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}</span>
+    </div>`).join("")
+    :'<div class="empty">Nenhum acesso registrado</div>';
+}
+
+// ── CONFIG ────────────────────────────────────────────────────────
+function loadCfg(){
+  document.getElementById("proxy-omie").value=localStorage.getItem("re_proxy_omie")||"";
+  document.getElementById("proxy-sheets").value=localStorage.getItem("re_proxy_sheets")||"";
+}
+function saveProxyOmie(){
+  localStorage.setItem("re_proxy_omie",document.getElementById("proxy-omie").value.trim());
+  document.getElementById("proxy-status").textContent="✅ Salvo";
+  setTimeout(()=>document.getElementById("proxy-status").textContent="",2000);
+}
+function saveProxySheets(){
+  localStorage.setItem("re_proxy_sheets",document.getElementById("proxy-sheets").value.trim());
+}
+async function testProxy(){
+  const url=document.getElementById("proxy-omie").value.trim();
+  if(!url){document.getElementById("proxy-status").textContent="Cole a URL primeiro";return;}
+  document.getElementById("proxy-status").textContent="Testando...";
+  try{
+    const r=await fetch(url+"?action=ping");
+    const d=await r.json();
+    document.getElementById("proxy-status").textContent=d.ok?"✅ Conectado — "+d.cap_total+" títulos":"❌ Erro: "+d.error;
+  }catch(e){
+    document.getElementById("proxy-status").textContent="❌ Falha: "+e.message;
+  }
+}
+
+function buildUsersCfg(){
+  const users=getUsers();
+  document.getElementById("users-cfg").innerHTML=users.map((u,i)=>`
+    <div class="user-row">
+      <div class="user-row-info">
+        <div class="user-row-name">${u.name}</div>
+        <div class="user-row-user">@${u.user}</div>
+      </div>
+      <input type="password" id="pwd-${i}" placeholder="Nova senha" value="${u.pwd}">
+      <div style="flex:1;min-width:200px">
+        <input type="text" class="clientes-input" id="cli-${i}" value="${u.clientes||""}" placeholder="Cliente1,Cliente2,...">
+        <div class="input-hint">Clientes separados por vírgula</div>
+      </div>
+    </div>`).join("");
+}
+function saveUsers(){
+  const users=getUsers();
+  users.forEach((u,i)=>{
+    const pwd=document.getElementById("pwd-"+i)?.value||u.pwd;
+    const cli=document.getElementById("cli-"+i)?.value||u.clientes;
+    users[i]={...u,pwd,clientes:cli};
+  });
+  localStorage.setItem("re_users",JSON.stringify(users));
+  // Atualiza também no portal da colaboradora
+  const forPortal=users.map(u=>({...u,clientes:u.clientes.split(",").map(s=>s.trim()).filter(Boolean)}));
+  localStorage.setItem("re_users",JSON.stringify(forPortal));
+  const msg=document.getElementById("users-save-msg");
+  msg.textContent="✅ Salvo!";
+  setTimeout(()=>msg.textContent="",2000);
+}
+</script>
+</body>
+</html>
