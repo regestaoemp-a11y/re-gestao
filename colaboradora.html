@@ -299,7 +299,6 @@ body::before {
 option { background:var(--bg3); color:var(--text); }
 </style>
 
-<!-- Firebase SDK -->
 <script type="module">
 import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, push, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -313,44 +312,58 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "1070846495916",
   appId:             "1:1070846495916:web:96052494779011627I2309"
 };
-
 const app = initializeApp(FIREBASE_CONFIG);
 const db  = getDatabase(app);
 
-const PONTOS = {
-  nota_fiscal:2,lancamento:5,cobranca:10,relatorio:15,
-  reuniao_cliente:20,conciliacao:25,visita_cliente:35,
-  organizacao_mes:45,outro:8
-};
+const PONTOS = {nota_fiscal:2,lancamento:5,cobranca:10,relatorio:15,reuniao_cliente:20,conciliacao:25,visita_cliente:35,organizacao_mes:45,outro:8};
 
 function hoje() { return new Date().toISOString().split("T")[0]; }
 function isUtil(ds) { const d=new Date(ds+"T12:00:00"); return d.getDay()!==0&&d.getDay()!==6; }
 function ultimoDiaUtil() {
   let n=1;
-  const base=d=>{const x=new Date();x.setDate(x.getDate()-d);return x.toISOString().split("T")[0];};
-  while(!isUtil(base(n))) n++;
-  return base(n);
+  const b=d=>{ const x=new Date(); x.setDate(x.getDate()-d); return x.toISOString().split("T")[0]; };
+  while(!isUtil(b(n))) n++;
+  return b(n);
 }
 
 let currentUser=null, myEmpresas=[], myActivities=[];
 
-// ── OVERRIDE DO LOGIN com Firebase ──────────────────────
-const origFazerLogin = window.fazerLogin;
+// ── OVERRIDE COMPLETO DO LOGIN ─────────────────────────
 window.fazerLogin = async function() {
-  const usuario = document.getElementById("f-usuario").value.trim().toLowerCase();
-  const senha   = document.getElementById("f-senha").value;
-  const err     = document.getElementById("f-error");
+  // Pega os campos pelo ID correto do HTML
+  const campoUser  = document.getElementById("usuario");
+  const campoSenha = document.getElementById("senha");
+  const errEl      = document.getElementById("login-error");
 
-  if(!usuario||!senha){err.textContent="Preencha usuário e senha.";err.style.display="block";setTimeout(()=>err.style.display="none",3500);return;}
+  if(!campoUser || !campoSenha) {
+    console.error("Campos de login não encontrados"); return;
+  }
+
+  const usuario = campoUser.value.trim().toLowerCase();
+  const senha   = campoSenha.value;
+
+  if(!usuario || !senha) {
+    if(errEl) { errEl.textContent="Preencha usuário e senha."; errEl.style.display="block"; setTimeout(()=>errEl.style.display="none",3500); }
+    return;
+  }
 
   try {
     const snap = await get(ref(db,"colaboradores/"+usuario));
-    if(!snap.exists()){err.textContent="Usuário não encontrado.";err.style.display="block";setTimeout(()=>err.style.display="none",3500);return;}
-    const colab=snap.val();
-    if(colab.status==="inativo"){err.textContent="Acesso bloqueado. Fale com o gestor.";err.style.display="block";return;}
-    if(colab.senha!==senha){err.textContent="Senha incorreta.";err.style.display="block";document.getElementById("f-senha").value="";setTimeout(()=>err.style.display="none",3500);return;}
+    if(!snap.exists()) {
+      if(errEl) { errEl.textContent="Usuário não encontrado."; errEl.style.display="block"; setTimeout(()=>errEl.style.display="none",3500); }
+      return;
+    }
+    const colab = snap.val();
+    if(colab.status==="inativo") {
+      if(errEl) { errEl.textContent="Acesso bloqueado. Fale com o gestor."; errEl.style.display="block"; }
+      return;
+    }
+    if(colab.senha !== senha) {
+      if(errEl) { errEl.textContent="Senha incorreta."; errEl.style.display="block"; campoSenha.value=""; setTimeout(()=>errEl.style.display="none",3500); }
+      return;
+    }
 
-    currentUser={id:usuario,...colab};
+    currentUser = {id:usuario, ...colab};
 
     if(colab.senhaTemporaria) {
       document.getElementById("login-screen").style.display="none";
@@ -358,40 +371,52 @@ window.fazerLogin = async function() {
       return;
     }
 
-    iniciarFirebaseApp();
+    iniciarApp();
   } catch(e) {
-    err.textContent="Erro de conexão. Verifique o Firebase.";err.style.display="block";
-    console.error(e);
+    if(errEl) { errEl.textContent="Erro de conexão. Tente novamente."; errEl.style.display="block"; }
+    console.error("Erro Firebase login:",e);
   }
 };
 
+// ── TROCA DE SENHA ─────────────────────────────────────
 window.trocarSenha = async function() {
-  const ns=document.getElementById("new-pw").value;
-  const ns2=document.getElementById("new-pw2").value;
-  const err=document.getElementById("cpw-error");
-  if(ns.length<6){err.textContent="Mínimo 6 caracteres.";err.style.display="block";return;}
-  if(ns!==ns2){err.textContent="Senhas não coincidem.";err.style.display="block";return;}
-  await set(ref(db,"colaboradores/"+currentUser.id+"/senha"),ns);
-  await set(ref(db,"colaboradores/"+currentUser.id+"/senhaTemporaria"),false);
+  const ns  = document.getElementById("new-pw").value;
+  const ns2 = document.getElementById("new-pw2").value;
+  const err = document.getElementById("cpw-error");
+
+  if(ns.length<6) { err.textContent="Mínimo 6 caracteres."; err.style.display="block"; return; }
+  if(ns!==ns2)    { err.textContent="As senhas não coincidem."; err.style.display="block"; return; }
+
+  await set(ref(db,"colaboradores/"+currentUser.id+"/senha"), ns);
+  await set(ref(db,"colaboradores/"+currentUser.id+"/senhaTemporaria"), false);
   currentUser.senha=ns; currentUser.senhaTemporaria=false;
+
   document.getElementById("change-pw-screen").style.display="none";
-  iniciarFirebaseApp();
+  iniciarApp();
 };
 
-async function iniciarFirebaseApp() {
+// ── INICIA APP ─────────────────────────────────────────
+async function iniciarApp() {
   document.getElementById("login-screen").style.display="none";
-  document.getElementById("change-pw-screen").style.display="none";
   document.getElementById("app-screen").style.display="flex";
 
-  const cor=currentUser.cor||"blue";
-  const cm={blue:"rgba(59,127,245,0.15)|#5a9bff",green:"rgba(16,214,122,0.15)|#10d67a",amber:"rgba(245,166,35,0.15)|#f5a623",purple:"rgba(168,85,247,0.15)|#a855f7"};
-  const [bg,txt]=(cm[cor]||cm.blue).split("|");
-  const initials=currentUser.nome.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-  const av=document.getElementById("u-av");
-  av.textContent=initials;av.style.background=bg;av.style.color=txt;
-  document.getElementById("u-name").textContent=currentUser.nome;
+  // Avatar e nome
+  const cor = currentUser.cor||"blue";
+  const corMap = {
+    blue:  "rgba(59,127,245,0.18)|#5a9bff",
+    green: "rgba(16,214,122,0.18)|#10d67a",
+    amber: "rgba(245,166,35,0.18)|#f5a623",
+    purple:"rgba(168,85,247,0.18)|#a855f7"
+  };
+  const [bg,txt] = (corMap[cor]||corMap.blue).split("|");
+  const initials = currentUser.nome.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+  const av = document.getElementById("u-av");
+  if(av) { av.textContent=initials; av.style.background=bg; av.style.color=txt; }
+  const un = document.getElementById("u-name");
+  if(un) un.textContent = currentUser.nome;
 
-  await set(ref(db,"logins/"+hoje()+"/"+currentUser.id),{timestamp:Date.now(),userId:currentUser.id});
+  // Registra login
+  await set(ref(db,"logins/"+hoje()+"/"+currentUser.id), {timestamp:Date.now(), userId:currentUser.id});
 
   await carregarMinhasEmpresas();
   carregarMinhasAtividades();
@@ -400,145 +425,181 @@ async function iniciarFirebaseApp() {
   window.atualizarPts();
 }
 
+// ── EMPRESAS ───────────────────────────────────────────
 async function carregarMinhasEmpresas() {
-  const atribSnap=await get(ref(db,"colaboradores/"+currentUser.id+"/empresas"));
-  const atrib=atribSnap.val()||{};
-  const empSnap=await get(ref(db,"empresas"));
-  const todasEmp=empSnap.val()||{};
-  myEmpresas=[];
+  const atribSnap = await get(ref(db,"colaboradores/"+currentUser.id+"/empresas"));
+  const atrib     = atribSnap.val()||{};
+  const empSnap   = await get(ref(db,"empresas"));
+  const todasEmp  = empSnap.val()||{};
+
+  myEmpresas = [];
   Object.entries(todasEmp).forEach(([eid,e])=>{
-    if(e.status!=="inativo"&&atrib[eid]) myEmpresas.push({id:eid,...e});
+    if(e.status!=="inativo" && atrib[eid]) myEmpresas.push({id:eid,...e});
   });
-  const sel=document.getElementById("empresa-sel");
+
+  const sel = document.getElementById("empresa-sel");
   if(sel) {
-    sel.innerHTML="<option value=\"\">Selecione a empresa</option>";
-    myEmpresas.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nome}</option>`;});
+    sel.innerHTML = '<option value="">Selecione a empresa</option>';
+    myEmpresas.forEach(e=>{ sel.innerHTML+=`<option value="${e.id}">${e.nome}</option>`; });
   }
 }
 
+// ── ALERTAS DE MOVIMENTAÇÃO ────────────────────────────
 async function verificarAlertasMovimentacao() {
   if(!myEmpresas.length) return;
-  const uldKey=ultimoDiaUtil();
-  const actSnap=await get(ref(db,"atividades/"+uldKey+"/"+currentUser.id));
-  const ativsDia=actSnap.val()||{};
-  const movidas=new Set();
-  Object.values(ativsDia).forEach(a=>{if(a.empresa) movidas.add(a.empresa);});
-  const sem=myEmpresas.filter(e=>!movidas.has(e.id));
-  const alertDiv=document.getElementById("mov-alert");
-  if(alertDiv) {
-    if(sem.length>0){
-      alertDiv.style.display="flex";
-      const nomes=sem.slice(0,3).map(e=>e.nome).join(", ");
-      const extra=sem.length>3?" e mais "+(sem.length-3):"";
-      document.getElementById("mov-alert-text").textContent=sem.length+" empresa(s) sem movimentação no último dia útil: "+nomes+extra;
-    } else { alertDiv.style.display="none"; }
+  const uldKey  = ultimoDiaUtil();
+  const actSnap = await get(ref(db,"atividades/"+uldKey+"/"+currentUser.id));
+  const ativsDia = actSnap.val()||{};
+  const movidas  = new Set();
+  Object.values(ativsDia).forEach(a=>{ if(a.empresa) movidas.add(a.empresa); });
+  const sem = myEmpresas.filter(e=>!movidas.has(e.id));
+
+  const alertDiv = document.getElementById("mov-alert");
+  const alertTxt = document.getElementById("mov-alert-text");
+  if(alertDiv && sem.length>0) {
+    alertDiv.style.display="flex";
+    const nomes = sem.slice(0,3).map(e=>e.nome).join(", ");
+    const extra = sem.length>3?" e mais "+(sem.length-3):"";
+    if(alertTxt) alertTxt.textContent = sem.length+" empresa(s) sem movimentação no último dia útil: "+nomes+extra;
   }
 }
 
+// ── ATIVIDADES ─────────────────────────────────────────
 function carregarMinhasAtividades() {
-  const actRef=ref(db,"atividades/"+hoje()+"/"+currentUser.id);
-  onValue(actRef,snap=>{
-    const data=snap.val()||{};
-    myActivities=Object.entries(data).map(([id,v])=>Object.assign({},v,{id}));
+  onValue(ref(db,"atividades/"+hoje()+"/"+currentUser.id), snap=>{
+    const data = snap.val()||{};
+    myActivities = Object.entries(data).map(([id,v])=>Object.assign({},v,{id}));
     myActivities.sort((a,b)=>b.timestamp-a.timestamp);
-    const totalPts=myActivities.reduce((s,a)=>s+(PONTOS[a.tipo]||8)*(a.quantidade||1),0);
-    updateScoreFirebase(totalPts);
-    renderFeedFirebase();
+    const totalPts = myActivities.reduce((s,a)=>s+(PONTOS[a.tipo]||8)*(a.quantidade||1),0);
+    updateScore(totalPts);
+    renderFeed();
   });
 }
 
-// Override registrar
+// ── REGISTRAR ──────────────────────────────────────────
 window.registrar = async function() {
-  const tipo=document.getElementById("tipo").value;
-  const desc=document.getElementById("descricao").value.trim();
-  const qtd=parseInt(document.getElementById("quantidade").value)||1;
-  const empresa=document.getElementById("empresa-sel").value;
-  const obs=document.getElementById("obs").value.trim();
-  if(!desc){showMsg("Descreva a atividade.","err");return;}
-  if(!empresa){showMsg("Selecione a empresa.","err");return;}
-  const pts=(PONTOS[tipo]||8)*qtd;
+  const tipo    = document.getElementById("tipo").value;
+  const desc    = document.getElementById("descricao").value.trim();
+  const qtd     = parseInt(document.getElementById("quantidade").value)||1;
+  const empresa = document.getElementById("empresa-sel") ? document.getElementById("empresa-sel").value : "";
+  const obs     = document.getElementById("obs").value.trim();
+
+  if(!desc)    { showMsg("Descreva a atividade.","err"); return; }
+  if(!empresa) { showMsg("Selecione a empresa.","err"); return; }
+
+  const pts = (PONTOS[tipo]||8)*qtd;
   try {
-    await push(ref(db,"atividades/"+hoje()+"/"+currentUser.id),{
-      tipo,descricao:desc,quantidade:qtd,empresa,obs,
-      pontos:pts,timestamp:Date.now(),userId:currentUser.id
+    await push(ref(db,"atividades/"+hoje()+"/"+currentUser.id), {
+      tipo, descricao:desc, quantidade:qtd,
+      empresa, obs, pontos:pts,
+      timestamp:Date.now(), userId:currentUser.id
     });
     showMsg("✓ Registrado! +"+pts+" pontos","ok");
     document.getElementById("descricao").value="";
     document.getElementById("quantidade").value="1";
-    document.getElementById("empresa-sel").value="";
+    if(document.getElementById("empresa-sel")) document.getElementById("empresa-sel").value="";
     document.getElementById("obs").value="";
     window.atualizarPts();
-  } catch(e) { showMsg("Erro ao salvar.","err"); console.error(e); }
+  } catch(e) { showMsg("Erro ao salvar. Verifique conexão.","err"); console.error(e); }
 };
 
-const ICON_MAP={nota_fiscal:"NF",lancamento:"LC",cobranca:"CB",relatorio:"RL",reuniao_cliente:"RN",conciliacao:"CC",visita_cliente:"VS",organizacao_mes:"OM",outro:"AT"};
-const TIPO_NOME={nota_fiscal:"Nota Fiscal",lancamento:"Lançamento",cobranca:"Cobrança",relatorio:"Relatório",reuniao_cliente:"Reunião c/ cliente",conciliacao:"Conciliação",visita_cliente:"Visita ao cliente",organizacao_mes:"Organização mês ant.",outro:"Outra atividade"};
-const ICON_CLR={nota_fiscal:["rgba(59,127,245,.15)","#5a9bff"],lancamento:["rgba(59,127,245,.1)","#818cf8"],cobranca:["rgba(245,166,35,.12)","#f5a623"],relatorio:["rgba(16,214,122,.1)","#6ee7b7"],reuniao_cliente:["rgba(16,214,122,.14)","#10d67a"],conciliacao:["rgba(59,127,245,.12)","#818cf8"],visita_cliente:["rgba(168,85,247,.12)","#a855f7"],organizacao_mes:["rgba(245,166,35,.14)","#fbbf24"],outro:["rgba(255,255,255,.06)","rgba(220,232,255,.4)"]};
+window.atualizarPts = function() {
+  const tipo = document.getElementById("tipo") ? document.getElementById("tipo").value : "nota_fiscal";
+  const qtd  = parseInt(document.getElementById("quantidade") ? document.getElementById("quantidade").value : "1")||1;
+  const el   = document.getElementById("pts-prev");
+  if(el) el.textContent = "+"+((PONTOS[tipo]||8)*qtd)+" pts";
+};
 
-function updateScoreFirebase(totalPts) {
-  const pct=Math.min(totalPts/200,1);
-  const ring=document.getElementById("score-ring");
-  if(!ring) return;
-  ring.style.strokeDashoffset=226.2*(1-pct);
-  document.getElementById("score-val").textContent=totalPts;
-  document.getElementById("si-bar").style.width=Math.min(pct*100,100)+"%";
-  let lvl="Iniciando",cor="var(--amber)";
-  if(totalPts>=150){lvl="Excelente! 🏆";cor="var(--green)";}
-  else if(totalPts>=100){lvl="Muito bom! ✓";cor="var(--blue2)";}
-  else if(totalPts>=50){lvl="Bom ritmo";cor="var(--purple)";}
-  const el=document.getElementById("si-lvl");
-  if(el){el.textContent=lvl;el.style.color=cor;}
-  ring.style.stroke=cor;
-  document.getElementById("si-bar").style.background=cor;
+// ── SCORE ──────────────────────────────────────────────
+function updateScore(totalPts) {
+  const pct  = Math.min(totalPts/200,1);
+  const ring = document.getElementById("score-ring");
+  if(ring) { ring.style.strokeDashoffset=226.2*(1-pct); }
+  const sv = document.getElementById("score-val");
+  if(sv) sv.textContent=totalPts;
+  const sb = document.getElementById("si-bar");
+  if(sb) sb.style.width=Math.min(pct*100,100)+"%";
+
+  let lvl="Iniciando", cor="var(--amber)";
+  if(totalPts>=150) { lvl="Excelente! 🏆"; cor="var(--green)"; }
+  else if(totalPts>=100) { lvl="Muito bom! ✓"; cor="var(--blue2)"; }
+  else if(totalPts>=50)  { lvl="Bom ritmo"; cor="var(--purple)"; }
+
+  const sl = document.getElementById("si-lvl");
+  if(sl) { sl.textContent=lvl; sl.style.color=cor; }
+  if(ring) ring.style.stroke=cor;
+  if(sb) sb.style.background=cor;
 }
 
-function renderFeedFirebase() {
-  const empty=document.getElementById("feed-empty");
-  const list=document.getElementById("feed-list");
-  const cnt=document.getElementById("feed-count");
-  if(!myActivities.length){if(empty)empty.style.display="block";if(list)list.innerHTML="";if(cnt)cnt.style.display="none";return;}
-  if(empty)empty.style.display="none";
-  if(cnt){cnt.style.display="block";cnt.textContent=myActivities.length+" registro"+(myActivities.length>1?"s":"");}
-  if(list) list.innerHTML=myActivities.map(a=>{
-    const [bg,clr]=ICON_CLR[a.tipo]||ICON_CLR["outro"];
-    const hora=new Date(a.timestamp).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-    const pts=a.pontos||(PONTOS[a.tipo]||8)*(a.quantidade||1);
-    const empNome=myEmpresas.find(e=>e.id===a.empresa)?.nome||a.empresa||"";
-    return `<div class="act-item"><div class="act-icon" style="background:${bg};color:${clr}">${ICON_MAP[a.tipo]||"AT"}</div><div class="act-body"><div class="act-tp">${TIPO_NOME[a.tipo]||"Atividade"}${a.quantidade>1?" · "+a.quantidade+"×":""}</div><div class="act-ds">${a.descricao}${empNome?" · "+empNome:""}</div>${a.obs?`<div class="act-ob">${a.obs}</div>`:""}<div class="act-meta"><span class="act-ti">${hora}</span><span class="act-pt">+${pts} pts</span></div></div></div>`;
+// ── FEED ───────────────────────────────────────────────
+const ICON_MAP  = {nota_fiscal:"NF",lancamento:"LC",cobranca:"CB",relatorio:"RL",reuniao_cliente:"RN",conciliacao:"CC",visita_cliente:"VS",organizacao_mes:"OM",outro:"AT"};
+const TIPO_NOME = {nota_fiscal:"Nota Fiscal",lancamento:"Lançamento",cobranca:"Cobrança",relatorio:"Relatório",reuniao_cliente:"Reunião c/ cliente",conciliacao:"Conciliação",visita_cliente:"Visita ao cliente",organizacao_mes:"Organização mês ant.",outro:"Outra atividade"};
+const ICON_CLR  = {nota_fiscal:["rgba(59,127,245,.15)","#5a9bff"],lancamento:["rgba(59,127,245,.1)","#818cf8"],cobranca:["rgba(245,166,35,.12)","#f5a623"],relatorio:["rgba(16,214,122,.1)","#6ee7b7"],reuniao_cliente:["rgba(16,214,122,.14)","#10d67a"],conciliacao:["rgba(59,127,245,.12)","#818cf8"],visita_cliente:["rgba(168,85,247,.12)","#a855f7"],organizacao_mes:["rgba(245,166,35,.14)","#fbbf24"],outro:["rgba(255,255,255,.06)","rgba(220,232,255,.4)"]};
+
+function renderFeed() {
+  const empty = document.getElementById("feed-empty");
+  const list  = document.getElementById("feed-list");
+  const cnt   = document.getElementById("feed-count");
+  if(!myActivities.length) {
+    if(empty) empty.style.display="block";
+    if(list)  list.innerHTML="";
+    if(cnt)   cnt.style.display="none";
+    return;
+  }
+  if(empty) empty.style.display="none";
+  if(cnt)   { cnt.style.display="block"; cnt.textContent=myActivities.length+" registro"+(myActivities.length>1?"s":""); }
+  if(list) list.innerHTML = myActivities.map(a=>{
+    const [bg,clr] = ICON_CLR[a.tipo]||ICON_CLR["outro"];
+    const hora = new Date(a.timestamp).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+    const pts  = a.pontos||(PONTOS[a.tipo]||8)*(a.quantidade||1);
+    const empNome = myEmpresas.find(e=>e.id===a.empresa)?.nome||a.empresa||"";
+    return `<div class="act-item">
+      <div class="act-icon" style="background:${bg};color:${clr}">${ICON_MAP[a.tipo]||"AT"}</div>
+      <div class="act-body">
+        <div class="act-tp">${TIPO_NOME[a.tipo]||"Atividade"}${a.quantidade>1?" · "+a.quantidade+"×":""}</div>
+        <div class="act-ds">${a.descricao}${empNome?" · "+empNome:""}</div>
+        ${a.obs?`<div class="act-ob">${a.obs}</div>`:""}
+        <div class="act-meta"><span class="act-ti">${hora}</span><span class="act-pt">+${pts} pts</span></div>
+      </div></div>`;
   }).join("");
 }
 
-function showMsg(msg,tipo){const el=document.getElementById("msg-box");if(!el)return;el.textContent=msg;el.className="msg-box msg-"+tipo;el.style.display="block";setTimeout(()=>el.style.display="none",3500);}
-
-function startClock(){
-  function tick(){
-    const n=new Date();
-    const hc=document.getElementById("hclock");if(hc)hc.textContent=n.toLocaleTimeString("pt-BR");
-    const hd=document.getElementById("hdate");if(hd)hd.textContent=n.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});
-    const ft=document.getElementById("fc-time");if(ft)ft.textContent=n.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-  }
-  tick();setInterval(tick,1000);
+function showMsg(msg,tipo) {
+  const el=document.getElementById("msg-box");
+  if(!el) return;
+  el.textContent=msg; el.className="msg-box msg-"+tipo; el.style.display="block";
+  setTimeout(()=>el.style.display="none",3500);
 }
+
+function startClock() {
+  function tick() {
+    const n=new Date();
+    const hc=document.getElementById("hclock"); if(hc) hc.textContent=n.toLocaleTimeString("pt-BR");
+    const hd=document.getElementById("hdate");  if(hd) hd.textContent=n.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});
+    const ft=document.getElementById("fc-time");if(ft) ft.textContent=n.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  }
+  tick(); setInterval(tick,1000);
+}
+
+window.fazerLogout = function() { location.reload(); };
 </script>
 </head>
 <body>
 
-<!-- TROCA DE SENHA (primeiro acesso) -->
 <div id="change-pw-screen" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px;z-index:9998;background:rgba(2,4,13,0.97);backdrop-filter:blur(20px);">
-  <div style="width:380px;background:rgba(8,13,28,0.95);border:1px solid rgba(59,127,245,0.22);border-radius:18px;padding:32px 36px;backdrop-filter:blur(24px);">
-    <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Primeiro acesso</div>
-    <div style="font-size:10px;color:var(--amber);font-family:var(--mono);margin-bottom:20px;padding:8px 12px;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.18);border-radius:8px;">⚠ Você está usando uma senha temporária.<br>Crie sua senha pessoal para continuar.</div>
-    <label style="display:block;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:6px;">Nova senha (mínimo 6 caracteres)</label>
-    <input type="password" id="new-pw" placeholder="••••••" maxlength="30" style="width:100%;background:rgba(6,10,25,.8);border:1px solid rgba(59,127,245,0.12);border-radius:9px;padding:11px 14px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;margin-bottom:12px;">
-    <label style="display:block;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:6px;">Confirmar nova senha</label>
-    <input type="password" id="new-pw2" placeholder="••••••" maxlength="30" style="width:100%;background:rgba(6,10,25,.8);border:1px solid rgba(59,127,245,0.12);border-radius:9px;padding:11px 14px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;margin-bottom:12px;" onkeydown="if(event.key==='Enter') trocarSenha()">
-    <button onclick="trocarSenha()" style="width:100%;border:none;border-radius:9px;padding:13px;font-size:10px;font-weight:600;color:#fff;cursor:pointer;font-family:var(--mono);letter-spacing:2.5px;text-transform:uppercase;background:linear-gradient(135deg,#1a50c8,#2d3ac8);">→ Definir minha senha</button>
-    <div id="cpw-error" style="display:none;margin-top:10px;background:rgba(240,62,62,0.1);border:1px solid rgba(240,62,62,0.2);border-radius:8px;padding:8px 12px;font-size:10px;font-family:var(--mono);color:#f87171;text-align:center;"></div>
+  <div style="width:380px;background:rgba(8,13,28,0.95);border:1px solid rgba(59,127,245,0.22);border-radius:18px;padding:32px 36px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:10px;color:#dce8ff">Primeiro acesso</div>
+    <div style="font-size:10px;color:#f5a623;font-family:'DM Mono',monospace;margin-bottom:20px;padding:8px 12px;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.18);border-radius:8px;">⚠ Você está usando uma senha temporária. Crie sua senha pessoal para continuar.</div>
+    <label style="display:block;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:rgba(220,232,255,0.25);font-family:'DM Mono',monospace;margin-bottom:6px;">Nova senha (mínimo 6 caracteres)</label>
+    <input type="password" id="new-pw" placeholder="••••••" maxlength="30" style="width:100%;background:rgba(6,10,25,.8);border:1px solid rgba(59,127,245,0.12);border-radius:9px;padding:11px 14px;font-size:13px;color:#dce8ff;font-family:'DM Mono',monospace;outline:none;margin-bottom:12px;">
+    <label style="display:block;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:rgba(220,232,255,0.25);font-family:'DM Mono',monospace;margin-bottom:6px;">Confirmar nova senha</label>
+    <input type="password" id="new-pw2" placeholder="••••••" maxlength="30" style="width:100%;background:rgba(6,10,25,.8);border:1px solid rgba(59,127,245,0.12);border-radius:9px;padding:11px 14px;font-size:13px;color:#dce8ff;font-family:'DM Mono',monospace;outline:none;margin-bottom:12px;" onkeydown="if(event.key==='Enter') trocarSenha()">
+    <button onclick="trocarSenha()" style="width:100%;border:none;border-radius:9px;padding:13px;font-size:10px;font-weight:600;color:#fff;cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:2.5px;text-transform:uppercase;background:linear-gradient(135deg,#1a50c8,#2d3ac8);">→ Definir minha senha</button>
+    <div id="cpw-error" style="display:none;margin-top:10px;background:rgba(240,62,62,0.1);border:1px solid rgba(240,62,62,0.2);border-radius:8px;padding:8px 12px;font-size:10px;font-family:'DM Mono',monospace;color:#f87171;text-align:center;"></div>
   </div>
 </div>
 
-<!-- ALERTA MOVIMENTAÇÃO -->
-<div id="mov-alert" style="display:none;align-items:center;gap:12px;background:rgba(240,62,62,.07);border:1px solid rgba(240,62,62,.2);border-left:3px solid var(--red);border-radius:10px;padding:10px 16px;margin:14px 24px 0;font-size:11px;color:#f87171;font-family:var(--mono);">
+<div id="mov-alert" style="display:none;align-items:center;gap:12px;background:rgba(240,62,62,.07);border:1px solid rgba(240,62,62,.2);border-left:3px solid #f03e3e;border-radius:10px;padding:10px 16px;margin:14px 24px 0;font-size:11px;color:#f87171;font-family:'DM Mono',monospace;">
   <span style="font-size:14px;flex-shrink:0">⚠</span>
   <span id="mov-alert-text"></span>
 </div>
@@ -665,6 +726,13 @@ function startClock(){
             <option value="visita_cliente">Visita ao cliente · 35 pts</option>
             <option value="organizacao_mes">Organização mês anterior · 45 pts</option>
             <option value="outro">Outra atividade · 8 pts</option>
+          </select>
+        </div>
+        
+        <div class="fg">
+          <label class="fl">Empresa <span style="color:var(--red);opacity:.7">*</span></label>
+          <select class="fi" id="empresa-sel">
+            <option value="">Selecione a empresa</option>
           </select>
         </div>
         <div class="fg">
