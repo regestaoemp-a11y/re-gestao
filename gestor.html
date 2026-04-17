@@ -8,6 +8,7 @@
 
 <!-- Firebase SDK -->
 <script type="module">
+
 import { initializeApp }       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
@@ -328,6 +329,421 @@ function setKPI(id, val) {
 function formatBRL(n) {
   return 'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
 }
+
+
+// ════════════════════════════════════════════════════════
+// MÓDULO DE CONFIGURAÇÕES — integrado ao gestor
+// ════════════════════════════════════════════════════════
+
+
+// ── HELPERS ──────────────────────────────────────────────
+function hoje() { return new Date().toISOString().split("T")[0]; }
+function isUtil(ds) { const d=new Date(ds+"T12:00:00"); return d.getDay()!==0&&d.getDay()!==6; }
+function ultimoDiaUtil() {
+  let n=1;
+  const b=d=>{const x=new Date();x.setDate(x.getDate()-d);return x.toISOString().split("T")[0];};
+  while(!isUtil(b(n))) n++;
+  return b(n);
+}
+function gerarSenhaTemp() {
+  return "RE-"+Math.floor(1000+Math.random()*9000);
+}
+const COR_MAP = {
+  blue:  {bg:"rgba(59,127,245,0.15)",txt:"#5a9bff"},
+  green: {bg:"rgba(16,214,122,0.15)",txt:"#10d67a"},
+  amber: {bg:"rgba(245,166,35,0.15)", txt:"#f5a623"},
+  purple:{bg:"rgba(168,85,247,0.15)",txt:"#a855f7"},
+  red:   {bg:"rgba(240,62,62,0.15)", txt:"#f87171"}
+};
+
+// ── CARREGAR TUDO AO INICIAR ──────────────────────────────
+window.addEventListener("DOMContentLoaded", ()=>{
+  carregarColaboradores();
+  carregarEmpresas();
+  carregarAtribuicoes();
+  carregarAlertas();
+});
+
+// ══ COLABORADORES ═════════════════════════════════════════
+
+async function carregarColaboradores() {
+  const snap = await get(ref(db,"colaboradores"));
+  const data = snap.val()||{};
+  renderColaboradores(data);
+  document.getElementById("colab-count").textContent = Object.keys(data).filter(k=>data[k].status!=="inativo").length+" cadastradas";
+}
+
+function renderColaboradores(data) {
+  const list = document.getElementById("colab-list");
+  if(!list) return;
+  const entries = Object.entries(data);
+  if(!entries.length) { list.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">Nenhuma colaboradora cadastrada ainda.</div>'; return; }
+
+  list.innerHTML = entries.map(([uid,c])=>{
+    const cor = COR_MAP[c.cor||"blue"];
+    const initials = c.nome.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+    const statusBadge = c.status==="inativo"
+      ? `<span class="badge br">● Desativada · acesso bloqueado</span>`
+      : c.senhaTemporaria
+        ? `<span class="badge ba" style="animation:blink 1.5s infinite">⚠ Senha temporária · aguardando 1º acesso</span>`
+        : `<span class="badge bg">● Ativa</span>`;
+    const opacity = c.status==="inativo" ? "opacity:.4;" : "";
+    return `<div class="item-row" style="${opacity}">
+      <div class="item-av" style="background:${cor.bg};color:${cor.txt}">${initials}</div>
+      <div class="item-info">
+        <div class="item-name" style="${c.status==="inativo"?"text-decoration:line-through":""}">${c.nome}</div>
+        <div class="item-sub">${uid} · ${c.cargo||""}</div>
+        <div class="item-badges">${statusBadge}</div>
+      </div>
+      <div class="item-actions">
+        ${c.status!=="inativo"
+          ? `<button class="btn btn-ghost btn-sm" onclick="resetarSenha('${uid}','${c.nome}')">Resetar senha</button>
+             <button class="btn btn-danger btn-sm" onclick="desativarColab('${uid}')">Desativar</button>`
+          : `<button class="btn btn-ghost btn-sm" onclick="reativarColab('${uid}')">Reativar</button>`}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+window.adicionarColab = async function() {
+  const nome  = document.getElementById("nc-nome").value.trim();
+  const cargo = document.getElementById("nc-cargo").value.trim();
+  const uid   = document.getElementById("nc-user").value.trim().toLowerCase().replace(/\s+/g,".").replace(/[^a-z0-9.]/g,"");
+  const cor   = document.getElementById("nc-cor").value;
+  const msg   = document.getElementById("msg-colab");
+
+  if(!nome||!uid) { showFeedback(msg,"Preencha nome e usuário.","err"); return; }
+
+  const snap = await get(ref(db,"colaboradores/"+uid));
+  if(snap.exists()) { showFeedback(msg,"Usuário já existe.","err"); return; }
+
+  const senha = gerarSenhaTemp();
+  await set(ref(db,"colaboradores/"+uid), {
+    nome,cargo,cor,status:"ativo",
+    senha, senhaTemporaria:true,
+    criadoEm: Date.now()
+  });
+
+  // Mostra senha gerada
+  document.getElementById("sg-val").textContent = senha;
+  document.getElementById("sg-badge-info").style.display = "block";
+  showFeedback(msg,"✓ "+nome+" adicionada! Senha temporária: "+senha,"ok");
+  document.getElementById("nc-nome").value="";
+  document.getElementById("nc-cargo").value="";
+  document.getElementById("nc-user").value="";
+  carregarColaboradores();
+  carregarAtribuicoes();
+};
+
+window.desativarColab = async function(uid) {
+  if(!confirm("Desativar "+uid+"? O acesso será bloqueado imediatamente.")) return;
+  await set(ref(db,"colaboradores/"+uid+"/status"),"inativo");
+  carregarColaboradores();
+};
+
+window.reativarColab = async function(uid) {
+  await set(ref(db,"colaboradores/"+uid+"/status"),"ativo");
+  carregarColaboradores();
+};
+
+window.resetarSenha = async function(uid, nome) {
+  const nova = gerarSenhaTemp();
+  await set(ref(db,"colaboradores/"+uid+"/senha"), nova);
+  await set(ref(db,"colaboradores/"+uid+"/senhaTemporaria"), true);
+  document.getElementById("modal-senha").textContent = nova;
+  document.getElementById("modal-nome").textContent  = nome;
+  document.getElementById("modal-reset").style.display = "flex";
+};
+
+window.fecharModal = function() { document.getElementById("modal-reset").style.display="none"; };
+window.copiarSenha = function() {
+  const s = document.getElementById("modal-senha").textContent;
+  navigator.clipboard.writeText(s).catch(()=>{});
+  fecharModal();
+};
+
+window.gerarSenha = function() {
+  const uid = document.getElementById("nc-user").value.trim();
+  document.getElementById("sg-val").textContent = uid ? gerarSenhaTemp() : "—";
+};
+
+// ══ EMPRESAS ══════════════════════════════════════════════
+
+async function carregarEmpresas() {
+  const snap = await get(ref(db,"empresas"));
+  const data = snap.val()||{};
+  renderEmpresas(data);
+
+  const count = Object.keys(data).filter(k=>data[k].status!=="inativo").length;
+  const el=document.getElementById("emp-count");
+  if(el) el.textContent = count+" empresas";
+}
+
+async function renderEmpresas(data) {
+  const list = document.getElementById("emp-list");
+  if(!list) return;
+  const uldKey = ultimoDiaUtil();
+  const actSnap = await get(ref(db,"atividades/"+uldKey));
+  const ativs = actSnap.val()||{};
+
+  // Quais empresas tiveram movimento
+  const movidas = new Set();
+  Object.values(ativs).forEach(userActs=>{
+    Object.values(userActs).forEach(a=>{ if(a.empresa) movidas.add(a.empresa); });
+  });
+
+  const entries = Object.entries(data).filter(([,e])=>e.status!=="inativo");
+  if(!entries.length) { list.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">Nenhuma empresa cadastrada ainda.</div>'; return; }
+
+  list.innerHTML = entries.map(([eid,e])=>{
+    const ok = movidas.has(eid);
+    const badge = ok
+      ? `<span class="badge bg">✓ Movimento hoje</span>`
+      : `<span class="badge br">⚠ Sem movimento</span>`;
+    return `<div class="item-row">
+      <div class="item-info">
+        <div class="item-name">${e.nome}</div>
+        <div class="item-sub">${e.segmento||""} · ID: ${eid}</div>
+        <div class="item-badges">${badge}</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn btn-danger btn-sm" onclick="removerEmpresa('${eid}','${e.nome}')">Remover</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+window.adicionarEmpresa = async function() {
+  const nome  = document.getElementById("emp-nome").value.trim();
+  const cnpj  = document.getElementById("emp-cnpj").value.trim();
+  const segmento = document.getElementById("emp-segmento").value;
+  const msgEl = document.getElementById("msg-emp");
+
+  if(!nome) { showFeedback(msgEl,"Preencha o nome da empresa.","err"); return; }
+
+  const uid = nome.toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"").substring(0,30)+"_"+Date.now().toString().slice(-4);
+  await set(ref(db,"empresas/"+uid),{ nome, cnpj, segmento, status:"ativo", criadoEm:Date.now() });
+
+  showFeedback(msgEl,"✓ Empresa adicionada com sucesso!","ok");
+  document.getElementById("emp-nome").value="";
+  document.getElementById("emp-cnpj").value="";
+  carregarEmpresas();
+  carregarAtribuicoes();
+};
+
+window.removerEmpresa = async function(eid, nome) {
+  if(!confirm("Remover empresa "+nome+"?")) return;
+  await set(ref(db,"empresas/"+eid+"/status"),"inativo");
+  carregarEmpresas();
+};
+
+// ══ ATRIBUIÇÕES ═══════════════════════════════════════════
+
+let atribState = { selectedColab: null, colab:{}, empresas:{} };
+
+async function carregarAtribuicoes() {
+  const [cs,es] = await Promise.all([
+    get(ref(db,"colaboradores")),
+    get(ref(db,"empresas"))
+  ]);
+  atribState.colab   = cs.val()||{};
+  atribState.empresas = Object.fromEntries(
+    Object.entries(es.val()||{}).filter(([,e])=>e.status!=="inativo")
+  );
+  renderAtribColabs();
+  renderAtribResumo();
+}
+
+function renderAtribColabs() {
+  const sel = document.getElementById("atrib-colab-sel");
+  if(!sel) return;
+  const ativos = Object.entries(atribState.colab).filter(([,c])=>c.status!=="inativo");
+  sel.innerHTML = ativos.map(([uid,c])=>{
+    const cor = COR_MAP[c.cor||"blue"];
+    const sel2 = atribState.selectedColab===uid;
+    const initials = c.nome.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+    return `<div class="colab-chip${sel2?" selected":""}" onclick="selecionarColabAtrib('${uid}')"
+      style="${sel2?`border-color:${cor.txt};color:${cor.txt};background:rgba(59,127,245,0.08)`:""}" >
+      <div class="chip-av" style="background:${cor.bg};color:${cor.txt}">${initials}</div>
+      ${c.nome.split(" ")[0]}
+    </div>`;
+  }).join("");
+
+  if(ativos.length && !atribState.selectedColab) {
+    atribState.selectedColab = ativos[0][0];
+    renderAtribEmpresas();
+  }
+}
+
+window.selecionarColabAtrib = function(uid) {
+  atribState.selectedColab = uid;
+  renderAtribColabs();
+  renderAtribEmpresas();
+};
+
+function renderAtribEmpresas() {
+  const uid = atribState.selectedColab;
+  if(!uid) return;
+  const colab = atribState.colab[uid];
+  const atrib = colab?.empresas||{};
+  const list  = document.getElementById("atrib-emp-list");
+  const title = document.getElementById("atrib-emp-title");
+  const count = document.getElementById("atrib-emp-count");
+  if(!list) return;
+
+  const entries = Object.entries(atribState.empresas);
+  const selCount = entries.filter(([eid])=>atrib[eid]).length;
+  if(title) title.textContent = "Empresas de "+colab.nome.split(" ")[0];
+  if(count) count.textContent = selCount+" selecionadas";
+
+  list.innerHTML = entries.map(([eid,e])=>{
+    const isAtrib = !!atrib[eid];
+    return `<div class="empresa-chip${isAtrib?" atribuida":""}" onclick="toggleAtrib('${uid}','${eid}','${e.nome}')">
+      <span class="ec-name">${e.nome}</span>
+      <div class="ec-check">${isAtrib?"✓":""}</div>
+    </div>`;
+  }).join("") || '<div style="text-align:center;padding:16px;color:var(--text3);font-family:var(--mono);font-size:10px">Nenhuma empresa cadastrada</div>';
+}
+
+window.toggleAtrib = async function(uid, eid, ename) {
+  const colab = atribState.colab[uid];
+  const atrib = colab?.empresas||{};
+  const isSet = !!atrib[eid];
+
+  if(isSet) {
+    await set(ref(db,"colaboradores/"+uid+"/empresas/"+eid), null);
+    delete atribState.colab[uid].empresas[eid];
+  } else {
+    await set(ref(db,"colaboradores/"+uid+"/empresas/"+eid), true);
+    if(!atribState.colab[uid].empresas) atribState.colab[uid].empresas={};
+    atribState.colab[uid].empresas[eid] = true;
+  }
+  renderAtribEmpresas();
+  renderAtribResumo();
+};
+
+function renderAtribResumo() {
+  const list = document.getElementById("atrib-resumo-list");
+  if(!list) return;
+  const ativos = Object.entries(atribState.colab).filter(([,c])=>c.status!=="inativo");
+  list.innerHTML = ativos.map(([uid,c])=>{
+    const cor = COR_MAP[c.cor||"blue"];
+    const initials = c.nome.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+    const atrib = c.empresas||{};
+    const empNomes = Object.keys(atrib)
+      .map(eid=>atribState.empresas[eid]?.nome)
+      .filter(Boolean)
+      .map(n=>`<span class="ar-empresa">${n}</span>`)
+      .join("");
+    return `<div id="atrib-resumo-list"><div class="ar-row">
+      <div class="ar-av" style="background:${cor.bg};color:${cor.txt}">${initials}</div>
+      <div class="ar-info">
+        <div class="ar-name">${c.nome}</div>
+        <div class="ar-empresas">${empNomes||'<span style="opacity:.4;font-size:9px;font-family:var(--mono)">Nenhuma empresa atribuída</span>'}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ══ ALERTAS ═══════════════════════════════════════════════
+
+async function carregarAlertas() {
+  const uldKey = ultimoDiaUtil();
+  const [cs,es,as] = await Promise.all([
+    get(ref(db,"colaboradores")),
+    get(ref(db,"empresas")),
+    get(ref(db,"atividades/"+uldKey))
+  ]);
+
+  const colab   = cs.val()||{};
+  const empresas = Object.entries(es.val()||{}).filter(([,e])=>e.status!=="inativo");
+  const ativs   = as.val()||{};
+
+  const movidas = new Set();
+  Object.values(ativs).forEach(ua=>{
+    Object.values(ua).forEach(a=>{ if(a.empresa) movidas.add(a.empresa); });
+  });
+
+  const alertas=[], ok=[];
+  empresas.forEach(([eid,e])=>{
+    if(movidas.has(eid)) {
+      // Quem fez o movimento
+      let resp="—", hora="";
+      Object.entries(ativs).forEach(([uid,ua])=>{
+        Object.values(ua).forEach(a=>{
+          if(a.empresa===eid) { resp=colab[uid]?.nome||uid; hora=new Date(a.timestamp).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}); }
+        });
+      });
+      ok.push({nome:e.nome,resp,hora});
+    } else {
+      let resp="Sem responsável";
+      Object.entries(colab).forEach(([uid,c])=>{ if(c.empresas&&c.empresas[eid]) resp=c.nome; });
+      alertas.push({nome:e.nome,resp});
+    }
+  });
+
+  renderAlertasTab(alertas, ok, uldKey);
+}
+
+function renderAlertasTab(alertas, ok, uldKey) {
+  const d = new Date(uldKey+"T12:00:00");
+  const dias = ["domingo","segunda","terça","quarta","quinta","sexta","sábado"];
+  const diaNome = dias[d.getDay()];
+
+  const count = document.getElementById("alert-count");
+  if(count) { count.textContent=alertas.length+" alertas ativos"; count.style.color=alertas.length?"#f87171":"var(--green)"; }
+
+  const section = document.getElementById("alert-section");
+  if(section) {
+    if(!alertas.length) {
+      section.innerHTML='<div style="background:rgba(16,214,122,.08);border:1px solid rgba(16,214,122,.2);border-radius:10px;padding:16px 20px;color:var(--green);font-family:var(--mono);font-size:11px">✓ Todas as empresas tiveram movimentação na '+diaNome+'. Ótimo trabalho!</div>';
+    } else {
+      section.innerHTML = alertas.map((a,i)=>{
+        const isRed = i===0&&alertas.length>1;
+        return `<div class="alert-item${!isRed?" warn":""}">
+          <span class="ai-icon">${isRed?"🔴":"🟡"}</span>
+          <div class="ai-body">
+            <div class="ai-title">${a.nome}</div>
+            <div class="ai-sub">Responsável: ${a.resp} · Sem contato na ${diaNome}</div>
+          </div>
+          <div class="ai-dias" style="color:${isRed?"#f87171":"var(--amber)"}">1 dia útil</div>
+        </div>`;
+      }).join("");
+    }
+  }
+
+  const okList = document.getElementById("alert-ok-list");
+  const okCount = document.getElementById("alert-ok-count");
+  if(okCount) okCount.textContent=ok.length+" ok";
+  if(okList) {
+    okList.innerHTML = ok.map(e=>`<div class="item-row">
+      <div class="item-info">
+        <div class="item-name" style="font-size:12px">${e.nome}</div>
+        <div class="item-sub">${e.resp} · ${e.hora}</div>
+      </div>
+      <span class="badge bg">✓ OK</span>
+    </div>`).join("") || '<div style="text-align:center;padding:16px;color:var(--text3);font-family:var(--mono);font-size:10px">Nenhuma empresa com movimento registrado</div>';
+  }
+}
+
+// ── HELPERS DE FEEDBACK ───────────────────────────────────
+function showFeedback(el, msg, tipo) {
+  if(!el) return;
+  el.textContent=msg;
+  el.className="msg"+(tipo==="ok"?" msg-ok":" msg-err");
+  el.style.display="block";
+  setTimeout(()=>el.style.display="none",4000);
+}
+
+// ── RELÓGIO ───────────────────────────────────────────────
+function tick() {
+  const t=new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  const el=document.getElementById("alert-time");
+  if(el) el.textContent=t;
+}
+tick(); setInterval(tick,1000);
+
+
 </script>
 
 <style>
@@ -514,6 +930,279 @@ body::after{content:'';position:fixed;top:-200px;right:-200px;width:600px;height
   .gf{grid-template-columns:repeat(2,1fr);}
   .th2,.tr2{grid-template-columns:160px 1fr 70px 60px;}
 }
+
+/* ══ CONFIG STYLES ══ */
+
+:root {
+  --bg:#02040d; --bg2:#080d1c; --bg3:#0d1526; --bg4:#111e30;
+  --bdr:rgba(59,127,245,0.12); --bdr2:rgba(59,127,245,0.22);
+  --blue:#3b7ff5; --blue2:#5a9bff; --green:#10d67a;
+  --amber:#f5a623; --red:#f03e3e; --purple:#a855f7;
+  --text:#dce8ff; --text2:rgba(220,232,255,0.52); --text3:rgba(220,232,255,0.25);
+  --font:'Syne',sans-serif; --mono:'DM Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(59,127,245,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(59,127,245,0.025) 1px,transparent 1px);
+  background-size:44px 44px;pointer-events:none;z-index:0;
+}
+.scanline{position:fixed;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(59,127,245,0.4),transparent);z-index:200;animation:scan 6s linear infinite;}
+@keyframes scan{0%{top:-1px;opacity:0;}5%{opacity:1;}95%{opacity:.3;}100%{top:100vh;opacity:0;}}
+
+/* ── TOPBAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 24px;border-bottom:1px solid var(--bdr);
+  background:rgba(2,4,13,0.94);backdrop-filter:blur(24px);
+  position:sticky;top:0;z-index:100;
+}
+.h-logo{display:flex;align-items:center;gap:12px;}
+.h-logo-img{height:32px;width:auto;filter:drop-shadow(0 0 8px rgba(59,127,245,0.35)) brightness(1.1);}
+.h-div{width:1px;height:28px;background:linear-gradient(to bottom,transparent,var(--bdr2),transparent);}
+.h-title{font-size:13px;font-weight:700;}
+.h-title span{color:var(--blue2);}
+.h-sub{font-size:9px;color:var(--text3);font-family:var(--mono);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px;}
+.h-right{display:flex;align-items:center;gap:12px;}
+.user-pill{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bdr2);border-radius:99px;padding:5px 14px 5px 5px;}
+.u-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
+.u-name{font-size:12px;font-weight:600;}
+.back-link{font-size:9px;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);background:none;border:1px solid var(--bdr);cursor:pointer;padding:5px 10px;border-radius:6px;transition:all .2s;text-decoration:none;display:flex;align-items:center;gap:5px;}
+.back-link:hover{color:var(--text2);border-color:var(--bdr2);}
+
+/* ── LAYOUT ── */
+.wrapper{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:24px 24px 60px;}
+
+.page-header{margin-bottom:24px;}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px;}
+.page-title span{color:var(--blue2);}
+.page-sub{font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;}
+
+/* ── TABS DE NAVEGAÇÃO ── */
+.tab-nav{
+  display:flex;gap:4px;margin-bottom:24px;
+  background:var(--bg2);border:1px solid var(--bdr);
+  border-radius:12px;padding:5px;width:fit-content;
+}
+.tab-btn{
+  font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:var(--mono);padding:8px 18px;border-radius:9px;
+  border:none;cursor:pointer;
+  color:var(--text3);background:transparent;
+  transition:all .2s;
+}
+.tab-btn.active{
+  background:var(--bg3);color:var(--blue2);
+  border:1px solid var(--bdr2);
+  box-shadow:0 0 12px rgba(59,127,245,0.1);
+}
+.tab-btn:hover:not(.active){color:var(--text2);}
+
+/* ── TAB CONTENT ── */
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* ── SECTION CARD ── */
+.section-card{
+  background:var(--bg2);border:1px solid var(--bdr);
+  border-radius:14px;padding:20px;margin-bottom:16px;
+  position:relative;overflow:hidden;
+}
+.section-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  border-radius:2px 2px 0 0;
+}
+.sc-blue::before{background:var(--blue);}
+.sc-green::before{background:var(--green);}
+.sc-amber::before{background:var(--amber);}
+.sc-purple::before{background:var(--purple);}
+
+.sc-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bdr);
+}
+.sc-title{font-size:11px;font-weight:500;letter-spacing:1.8px;text-transform:uppercase;color:var(--text3);font-family:var(--mono);}
+.sc-count{font-size:10px;font-family:var(--mono);color:var(--blue2);background:rgba(59,127,245,0.1);padding:2px 10px;border-radius:99px;border:1px solid var(--bdr);}
+
+/* ── FORM INLINE ── */
+.add-form{
+  background:var(--bg3);border:1px solid var(--bdr);
+  border-radius:10px;padding:14px 16px;margin-bottom:14px;
+}
+.add-form-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:12px;}
+.form-row{display:grid;gap:10px;margin-bottom:10px;}
+.fr-2{grid-template-columns:1fr 1fr;}
+.fr-3{grid-template-columns:1fr 1fr 1fr;}
+.fr-4{grid-template-columns:1fr 1fr 1fr auto;}
+.fl{display:block;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:5px;}
+.fi{
+  width:100%;background:rgba(6,10,25,0.8);
+  border:1px solid var(--bdr);border-radius:8px;
+  padding:9px 12px;font-size:12px;color:var(--text);
+  font-family:var(--font);outline:none;
+  transition:border-color .2s,box-shadow .2s;appearance:none;
+}
+.fi:focus{border-color:rgba(59,127,245,0.5);box-shadow:0 0 0 3px rgba(59,127,245,0.08);}
+.fi::placeholder{color:var(--text3);font-size:11px;}
+option{background:var(--bg3);color:var(--text);}
+
+/* Senha gerada automaticamente */
+.senha-gerada{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(16,214,122,0.08);border:1px solid rgba(16,214,122,0.18);
+  border-radius:8px;padding:9px 12px;
+}
+.sg-val{font-family:var(--mono);font-size:13px;color:var(--green);letter-spacing:2px;flex:1;}
+.sg-badge{font-size:8px;font-family:var(--mono);color:var(--green);background:rgba(16,214,122,0.12);padding:2px 8px;border-radius:4px;border:1px solid rgba(16,214,122,0.2);white-space:nowrap;}
+
+/* Botões */
+.btn{
+  font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:var(--mono);padding:9px 16px;border-radius:8px;
+  border:none;cursor:pointer;transition:all .2s;
+}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{opacity:.85;transform:translateY(-1px);}
+.btn-danger{background:rgba(240,62,62,0.1);color:#f87171;border:1px solid rgba(240,62,62,0.2);}
+.btn-danger:hover{background:rgba(240,62,62,0.18);}
+.btn-ghost{background:transparent;color:var(--text3);border:1px solid var(--bdr);}
+.btn-ghost:hover{color:var(--text2);border-color:var(--bdr2);}
+.btn-sm{padding:5px 10px;font-size:8px;}
+.btn-icon{width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:6px;}
+
+/* ── LISTA DE ITENS ── */
+.item-list{display:flex;flex-direction:column;gap:6px;}
+
+.item-row{
+  display:flex;align-items:center;gap:12px;
+  background:var(--bg3);border:1px solid var(--bdr);
+  border-radius:10px;padding:10px 14px;
+  transition:border-color .2s;
+}
+.item-row:hover{border-color:var(--bdr2);}
+
+.item-av{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;flex-shrink:0;
+}
+.item-info{flex:1;min-width:0;}
+.item-name{font-size:13px;font-weight:600;line-height:1.2;}
+.item-sub{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:1px;}
+.item-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:9px;font-family:var(--mono);
+  padding:2px 8px;border-radius:4px;
+}
+.bg{background:rgba(16,214,122,0.1);color:var(--green);border:1px solid rgba(16,214,122,0.18);}
+.ba{background:rgba(245,166,35,0.1);color:var(--amber);border:1px solid rgba(245,166,35,0.18);}
+.bb{background:rgba(59,127,245,0.1);color:#60a5fa;border:1px solid rgba(59,127,245,0.18);}
+.bp{background:rgba(168,85,247,0.1);color:#c084fc;border:1px solid rgba(168,85,247,0.18);}
+.br{background:rgba(240,62,62,0.1);color:#f87171;border:1px solid rgba(240,62,62,0.18);}
+.b-temp{background:rgba(245,166,35,0.12);color:var(--amber);border:1px solid rgba(245,166,35,0.25);animation:blink 1.5s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.5;}}
+
+.item-actions{display:flex;gap:6px;flex-shrink:0;}
+
+/* Status dot */
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.s-on{background:var(--green);box-shadow:0 0 6px var(--green);}
+.s-off{background:var(--text3);}
+.s-temp{background:var(--amber);box-shadow:0 0 6px var(--amber);}
+
+/* ── ATRIBUIÇÕES ── */
+.atrib-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+.atrib-col{
+  background:var(--bg3);border:1px solid var(--bdr);
+  border-radius:12px;padding:16px;
+}
+.atrib-col-title{
+  font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--text3);font-family:var(--mono);
+  margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;justify-content:space-between;
+}
+
+.colab-selector{
+  display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;
+}
+.colab-chip{
+  display:flex;align-items:center;gap:7px;
+  padding:6px 12px;border-radius:99px;
+  border:1px solid var(--bdr);cursor:pointer;
+  transition:all .2s;font-size:11px;font-weight:500;
+  background:var(--bg2);
+}
+.colab-chip:hover{border-color:var(--bdr2);}
+.colab-chip.selected{border-width:1px;}
+.chip-av{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;}
+
+.empresa-lista{display:flex;flex-direction:column;gap:4px;}
+.empresa-chip{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-radius:8px;
+  border:1px solid var(--bdr);background:var(--bg2);
+  font-size:11px;transition:all .2s;cursor:pointer;
+}
+.empresa-chip:hover{border-color:var(--bdr2);background:var(--bg3);}
+.empresa-chip.atribuida{border-color:rgba(16,214,122,0.3);background:rgba(16,214,122,0.05);}
+.ec-name{color:var(--text2);}
+.ec-check{width:16px;height:16px;border-radius:4px;border:1px solid var(--bdr2);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:all .2s;}
+.empresa-chip.atribuida .ec-check{background:var(--green);border-color:var(--green);color:var(--bg);}
+
+/* Resumo atribuições */
+.atrib-resumo{
+  background:var(--bg2);border:1px solid var(--bdr);
+  border-radius:12px;padding:16px;margin-top:16px;
+}
+.ar-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bdr);}
+
+.ar-row{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:10px 0;border-bottom:1px solid var(--bdr);
+}
+.ar-row:last-child{border-bottom:none;}
+.ar-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:2px;}
+.ar-info{flex:1;}
+.ar-name{font-size:12px;font-weight:600;margin-bottom:5px;}
+.ar-empresas{display:flex;gap:5px;flex-wrap:wrap;}
+.ar-empresa{font-size:9px;font-family:var(--mono);padding:2px 8px;border-radius:4px;background:rgba(59,127,245,0.08);color:var(--blue2);border:1px solid var(--bdr);}
+
+/* ── ALERTAS ── */
+.alert-section{margin-bottom:16px;}
+.alert-item{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(240,62,62,0.06);border:1px solid rgba(240,62,62,0.18);
+  border-left:3px solid var(--red);border-radius:10px;
+  padding:12px 16px;margin-bottom:8px;
+}
+.alert-item.warn{background:rgba(245,166,35,0.06);border-color:rgba(245,166,35,0.18);border-left-color:var(--amber);}
+.ai-icon{font-size:16px;flex-shrink:0;}
+.ai-body{flex:1;}
+.ai-title{font-size:12px;font-weight:600;color:var(--text);}
+.ai-sub{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px;}
+.ai-dias{font-size:11px;font-family:var(--mono);color:#f87171;font-weight:600;flex-shrink:0;}
+.alert-item.warn .ai-dias{color:var(--amber);}
+
+/* Msg de feedback */
+.msg{display:none;padding:10px 14px;border-radius:9px;font-size:11px;font-family:var(--mono);margin-top:10px;}
+.msg-ok{background:rgba(16,214,122,0.1);border:1px solid rgba(16,214,122,0.2);color:var(--green);}
+.msg-err{background:rgba(240,62,62,0.1);border:1px solid rgba(240,62,62,0.2);color:#f87171;}
+
+/* Scroll */
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px;}
+
+/* ══ NAV ══ */
+.main-nav{display:flex;gap:2px;background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;padding:3px;}
+.nav-btn{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;font-family:var(--mono);padding:7px 16px;border-radius:7px;border:none;cursor:pointer;color:var(--text3);background:transparent;transition:all .2s;}
+.nav-btn.active{background:var(--bg2);color:var(--blue2);border:1px solid var(--bdr2);}
+.nav-btn:hover:not(.active){color:var(--text2);}
+
 </style>
 </head>
 <body>
@@ -567,7 +1256,7 @@ body::after{content:'';position:fixed;top:-200px;right:-200px;width:600px;height
     <div class="topbar-right">
       <span id="dt" style="font-size:10px;color:var(--text3);font-family:var(--mono)"></span>
       <div class="user-chip"><div class="u-av">RS</div><span class="u-name">Robson</span></div>
-      <a class="cfg-link" href="config.html">⚙ Config</a>
+      <div class="main-nav"><button class="nav-btn active" id="nav-painel" onclick="alternarView('painel')">📊 Painel C-Level</button><button class="nav-btn" id="nav-config" onclick="alternarView('config')">⚙ Configurações</button></div>
       <button class="logout-btn" onclick="fazerLogout()">sair</button>
     </div>
   </div>
@@ -578,6 +1267,7 @@ body::after{content:'';position:fixed;top:-200px;right:-200px;width:600px;height
     <span id="alt-time" style="font-size:10px;font-family:var(--mono);opacity:.6"></span>
   </div>
 
+  <div id="view-painel">
   <!-- ZONA 1 — SOBREVIVÊNCIA -->
   <div class="zh"><span class="zb z1">Zona 01</span><span class="zt">Sobrevivência · Visão de Caixa</span><div class="zl"></div><span class="zi">CFO · Prioridade crítica</span></div>
   <div class="g1">
@@ -787,8 +1477,417 @@ body::after{content:'';position:fixed;top:-200px;right:-200px;width:600px;height
     <div class="ms"><div><div class="msl">Saldo em caixa</div><div class="msv" style="color:var(--amber)" id="kpi-saldo">R$ 27.186</div></div><span style="font-size:20px;opacity:.1">◈</span></div>
   </div>
   <div style="height:52px"></div>
-</div>
-</div>
+</div><!-- end mini-stats -->
+</div><!-- end view-painel -->
+
+<!-- ══ VIEW CONFIG ══ -->
+<div id="view-config" style="display:none;padding-bottom:52px">
+
+  <div class="page-header">
+    <div class="page-title">⚙ Configurações do <span>Sistema</span></div>
+    <div class="page-sub">Gerencie colaboradores, empresas, atribuições e alertas · Dados salvos em tempo real no Firebase</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="mudarTab('colaboradores',this)">Colaboradores</button>
+    <button class="tab-btn" onclick="mudarTab('empresas',this)">Empresas</button>
+    <button class="tab-btn" onclick="mudarTab('atribuicoes',this)">Atribuições</button>
+    <button class="tab-btn" onclick="mudarTab('alertas',this)">Alertas ativos</button>
+  </div>
+
+  <!-- ══ TAB: COLABORADORES ══ -->
+  <div class="tab-content active" id="tab-colaboradores">
+
+    <div class="section-card sc-blue">
+      <div class="sc-header">
+        <span class="sc-title">Adicionar colaboradora</span>
+      </div>
+
+      <div class="add-form">
+        <div class="add-form-title">Nova colaboradora · preencha os dados</div>
+        <div class="form-row fr-3">
+          <div>
+            <label class="fl">Nome completo</label>
+            <input type="text" class="fi" id="nc-nome" placeholder="Ex: Ana Paula Silva">
+          </div>
+          <div>
+            <label class="fl">Cargo / função</label>
+            <input type="text" class="fi" id="nc-cargo" placeholder="Ex: Analista Financeiro">
+          </div>
+          <div>
+            <label class="fl">Usuário de acesso</label>
+            <input type="text" class="fi" id="nc-user" placeholder="Ex: ana.paula" oninput="gerarSenha()">
+          </div>
+        </div>
+        <div class="form-row fr-2">
+          <div>
+            <label class="fl">Senha temporária gerada automaticamente</label>
+            <div class="senha-gerada">
+              <span class="sg-val" id="sg-val">—</span>
+              <span class="sg-badge">⚠ Temporária · ela troca no 1º acesso</span>
+            </div>
+          </div>
+          <div>
+            <label class="fl">Cor de identificação</label>
+            <select class="fi" id="nc-cor">
+              <option value="blue">Azul</option>
+              <option value="green">Verde</option>
+              <option value="amber">Âmbar</option>
+              <option value="purple">Roxo</option>
+              <option value="red">Vermelho</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+          <button class="btn btn-ghost" onclick="limparForm()">Cancelar</button>
+          <button class="btn btn-primary" onclick="adicionarColab()">+ Adicionar colaboradora</button>
+        </div>
+        <div class="msg" id="msg-colab" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <!-- Lista de colaboradoras -->
+    <div id="sg-badge-info" style="display:none;margin-top:8px;font-size:10px;color:var(--green);font-family:var(--mono)">⚠ Copie a senha acima e repasse à colaboradora antes de fechar.</div>
+      <div class="sc-header" style="margin-top:4px">
+        <span class="sc-title">Colaboradoras ativas</span>
+        <span class="sc-count" id="colab-count">carregando...</span>
+      </div>
+
+      <div class="item-list" id="colab-list">
+
+        <!-- Kênia -->
+        <div class="item-row">
+          <div class="item-av" style="background:rgba(59,127,245,0.15);color:#5a9bff">KP</div>
+          <div class="item-info">
+            <div class="item-name">Kênia Paiva</div>
+            <div class="item-sub">kenia · Coord. Operacional</div>
+            <div class="item-badges">
+              <span class="badge bg"><span class="sdot s-on"></span> Ativa</span>
+              <span class="badge bb">5 empresas</span>
+              <span class="badge" style="background:rgba(59,127,245,0.08);color:var(--blue2);border:1px solid var(--bdr)">Senha própria</span>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-ghost btn-sm" onclick="editarColab('kenia')">Editar</button>
+            <button class="btn btn-ghost btn-sm" onclick="resetarSenha('kenia')">Resetar senha</button>
+            <button class="btn btn-danger btn-sm">Desativar</button>
+          </div>
+        </div>
+
+        <!-- Cássia -->
+        <div class="item-row">
+          <div class="item-av" style="background:rgba(16,214,122,0.15);color:#10d67a">CM</div>
+          <div class="item-info">
+            <div class="item-name">Cássia Martins</div>
+            <div class="item-sub">cassia · Analista Sênior</div>
+            <div class="item-badges">
+              <span class="badge bg"><span class="sdot s-on"></span> Ativa</span>
+              <span class="badge bb">4 empresas</span>
+              <span class="badge" style="background:rgba(59,127,245,0.08);color:var(--blue2);border:1px solid var(--bdr)">Senha própria</span>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-ghost btn-sm">Editar</button>
+            <button class="btn btn-ghost btn-sm" onclick="resetarSenha('cassia')">Resetar senha</button>
+            <button class="btn btn-danger btn-sm">Desativar</button>
+          </div>
+        </div>
+
+        <!-- Marjore -->
+        <div class="item-row">
+          <div class="item-av" style="background:rgba(245,166,35,0.15);color:#f5a623">MO</div>
+          <div class="item-info">
+            <div class="item-name">Marjore Oliveira</div>
+            <div class="item-sub">marjore · Apoio Operacional</div>
+            <div class="item-badges">
+              <span class="badge bg"><span class="sdot s-on"></span> Ativa</span>
+              <span class="badge bb">3 empresas</span>
+              <span class="badge b-temp"><span class="sdot s-temp"></span> Senha temporária · aguardando 1º acesso</span>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-ghost btn-sm">Editar</button>
+            <button class="btn btn-ghost btn-sm">Resetar senha</button>
+            <button class="btn btn-danger btn-sm">Desativar</button>
+          </div>
+        </div>
+
+        <!-- Willy (desativado) -->
+        <div class="item-row" style="opacity:.45">
+          <div class="item-av" style="background:rgba(168,85,247,0.15);color:#a855f7">WR</div>
+          <div class="item-info">
+            <div class="item-name" style="text-decoration:line-through">Willy Reis</div>
+            <div class="item-sub">willy · Analista</div>
+            <div class="item-badges">
+              <span class="badge br"><span class="sdot s-off"></span> Desativado · acesso bloqueado</span>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-ghost btn-sm">Reativar</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Modal resetar senha -->
+    <div id="modal-reset" style="display:none;position:fixed;inset:0;background:rgba(2,4,13,0.85);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px);">
+      <div style="background:var(--bg2);border:1px solid var(--bdr2);border-radius:16px;padding:28px 32px;width:360px;text-align:center;position:relative;">
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:14px;">Nova senha temporária</div>
+        <div style="font-size:28px;font-weight:800;font-family:var(--mono);color:var(--green);letter-spacing:4px;margin-bottom:6px;" id="modal-senha">RE-7842</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:20px;">Ela será obrigada a trocar no próximo acesso</div>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>
+          <button class="btn btn-primary" onclick="copiarSenha()">Copiar senha</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: EMPRESAS ══ -->
+  <div class="tab-content" id="tab-empresas">
+    <div class="section-card sc-green">
+      <div class="sc-header">
+        <span class="sc-title">Adicionar empresa</span>
+      </div>
+      <div class="add-form">
+        <div class="add-form-title">Nova empresa · carteira de clientes</div>
+        <div class="form-row fr-3">
+          <div>
+            <label class="fl">Nome da empresa</label>
+            <input type="text" class="fi" placeholder="Ex: Construtora Minas Ltda" id="emp-nome">
+          </div>
+          <div>
+            <label class="fl">CNPJ (opcional)</label>
+            <input type="text" class="fi" placeholder="00.000.000/0001-00" id="emp-cnpj">
+          </div>
+          <div>
+            <label class="fl">Segmento</label>
+            <select class="fi" id="emp-segmento">
+              <option>Construção Civil</option>
+              <option>Comércio</option>
+              <option>Serviços</option>
+              <option>Indústria</option>
+              <option>Saúde</option>
+              <option>Tecnologia</option>
+              <option>Outro</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+          <button class="btn btn-ghost" onclick="document.getElementById('emp-nome').value=''">Cancelar</button>
+          <button class="btn btn-primary" onclick="adicionarEmpresa()">+ Adicionar empresa</button>
+        </div>
+      </div>
+
+      <div class="sc-header" style="margin-top:4px">
+        <span class="sc-title">Carteira ativa</span>
+        <span class="sc-count" id="emp-count">carregando...</span>
+      </div>
+
+      <div class="item-list" id="emp-list">carregando...</div>
+      </div>
+    </div>
+
+  <!-- ══ TAB: ATRIBUIÇÕES ══ -->
+  <div class="tab-content" id="tab-atribuicoes">
+    <div class="section-card sc-purple">
+      <div class="sc-header">
+        <span class="sc-title">Atribuir empresas às colaboradoras</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:16px;">
+        Selecione uma colaboradora e marque as empresas sob responsabilidade dela. As marcações são salvas automaticamente.
+      </div>
+
+      <div class="atrib-grid">
+        <!-- Seletor de colaboradora -->
+        <div class="atrib-col">
+          <div class="atrib-col-title">
+            <span>Selecione a colaboradora</span>
+          </div>
+          <div class="colab-selector" id="atrib-colab-sel">
+            <div class="colab-chip selected" style="border-color:#5a9bff;color:#5a9bff;background:rgba(59,127,245,0.08)" onclick="selecionarColab(this)">
+              <div class="chip-av" style="background:rgba(59,127,245,0.15);color:#5a9bff">KP</div>
+              Kênia
+            </div>
+            <div class="colab-chip" onclick="selecionarColab(this)">
+              <div class="chip-av" style="background:rgba(16,214,122,0.15);color:#10d67a">CM</div>
+              Cássia
+            </div>
+            <div class="colab-chip" onclick="selecionarColab(this)">
+              <div class="chip-av" style="background:rgba(245,166,35,0.15);color:#f5a623">MO</div>
+              Marjore
+            </div>
+          </div>
+
+          <div class="atrib-col-title" style="margin-top:12px">
+            <span id="atrib-emp-title">Empresas</span>
+            <span style="color:var(--blue2)" id="atrib-emp-count">—</span>
+          </div>
+          <div class="empresa-lista" id="atrib-emp-list">
+            <div class="empresa-chip atribuida">
+              <span class="ec-name">Alphaville Incorporações</span>
+              <div class="ec-check">✓</div>
+            </div>
+            <div class="empresa-chip atribuida">
+              <span class="ec-name">Supermercados BHoriz</span>
+              <div class="ec-check">✓</div>
+            </div>
+            <div class="empresa-chip atribuida">
+              <span class="ec-name">Farmácias Vida & Saúde</span>
+              <div class="ec-check">✓</div>
+            </div>
+            <div class="empresa-chip atribuida">
+              <span class="ec-name">Tech Solutions BH</span>
+              <div class="ec-check">✓</div>
+            </div>
+            <div class="empresa-chip atribuida">
+              <span class="ec-name">Escritório Advocacia Lima</span>
+              <div class="ec-check">✓</div>
+            </div>
+            <div class="empresa-chip">
+              <span class="ec-name">Distribuidora BH Alimentos</span>
+              <div class="ec-check"></div>
+            </div>
+            <div class="empresa-chip">
+              <span class="ec-name">Construtora Minas Gerais</span>
+              <div class="ec-check"></div>
+            </div>
+            <div class="empresa-chip">
+              <span class="ec-name">MedCenter Clínicas</span>
+              <div class="ec-check"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resumo geral das atribuições -->
+        <div class="atrib-col">
+          <div class="atrib-col-title">
+            <span>Resumo geral das atribuições</span>
+          </div>
+          <div class="ar-row">
+            <div class="ar-av" style="background:rgba(59,127,245,0.15);color:#5a9bff">KP</div>
+            <div class="ar-info">
+              <div class="ar-name">Kênia Paiva</div>
+              <div class="ar-empresas">
+                <span class="ar-empresa">Alphaville</span>
+                <span class="ar-empresa">Supermercados BHoriz</span>
+                <span class="ar-empresa">Farmácias V&S</span>
+                <span class="ar-empresa">Tech Solutions</span>
+                <span class="ar-empresa">Adv. Lima</span>
+              </div>
+            </div>
+          </div>
+          <div class="ar-row">
+            <div class="ar-av" style="background:rgba(16,214,122,0.15);color:#10d67a">CM</div>
+            <div class="ar-info">
+              <div class="ar-name">Cássia Martins</div>
+              <div class="ar-empresas">
+                <span class="ar-empresa">Distribuidora BH</span>
+                <span class="ar-empresa">Construtora MG</span>
+                <span class="ar-empresa">Auto Peças Norte</span>
+                <span class="ar-empresa">Clínica Bem Estar</span>
+              </div>
+            </div>
+          </div>
+          <div class="ar-row">
+            <div class="ar-av" style="background:rgba(245,166,35,0.15);color:#f5a623">MO</div>
+            <div class="ar-info">
+              <div class="ar-name">Marjore Oliveira</div>
+              <div class="ar-empresas">
+                <span class="ar-empresa">MedCenter</span>
+                <span class="ar-empresa">Academia Fit BH</span>
+                <span class="ar-empresa">Gráfica Express</span>
+              </div>
+            </div>
+          </div>
+          <div class="ar-row" style="border:none;opacity:.4">
+            <div class="ar-av" style="background:rgba(255,255,255,0.05);color:var(--text3)">—</div>
+            <div class="ar-info">
+              <div class="ar-name" style="color:var(--text3)">6 empresas sem responsável</div>
+              <div class="ar-empresas">
+                <span class="ar-empresa" style="opacity:.5">Sem atribuição</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: ALERTAS ATIVOS ══ -->
+  <div class="tab-content" id="tab-alertas">
+    <div class="section-card sc-amber">
+      <div class="sc-header">
+        <span class="sc-title">Empresas sem movimentação</span>
+        <span class="sc-count" id="alert-count" style="color:#f87171;background:rgba(240,62,62,0.1);border-color:rgba(240,62,62,0.2)">carregando...</span>
+      </div>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;">
+        Dias úteis verificados · Sábado e domingo não contam · Atualizado às <span id="alert-time" style="color:var(--blue2)">--:--</span>
+      </div>
+
+      <div class="alert-section" id="alert-section">
+        <!-- Crítico: 2+ dias -->
+        <div class="alert-item">
+          <span class="ai-icon">🔴</span>
+          <div class="ai-body">
+            <div class="ai-title">MedCenter Clínicas</div>
+            <div class="ai-sub">Responsável: Marjore Oliveira · Último contato: segunda-feira</div>
+          </div>
+          <div class="ai-dias">2 dias úteis</div>
+        </div>
+
+        <!-- Atenção: 1 dia -->
+        <div class="alert-item warn">
+          <span class="ai-icon">🟡</span>
+          <div class="ai-body">
+            <div class="ai-title">Construtora Minas Gerais</div>
+            <div class="ai-sub">Responsável: Cássia Martins · Último contato: terça-feira</div>
+          </div>
+          <div class="ai-dias" style="color:var(--amber)">1 dia útil</div>
+        </div>
+
+        <div class="alert-item warn">
+          <span class="ai-icon">🟡</span>
+          <div class="ai-body">
+            <div class="ai-title">Gráfica Express MG</div>
+            <div class="ai-sub">Responsável: Marjore Oliveira · Último contato: terça-feira</div>
+          </div>
+          <div class="ai-dias" style="color:var(--amber)">1 dia útil</div>
+        </div>
+      </div>
+
+      <!-- Histórico -->
+      <div class="sc-header" style="margin-top:8px">
+        <span class="sc-title">Empresas com movimento hoje</span>
+        <span class="sc-count" id="alert-ok-count" style="color:var(--green);background:rgba(16,214,122,0.08);border-color:rgba(16,214,122,0.18)">—</span>
+      </div>
+      <div class="item-list" id="alert-ok-list">
+        <div class="item-row">
+          <div class="item-info">
+            <div class="item-name" style="font-size:12px">Alphaville Incorporações</div>
+            <div class="item-sub">Kênia Paiva · NF emitidas · 09:38</div>
+          </div>
+          <span class="badge bg">✓ OK hoje</span>
+        </div>
+        <div class="item-row">
+          <div class="item-info">
+            <div class="item-name" style="font-size:12px">Distribuidora BH Alimentos</div>
+            <div class="item-sub">Cássia Martins · Reunião 1,5h · 09:12</div>
+          </div>
+          <span class="badge bg">✓ OK hoje</span>
+        </div>
+        <div style="text-align:center;padding:10px;font-size:10px;color:var(--text3);font-family:var(--mono)">
+          + 13 empresas com movimento
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</div><!-- end view-config -->
+
+</div><!-- end wrapper -->
 
 <!-- TICKER -->
 <div class="ticker" id="ticker-bar" style="display:none">
@@ -806,5 +1905,39 @@ body::after{content:'';position:fixed;top:-200px;right:-200px;width:600px;height
   <span class="tsep">│</span>
   <div class="ti"><span>Atualizado</span><span class="tv" id="ticker-clock">--:--</span></div>
 </div>
+
+<script>
+
+// ══ NAVEGAÇÃO ENTRE VIEWS ═══════════════════════════════
+window.alternarView = function(view) {
+  const painel  = document.getElementById('view-painel');
+  const conf    = document.getElementById('view-config');
+  const btnP    = document.getElementById('nav-painel');
+  const btnC    = document.getElementById('nav-config');
+  const ticker  = document.getElementById('ticker-bar');
+
+  if(view==='painel') {
+    if(painel) painel.style.display='block';
+    if(conf)   conf.style.display='none';
+    if(btnP) { btnP.classList.add('active'); }
+    if(btnC) { btnC.classList.remove('active'); }
+    if(ticker) ticker.style.display='flex';
+  } else {
+    if(painel) painel.style.display='none';
+    if(conf)   conf.style.display='block';
+    if(btnP) { btnP.classList.remove('active'); }
+    if(btnC) { btnC.classList.add('active'); }
+    if(ticker) ticker.style.display='none';
+    // Inicializa config ao abrir
+    if(typeof carregarColaboradores==='function') carregarColaboradores();
+    if(typeof carregarEmpresas==='function') carregarEmpresas();
+    if(typeof carregarAtribuicoes==='function') carregarAtribuicoes();
+    if(typeof carregarAlertas==='function') carregarAlertas();
+  }
+};
+
+</script>
+
+
 </body>
 </html>
