@@ -83,11 +83,18 @@ window.fazerLogout = function() {
 function iniciarDashboard() {
   startClock();
   animateBars();
+  // Carrega dados em background (para quando o usuário mudar de aba)
   carregarEquipe();
   carregarAlertas();
   buscarDadosOmie();
-  setInterval(()=>{ carregarEquipe(); carregarAlertas(); }, 30000);
-  setInterval(buscarDadosOmie, 300000); // Omie a cada 5min
+  setInterval(function(){ carregarEquipe(); carregarAlertas(); }, 30000);
+  setInterval(buscarDadosOmie, 300000);
+  // Abre financeiro como aba padrão
+  setTimeout(function(){
+    if(typeof window.alternarView === 'function') {
+      window.alternarView('fin');
+    }
+  }, 300);
 }
 
 // ─── RELÓGIO ─────────────────────────────────────────
@@ -956,7 +963,148 @@ body.light .fin-prog { background:rgba(0,0,0,0.08); }
 
 <!-- VIEW FINANCEIRO -->
 <div id="view-fin" style="display:block;padding-bottom:52px">
-FIN_PLACEHOLDER
+
+<div style="max-width:1500px;margin:0 auto;padding:22px 24px 0">
+
+  <div id="fin-omie-status" style="display:none;align-items:center;gap:10px;background:rgba(245,166,35,0.07);border:1px solid rgba(245,166,35,0.2);border-left:3px solid var(--amber);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:11px;color:var(--amber);font-family:var(--mono)">
+    <span>⚠</span><span id="fin-omie-msg">Omie offline — dados de demonstração</span>
+  </div>
+
+  <!-- KPIs principais -->
+  <div class="fin-grid" style="margin-bottom:16px">
+    <div class="fin-kpi k-blue">
+      <div class="fk-label">Saldo atual em caixa</div>
+      <div class="fk-value" style="color:var(--blue2)" id="fk-saldo">R$ 27.186</div>
+      <div class="fk-sub">Posição de hoje</div>
+      <span class="fk-badge bg">→ Seguro</span>
+    </div>
+    <div class="fin-kpi k-green">
+      <div class="fk-label">Receita mensal (MRR)</div>
+      <div class="fk-value" style="color:var(--green)" id="fk-receita">R$ 37.036</div>
+      <div class="fk-sub">Recorrência garantida</div>
+      <span class="fk-badge bg">+12% vs março</span>
+    </div>
+    <div class="fin-kpi k-purple">
+      <div class="fk-label">Lucro líquido previsto</div>
+      <div class="fk-value" style="color:var(--purple)" id="fk-lucro">R$ 8.374</div>
+      <div class="fk-sub" id="fk-margem-sub">Margem 22,6%</div>
+      <span class="fk-badge bp">Meta: 30%</span>
+    </div>
+    <div class="fin-kpi k-amber">
+      <div class="fk-label">Contas a receber</div>
+      <div class="fk-value" style="color:var(--amber)" id="fk-car">R$ 14.200</div>
+      <div class="fk-sub">CAR atual</div>
+      <span class="fk-badge ba">3 em atraso</span>
+    </div>
+    <div class="fin-kpi k-red">
+      <div class="fk-label">Contas a pagar</div>
+      <div class="fk-value" style="color:#f87171" id="fk-cap">R$ 9.850</div>
+      <div class="fk-sub">Próx. venc. 15/04</div>
+      <span class="fk-badge bg">Saldo cobre</span>
+    </div>
+    <div class="fin-kpi k-gray">
+      <div class="fk-label">Cash burn mensal</div>
+      <div class="fk-value" style="color:var(--text2)" id="fk-burn">R$ 28.662</div>
+      <div class="fk-sub">Custo total/mês</div>
+      <span class="fk-badge ba">Meta: abaixo 70%</span>
+    </div>
+  </div>
+
+  <!-- Gráfico projeção dia a dia + indicadores -->
+  <div class="fin-grid-2" style="margin-bottom:16px">
+    <div class="chart-container">
+      <div class="chart-title">
+        <span>Projeção de caixa — saldo dia a dia até fim do mês</span>
+        <span style="color:var(--blue2)" id="proj-end-val">calculando...</span>
+      </div>
+      <div class="chart-area">
+        <canvas id="chart-caixa" style="width:100%;height:160px"></canvas>
+      </div>
+      <div class="chart-labels" id="chart-labels" style="display:flex;justify-content:space-between;margin-top:6px;font-size:9px;color:var(--text3);font-family:var(--mono)"></div>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:9px;font-family:var(--mono);color:var(--text3)">
+        <span><span style="color:var(--blue)">█</span> Saldo projetado</span>
+        <span><span style="color:rgba(240,62,62,0.6)">─ ─</span> Ponto de equilíbrio</span>
+        <span><span style="color:var(--blue2)">●</span> Hoje</span>
+        <span><span style="color:var(--green)">●</span> Fim do mês</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fin-kpi k-blue" style="flex:1">
+        <div class="fk-label">Ponto de equilíbrio</div>
+        <div class="fk-value" style="font-size:18px;color:var(--blue2)" id="fk-pe">R$ 27.500</div>
+        <div class="fin-pl"><span>Cobertura</span><span style="color:var(--green)" id="fk-coberto">74%</span></div>
+        <div class="fin-prog"><div class="fin-prog-fill" id="fk-prog-pe" style="width:74%;background:var(--blue)"></div></div>
+        <div class="fk-sub" style="margin-top:6px">Folga: <span style="color:var(--green)" id="fk-folga">R$ 9.536</span></div>
+      </div>
+      <div class="fin-kpi k-green" style="flex:1">
+        <div class="fk-label">Runway</div>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <div class="fk-value" style="color:var(--green)" id="fk-runway">8.2</div>
+          <span style="font-size:12px;color:var(--text3);font-family:var(--mono)">meses</span>
+        </div>
+        <div class="fk-sub">Caixa sustenta a operação</div>
+        <span class="fk-badge bg">↑ Seguro</span>
+      </div>
+      <div class="fin-kpi k-purple" style="flex:1">
+        <div class="fk-label">Margem líquida</div>
+        <div class="fk-value" style="color:var(--purple)" id="fk-margem">22,6%</div>
+        <div class="fin-pl"><span>Meta</span><span style="color:var(--amber)">30%</span></div>
+        <div class="fin-prog"><div class="fin-prog-fill" id="fk-prog-margem" style="width:22.6%;background:var(--purple)"></div></div>
+        <div class="fk-sub" style="margin-top:6px" id="fk-margem-gap">Faltam 7,4pp para a meta</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real vs Orçado + EBITDA + Inadimplência -->
+  <div class="fin-grid-3" style="margin-bottom:16px">
+    <div class="fin-kpi k-amber">
+      <div class="fk-label">Real vs Orçado</div>
+      <div class="fk-value" style="font-size:18px;color:var(--green)" id="fk-desvio">+R$ 1.036</div>
+      <div class="fk-sub" style="margin-bottom:10px">Abril 2026</div>
+      <div class="fin-vr"><span class="fin-vl">Receita real</span><span class="fin-vv" style="color:var(--green)" id="fv-receita">R$ 37.036</span></div>
+      <div class="fin-vr"><span class="fin-vl">Orçado</span><span class="fin-vv" id="fv-orcado">R$ 36.000</span></div>
+      <div class="fin-vr"><span class="fin-vl">Desvio</span><span class="fin-vv" style="color:var(--green)" id="fv-desvio-pct">+2,9%</span></div>
+      <div class="fin-vr" style="border:none"><span class="fin-vl">Custo real</span><span class="fin-vv" style="color:#f87171" id="fv-custo">R$ 28.662</span></div>
+    </div>
+    <div class="fin-kpi k-purple">
+      <div class="fk-label">EBITDA · 6 meses</div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
+        <div class="fk-value" style="color:var(--purple)" id="fk-ebitda">R$ 8.374</div>
+        <span class="fk-badge bp">22,6% margem</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:5px;height:55px;margin:10px 0 4px">
+        <div style="display:flex;gap:2px;align-items:flex-end;flex:1"><div style="flex:1;height:32px;background:var(--purple);opacity:.38;border-radius:2px 2px 0 0"></div><div style="flex:1;height:24px;background:rgba(240,62,62,.4);border-radius:2px 2px 0 0"></div></div>
+        <div style="display:flex;gap:2px;align-items:flex-end;flex:1"><div style="flex:1;height:36px;background:var(--purple);opacity:.48;border-radius:2px 2px 0 0"></div><div style="flex:1;height:26px;background:rgba(240,62,62,.4);border-radius:2px 2px 0 0"></div></div>
+        <div style="display:flex;gap:2px;align-items:flex-end;flex:1"><div style="flex:1;height:42px;background:var(--purple);opacity:.58;border-radius:2px 2px 0 0"></div><div style="flex:1;height:28px;background:rgba(240,62,62,.4);border-radius:2px 2px 0 0"></div></div>
+        <div style="display:flex;gap:2px;align-items:flex-end;flex:1"><div style="flex:1;height:46px;background:var(--purple);opacity:.70;border-radius:2px 2px 0 0"></div><div style="flex:1;height:28px;background:rgba(240,62,62,.4);border-radius:2px 2px 0 0"></div></div>
+        <div style="display:flex;gap:2px;align-items:flex-end;flex:1"><div style="flex:1;height:50px;background:var(--purple);opacity:.84;border-radius:2px 2px 0 0"></div><div style="flex:1;height:30px;background:rgba(240,62,62,.4);border-radius:2px 2px 0 0"></div></div>
+        <div style="display:flex;gap:2px;align-items:flex-end;flex:1"><div style="flex:1;height:55px;background:var(--purple);border-radius:2px 2px 0 0;box-shadow:0 0 10px rgba(168,85,247,.3)"></div><div style="flex:1;height:30px;background:rgba(240,62,62,.5);border-radius:2px 2px 0 0"></div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text3);font-family:var(--mono)"><span>Nov</span><span>Dez</span><span>Jan</span><span>Fev</span><span>Mar</span><span style="color:var(--purple)">Abr</span></div>
+      <div style="display:flex;gap:10px;margin-top:8px;font-size:9px;font-family:var(--mono);color:var(--text3)">
+        <span><span style="color:var(--purple)">█</span> EBITDA</span>
+        <span><span style="color:#f87171">█</span> Desp. fixas</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fin-kpi k-red" style="flex:1">
+        <div class="fk-label">Índice de inadimplência</div>
+        <div class="fk-value" style="color:#f87171" id="fk-inad">12,9%</div>
+        <div class="fin-pl"><span>Exposição</span><span style="color:#f87171">R$ 4.800</span></div>
+        <div class="fin-prog"><div class="fin-prog-fill" id="fk-prog-inad" style="width:13%;background:var(--red)"></div></div>
+        <span class="fk-badge br">Ideal: abaixo de 8%</span>
+      </div>
+      <div class="fin-kpi k-blue" style="flex:1">
+        <div class="fk-label">LTV / CAC</div>
+        <div class="fk-value" style="color:var(--blue2)">4.2×</div>
+        <div class="fin-vr" style="padding:4px 0;font-size:10px"><span class="fin-vl">LTV médio</span><span class="fin-vv">R$ 18.400</span></div>
+        <div class="fin-vr" style="border:none;padding:4px 0;font-size:10px"><span class="fin-vl">CAC médio</span><span class="fin-vv">R$ 4.380</span></div>
+        <span class="fk-badge bg">✓ Ideal: acima de 3×</span>
+      </div>
+    </div>
+  </div>
+  <div style="height:20px"></div>
+</div>
 </div>
 
 <!-- VIEW CONFIG -->
