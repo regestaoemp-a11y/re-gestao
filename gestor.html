@@ -569,6 +569,14 @@ body:not(.light)::before {
 }
 .theme-btn:hover { border-color:var(--bdr2); color:var(--text2); }
 
+/* ══ CONFIG TABS (abas internas) ═════════════════════════ */
+.tab-nav     { display:flex; gap:3px; margin-bottom:20px; background:var(--bg2); border:1px solid var(--bdr); border-radius:10px; padding:4px; width:fit-content; }
+.tab-btn     { font-size:9px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; font-family:var(--mono); padding:7px 16px; border-radius:8px; border:none; cursor:pointer; color:var(--text3); background:transparent; transition:all .2s; }
+.tab-btn.active { background:var(--bg3); color:var(--blue2); border:1px solid var(--bdr2); }
+.tab-btn:hover:not(.active) { color:var(--text2); }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
 /* ══ CONFIG STYLES (reaproveitados) ══════════════════════ */
 .page-header { margin-bottom:22px; }
 .page-title  { font-size:20px; font-weight:700; margin-bottom:3px; }
@@ -1549,6 +1557,23 @@ window.alternarView = function(view) {
   if(view==='cfg')    window._iniciarConfig && window._iniciarConfig();
 };
 
+// ══ ABAS INTERNAS DO CONFIG ══════════════════════════════
+window.mudarTab = function(tabId, btn) {
+  // Esconde todos os conteúdos
+  document.querySelectorAll('.tab-content').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  // Remove active de todos os botões
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  // Mostra o conteúdo selecionado
+  var target = document.getElementById('tab-'+tabId);
+  if(target) target.classList.add('active');
+  // Ativa o botão clicado
+  if(btn) btn.classList.add('active');
+};
+
 // ══ TOGGLE TEMA ══════════════════════════════════════════
 window.toggleTheme = function() {
   var isLight = document.body.classList.toggle('light');
@@ -1759,9 +1784,11 @@ window._carregarFin = async function() {
 
 // ── HELPERS ──────────────────────────────────────────────
 
-function isUtil(ds) { const d=new Date(ds+"T12:00:00"); return d.getDay()!==0&&d.getDay()!==6; }
-;
-  while(!isUtil(b(n))) n++;
+function isUtil2(ds) { const d=new Date(ds+"T12:00:00"); return d.getDay()!==0&&d.getDay()!==6; }
+function ultimoDiaUtil2() {
+  let n=1;
+  const b = n=>{ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().split("T")[0]; };
+  while(!isUtil2(b(n))) n++;
   return b(n);
 }
 function gerarSenhaTemp() {
@@ -1775,13 +1802,13 @@ const COR_MAP = {
   red:   {bg:"rgba(240,62,62,0.15)", txt:"#f87171"}
 };
 
-// ── CARREGAR TUDO AO INICIAR ──────────────────────────────
-window.addEventListener("DOMContentLoaded", ()=>{
+// ── CARREGAR SOB DEMANDA (via _iniciarConfig) ─────────────
+window._carregarConfig = function() {
   carregarColaboradores();
   carregarEmpresas();
   carregarAtribuicoes();
   carregarAlertas();
-});
+};
 
 // ══ COLABORADORES ═════════════════════════════════════════
 
@@ -1901,7 +1928,7 @@ async function carregarEmpresas() {
 async function renderEmpresas(data) {
   const list = document.getElementById("emp-list");
   if(!list) return;
-  const uldKey = ultimoDiaUtil();
+  const uldKey = ultimoDiaUtil2();
   const actSnap = await get(ref(db,"atividades/"+uldKey));
   const ativs = actSnap.val()||{};
 
@@ -2067,7 +2094,7 @@ function renderAtribResumo() {
 // ══ ALERTAS ═══════════════════════════════════════════════
 
 async function carregarAlertas() {
-  const uldKey = ultimoDiaUtil();
+  const uldKey = ultimoDiaUtil2();
   const [cs,es,as] = await Promise.all([
     get(ref(db,"colaboradores")),
     get(ref(db,"empresas")),
@@ -2167,10 +2194,7 @@ let _cfgOk=false;
 window._iniciarConfig = function() {
   if(!_cfgOk) {
     _cfgOk=true;
-    if(typeof carregarColaboradores==='function') carregarColaboradores();
-    if(typeof carregarEmpresas==='function') carregarEmpresas();
-    if(typeof carregarAtribuicoes==='function') carregarAtribuicoes();
-    if(typeof carregarAlertas==='function') carregarAlertas();
+    if(typeof window._carregarConfig==='function') window._carregarConfig();
   }
 };
 
