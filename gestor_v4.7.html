@@ -1735,63 +1735,134 @@ window.sincronizarOmie = async function sincronizarOmie() {
   const dot = document.getElementById('omie-dot');
   const sta = document.getElementById('omie-status');
   const stt = document.getElementById('fin-sync-status');
-  if(sta) sta.textContent = 'Sincronizando Omie...';
+  const btn = document.getElementById('btn-sync-omie');
+
+  if(sta) sta.textContent = 'Buscando Omie...';
   if(dot) { dot.style.background='var(--amber)'; dot.style.boxShadow='0 0 8px var(--amber)'; }
+  if(btn) btn.disabled = true;
+
+  // Busca CAR e CAP em paralelo com timeout de 30s cada
+  const fetchOmie = async (action) => {
+    const url = OMIE_PROXY + '?action=' + action + '&t=' + Date.now();
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30000); // 30 segundos
+    try {
+      const r = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } catch(e) {
+      clearTimeout(timer);
+      throw e;
+    }
+  };
 
   try {
-    const url = OMIE_PROXY + '?action=financeiro_completo&t=' + Date.now();
-    const r   = await fetch(url, { signal: AbortSignal.timeout(12000) });
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
+    // Busca CAR e resumo do mês em paralelo
+    if(sta) sta.textContent = 'Buscando CAR + CAP...';
 
-    // Verifica se retornou erro do Apps Script
-    if(d.erro || d.faultstring) throw new Error(d.msg || d.faultstring || 'Erro Omie');
+    const [carData, capData, resumoData] = await Promise.all([
+      fetchOmie('contas_receber'),
+      fetchOmie('contas_pagar'),
+      fetchOmie('resumo_mes')
+    ]);
 
-    STATE.omie = d;
+    // Verifica erros
+    if(carData.erro) throw new Error('CAR: ' + carData.msg);
+    if(capData.erro) throw new Error('CAP: ' + capData.msg);
+
+    // Monta objeto consolidado
+    STATE.omie = {
+      a_receber:    carData.total    || 0,
+      a_pagar:      capData.total    || 0,
+      recebido_mes: resumoData.recebido_mes || 0,
+      pago_mes:     resumoData.pago_mes     || 0,
+      vencido:      0,
+      qtd_car:      carData.qtd     || 0,
+      qtd_cap:      capData.qtd     || 0,
+      qtd_venc:     0,
+      titulos_car:  carData.titulos  || [],
+      titulos_cap:  capData.titulos  || [],
+      titulos_vencidos: [],
+      projecao_diaria:  buildProjecaoLocal(carData.titulos, capData.titulos),
+      _sync:  new Date().toISOString(),
+      _demo:  false,
+      _cache: false
+    };
+
     if(sta) sta.textContent = 'Omie · ao vivo';
     if(dot) { dot.style.background='var(--green)'; dot.style.boxShadow='0 0 8px var(--green)'; }
     const hora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     if(stt) stt.textContent = '✓ Omie sync: ' + hora;
+    if(btn) { btn.disabled=false; btn.textContent='↻ Atualizar Omie'; }
 
-    // Salva cache no Firebase para histórico
+    // Salva cache Firebase
     try {
-      await set(ref(db,'cache_omie/ultimo'), {
-        ...d, _salvo: Date.now()
-      });
-    } catch(e) { /* silencioso */ }
+      await set(ref(db,'cache_omie/ultimo'), { ...STATE.omie, _salvo: Date.now() });
+    } catch(e) {}
 
     if(STATE.viewAtual === 'fin') renderFinanceiro();
 
   } catch(err) {
     console.warn('[Omie]', err.message);
-    if(sta) sta.textContent = 'Omie · offline';
-    if(dot) { dot.style.background='#f87171'; dot.style.boxShadow='0 0 8px #f87171'; }
-    if(stt) stt.textContent = '⚠ Omie indisponível — usando cache';
+    if(btn) { btn.disabled=false; btn.textContent='↻ Tentar novamente'; }
 
-    // Tenta usar cache do Firebase
+    // Tenta cache do Firebase
     try {
       const snap = await get(ref(db,'cache_omie/ultimo'));
       if(snap.val()) {
-        STATE.omie = snap.val();
-        STATE.omie._demo = false;
-        STATE.omie._cache = true;
-        if(sta) sta.textContent = 'Omie · cache local';
+        STATE.omie = { ...snap.val(), _cache:true, _demo:false };
+        if(sta) sta.textContent = 'Omie · cache';
         if(dot) { dot.style.background='var(--amber)'; dot.style.boxShadow='0 0 8px var(--amber)'; }
+        const ts = STATE.omie._salvo
+          ? new Date(STATE.omie._salvo).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+          : '--';
+        if(stt) stt.textContent = '⚠ Cache · última sync: ' + ts;
         if(STATE.viewAtual === 'fin') renderFinanceiro();
         return;
       }
     } catch(e2) {}
 
-    // Último recurso: dados demo
+    // Sem dados
+    if(sta) sta.textContent = 'Omie · erro';
+    if(dot) { dot.style.background='#f87171'; dot.style.boxShadow='0 0 8px #f87171'; }
+    if(stt) stt.textContent = '✗ ' + err.message;
     STATE.omie = {
-      a_receber:0, a_pagar:0, recebido_mes:0, pago_mes:0, vencido:0,
-      qtd_car:0, qtd_cap:0,
-      titulos_car:[], titulos_cap:[], titulos_vencidos:[],
-      projecao_diaria:[], _demo:true
+      a_receber:0, a_pagar:0, recebido_mes:0, pago_mes:0,
+      vencido:0, qtd_car:0, qtd_cap:0, qtd_venc:0,
+      titulos_car:[], titulos_cap:[], projecao_diaria:[], _demo:true
     };
     if(STATE.viewAtual === 'fin') renderFinanceiro();
   }
+};
+
+// Gera projeção diária localmente a partir dos títulos
+function buildProjecaoLocal(car, cap) {
+  const now   = new Date();
+  const ano   = now.getFullYear();
+  const mes   = now.getMonth();
+  const total = new Date(ano, mes+1, 0).getDate();
+  const diaH  = now.getDate();
+  const dias  = [];
+  for(let d=1; d<=total; d++) {
+    let entradas=0, saidas=0;
+    (car||[]).forEach(t => {
+      if(!t.vencimento) return;
+      const vd = new Date(t.vencimento+'T12:00:00');
+      if(vd.getDate()===d && vd.getMonth()===mes && vd.getFullYear()===ano)
+        entradas += t.valor||0;
+    });
+    (cap||[]).forEach(t => {
+      if(!t.vencimento) return;
+      const vd = new Date(t.vencimento+'T12:00:00');
+      if(vd.getDate()===d && vd.getMonth()===mes && vd.getFullYear()===ano)
+        saidas += t.valor||0;
+    });
+    dias.push({ dia:d, futuro:d>diaH, entradas, saidas });
+  }
+  return dias;
 }
+
 
 
 // ─── FINANCEIRO ───────────────────────────────────────────
