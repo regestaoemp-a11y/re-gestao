@@ -613,13 +613,9 @@ const SENHA_PADRAO = 'RE123456';
 // Navegação de mês
 let NAV = {
   ano:  new Date().getFullYear(),
-  mes:  new Date().getMonth(),      // 0-indexed
-  semSel: 0,                        // semana selecionada (0=primeira)
-  diaSel: new Date().toISOString().split('T')[0]  // dia selecionado
-};
-let STATE = {
-  colaboradores:{}, empresas:{}, tarefasPadrao:{},
-  tarefas:{}, empresaAtual:null, unsubs:[]
+  mes:  new Date().getMonth(),
+  semSel: 0,
+  diaSel: new Date().toISOString().split('T')[0]
 };
 
 // ═══════════════════════════════════════════════════════
@@ -780,9 +776,14 @@ function carregarDados() {
   });
   STATE.unsubs.push(unTP);
 
-  // Tarefas do mês atual
+  // Tarefas do mês atual (listener em tempo real)
   const unT = onValue(ref(db,`tarefas/${anoMes()}`), snap => {
     STATE.tarefas = snap.val() || {};
+    // Se navegando no mês atual, sincroniza tarefasNav também
+    const agora = new Date();
+    if(NAV.ano===agora.getFullYear() && NAV.mes===agora.getMonth()) {
+      STATE.tarefasNav = STATE.tarefas;
+    }
     if(STATE.empresaAtual) renderKanban(STATE.empresaAtual);
     renderMeuMes();
   });
@@ -867,18 +868,29 @@ window.navMes = async function(dir) {
   if(NAV.mes > 11) { NAV.mes=0; NAV.ano++; }
   if(NAV.mes < 0)  { NAV.mes=11; NAV.ano--; }
   // Não permite navegar para o futuro
-  const btnProx = document.getElementById('btn-mes-prox');
   const isAtual = NAV.ano===agora.getFullYear() && NAV.mes===agora.getMonth();
-  const isFuturo= NAV.ano > agora.getFullYear() || (NAV.ano===agora.getFullYear() && NAV.mes>agora.getMonth());
-  if(isFuturo) { NAV.mes -= dir; if(NAV.mes>11){NAV.mes=0;NAV.ano++;}if(NAV.mes<0){NAV.mes=11;NAV.ano--;} return; }
+  const isFuturo = NAV.ano > agora.getFullYear() ||
+    (NAV.ano===agora.getFullYear() && NAV.mes > agora.getMonth());
+  if(isFuturo) {
+    NAV.mes -= dir;
+    if(NAV.mes>11){NAV.mes=0;NAV.ano++;}
+    if(NAV.mes<0){NAV.mes=11;NAV.ano--;}
+    return;
+  }
+  const btnProx = document.getElementById('btn-mes-prox');
   if(btnProx) btnProx.style.opacity = isAtual ? '.35' : '1';
-  // Reseta dia selecionado para hoje ou último dia do mês
+  // Reseta seleções
   if(isAtual) NAV.diaSel = agora.toISOString().split('T')[0];
-  else NAV.diaSel = fmtDia(NAV.ano, NAV.mes, diasNoMes(NAV.ano,NAV.mes));
+  else NAV.diaSel = fmtDia(NAV.ano, NAV.mes, diasNoMes(NAV.ano, NAV.mes));
   NAV.semSel = 0;
   atualizarLabelMes();
   if(STATE.empresaAtual) {
-    await carregarTarefasMes();
+    // Se voltou para o mês atual, usa o listener existente
+    if(isAtual) {
+      STATE.tarefasNav = STATE.tarefas;
+    } else {
+      await carregarTarefasMes();
+    }
     renderKanban(STATE.empresaAtual);
   }
 };
