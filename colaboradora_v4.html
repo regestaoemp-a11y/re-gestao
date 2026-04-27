@@ -110,62 +110,54 @@ body::before{content:'';position:fixed;inset:0;
 .emp-ico{font-size:18px;flex-shrink:0;}
 .emp-arrow{color:var(--text3);font-size:12px;}
 
-/* ══ KANBAN COLABORADORA ═════════════════════════════════ */
-.kanban-wrap{display:flex;flex-direction:column;gap:12px;}
+/* ══ KANBAN HORIZONTAL — ESTILO TRELLO ══════════════════ */
+.kanban-board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:flex-start;
+  min-height:calc(100vh - 180px);}
+@media(max-width:900px){.kanban-board{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:500px){.kanban-board{grid-template-columns:1fr;}}
+.kanban-board::-webkit-scrollbar{height:5px;}
+.kanban-board::-webkit-scrollbar-thumb{background:var(--bdr3);border-radius:3px;}
 
-/* Coluna colapsável */
-.kan-col{background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;overflow:hidden;}
-.kan-col-head{display:flex;align-items:center;gap:10px;padding:12px 14px;
-  cursor:pointer;user-select:none;border-bottom:1px solid var(--bdr);}
-.kan-col-head:hover{background:rgba(255,255,255,0.02);}
-.kan-col-icon{font-size:16px;flex-shrink:0;}
-.kan-col-title{font-size:11px;font-weight:700;letter-spacing:.5px;flex:1;}
-.kan-col-stats{display:flex;align-items:center;gap:6px;}
+/* Coluna */
+.kan-col{background:var(--bg2);border:1px solid var(--bdr);
+  border-radius:12px;display:flex;flex-direction:column;max-height:calc(100vh - 190px);}
+.kan-col-head{padding:12px 14px 10px;border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.kan-col-head-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.kan-col-icon{font-size:15px;flex-shrink:0;}
+.kan-col-title{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  font-family:var(--mono);flex:1;}
 .kan-col-count{font-size:9px;font-family:var(--mono);background:var(--bg3);
   border:1px solid var(--bdr);border-radius:99px;padding:2px 8px;color:var(--text3);}
-.kan-prog-mini{width:50px;height:4px;background:var(--bg4);border-radius:99px;overflow:hidden;}
-.kan-prog-fill{height:100%;border-radius:99px;transition:width .6s ease;}
-.kan-toggle{color:var(--text3);font-size:10px;transition:transform .2s;flex-shrink:0;}
-.kan-col.open .kan-toggle{transform:rotate(90deg);}
-.kan-col-body{display:none;padding:10px;}
-.kan-col.open .kan-col-body{display:flex;flex-direction:column;gap:6px;}
+.kan-col-prog-track{height:3px;background:var(--bg4);border-radius:99px;overflow:hidden;}
+.kan-prog-fill{height:100%;border-radius:99px;transition:width .8s ease;}
+.kan-col-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;}
+.kan-col-body::-webkit-scrollbar{width:3px;}
+.kan-col-body::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px;}
 
 /* Item de tarefa */
 .kan-item{background:var(--bg3);border:1px solid var(--bdr);border-radius:9px;
-  padding:10px 12px;transition:all .15s;position:relative;}
-.kan-item.feito{opacity:.6;border-left:3px solid var(--green);}
-.kan-item.andamento{border-left:3px solid var(--amber);}
-.kan-item.desativada{opacity:.3;border-style:dashed;}
-.kan-item-txt{font-size:12px;color:var(--text2);line-height:1.4;margin-bottom:7px;}
+  padding:10px 12px;transition:all .2s;cursor:pointer;display:flex;align-items:flex-start;gap:10px;
+  position:relative;user-select:none;}
+.kan-item:hover{border-color:var(--bdr2);transform:translateY(-1px);box-shadow:0 3px 12px rgba(0,0,0,0.15);}
+.kan-item:active{transform:translateY(0);}
+.kan-item.feito{background:rgba(16,214,122,0.05);border-color:rgba(16,214,122,0.25);opacity:.75;}
+.kan-item.feito:hover{opacity:.9;}
+.kan-check{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--bdr2);
+  display:flex;align-items:center;justify-content:center;font-size:11px;
+  flex-shrink:0;margin-top:1px;transition:all .2s;}
+.kan-item.feito .kan-check{background:var(--green);border-color:var(--green);color:var(--bg);font-weight:700;}
+.kan-item-content{flex:1;min-width:0;}
+.kan-item-txt{font-size:12px;color:var(--text2);line-height:1.4;}
 .kan-item.feito .kan-item-txt{text-decoration:line-through;color:var(--text3);}
-.kan-item.desativada .kan-item-txt{text-decoration:line-through;}
-.kan-item-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.kan-status-row{display:flex;gap:4px;}
-.kan-s-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--bdr);
-  background:transparent;cursor:pointer;font-size:11px;display:flex;align-items:center;
-  justify-content:center;transition:all .15s;}
-.kan-s-btn:hover{border-color:var(--bdr2);}
-.kan-s-btn.p-on{background:rgba(59,127,245,0.15);border-color:var(--blue2);color:var(--blue2);}
-.kan-s-btn.a-on{background:rgba(245,166,35,0.15);border-color:var(--amber);color:var(--amber);}
-.kan-s-btn.f-on{background:rgba(16,214,122,0.15);border-color:var(--green);color:var(--green);}
-
-/* Obs campo */
-.kan-obs-btn{font-size:9px;font-family:var(--mono);color:var(--text3);background:none;
-  border:1px solid var(--bdr);border-radius:5px;padding:3px 8px;cursor:pointer;
-  transition:all .15s;white-space:nowrap;}
-.kan-obs-btn:hover{color:var(--blue2);border-color:var(--bdr2);}
-.kan-obs-area{margin-top:8px;display:none;}
-.kan-obs-area.open{display:block;}
-.kan-obs-input{width:100%;background:var(--bg2);border:1px solid var(--bdr);border-radius:7px;
-  padding:7px 10px;font-size:11px;color:var(--text);font-family:var(--font);
-  outline:none;resize:none;min-height:56px;line-height:1.5;}
-.kan-obs-input:focus{border-color:rgba(59,127,245,.35);}
-.kan-obs-save{font-size:9px;font-family:var(--mono);font-weight:600;color:var(--green);
-  background:rgba(16,214,122,0.08);border:1px solid rgba(16,214,122,0.2);
-  border-radius:5px;padding:4px 10px;cursor:pointer;margin-top:5px;transition:all .15s;}
-.kan-obs-save:hover{background:rgba(16,214,122,0.15);}
-.kan-obs-tag{font-size:9px;font-family:var(--mono);color:var(--blue2);margin-top:4px;
-  background:var(--blue3);padding:2px 7px;border-radius:4px;display:inline-block;}
+.kan-item-meta{font-size:9px;font-family:var(--mono);color:var(--green);margin-top:3px;}
+.kan-item-obs{font-size:10px;color:var(--text3);margin-top:3px;font-style:italic;}
+.kan-obs-icon{background:none;border:none;cursor:pointer;font-size:13px;padding:2px;
+  opacity:0;transition:opacity .15s;flex-shrink:0;margin-top:-1px;}
+.kan-item:hover .kan-obs-icon{opacity:.7;}
+.kan-obs-icon:hover{opacity:1!important;}
+/* Coluna toda concluída */
+.kan-col.all-done .kan-col-head{background:rgba(16,214,122,0.06);}
+.kan-col.all-done{border-color:rgba(16,214,122,0.2);}
 
 /* Coluna personalizada — add */
 .kan-add-btn{width:100%;padding:9px;border:1px dashed var(--bdr2);border-radius:8px;
@@ -273,6 +265,24 @@ textarea.fi{resize:vertical;min-height:64px;line-height:1.5;}
       onclick="voltarStep()">← Voltar</button>
     <div class="lg-err" id="err-senha">Senha incorreta. Tente novamente.</div>
   </div>
+
+  <!-- Step 3: trocar senha (primeira vez) -->
+  <div class="lg-card" id="step-trocar" style="display:none">
+    <div class="lg-step">Primeiro acesso · Crie sua senha pessoal</div>
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:28px;margin-bottom:6px">🔐</div>
+      <div style="font-size:13px;color:var(--text2)">Para sua segurança, crie uma senha nova.</div>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:4px">Mínimo 6 caracteres</div>
+    </div>
+    <label class="lg-label">Nova senha</label>
+    <input type="password" class="lg-input" id="inp-nova-senha" placeholder="• • • • • •"
+      maxlength="30" onkeydown="if(event.key==='Enter') document.getElementById('inp-conf-senha').focus()">
+    <label class="lg-label" style="margin-top:6px">Confirme a nova senha</label>
+    <input type="password" class="lg-input" id="inp-conf-senha" placeholder="• • • • • •"
+      maxlength="30" onkeydown="if(event.key==='Enter') confirmarTrocaSenha()">
+    <button class="lg-btn" onclick="confirmarTrocaSenha()">✓ Salvar minha senha</button>
+    <div class="lg-err" id="err-trocar">As senhas não coincidem ou são muito curtas.</div>
+  </div>
 </div>
 
 <!-- ═══════════ APP ═══════════ -->
@@ -310,10 +320,12 @@ textarea.fi{resize:vertical;min-height:64px;line-height:1.5;}
         <span class="emp-arrow">▾</span>
       </div>
 
-      <!-- Kanban 4 colunas (vertical no mobile) -->
-      <div class="kanban-wrap" id="kanban-container">
-        <div class="empty">
-          <div class="empty-ico">🏢</div>
+      <!-- Kanban horizontal estilo Trello -->
+      <div class="kanban-board" id="kanban-container">
+        <div style="display:flex;align-items:center;justify-content:center;
+          width:100%;color:var(--text3);font-family:var(--mono);font-size:11px;
+          flex-direction:column;gap:8px;padding:40px 0">
+          <span style="font-size:28px">🏢</span>
           Selecione um cliente acima para ver as tarefas
         </div>
       </div>
@@ -491,6 +503,9 @@ const COR_MAP = {
 
 // ── ESTADO ───────────────────────────────────────────────
 let ME = { uid:null, nome:'', cor:'blue', empresas:{}, meta:100 };
+let _pendingUid   = null;
+let _pendingColab = null;
+const SENHA_PADRAO = 'RE123456';
 let STATE = {
   colaboradores:{}, empresas:{}, tarefasPadrao:{},
   tarefas:{}, empresaAtual:null, unsubs:[]
@@ -536,22 +551,60 @@ window.fazerLogin = async function() {
   const uid   = document.getElementById('sel-usuario').value;
   const senha = document.getElementById('inp-senha').value.trim();
   const err   = document.getElementById('err-senha');
-  const colab = STATE.colaboradores[uid];
-  if(!colab || colab.senha !== senha) {
+  // Busca colaborador direto do Firebase para garantir senha atualizada
+  const snapFresh = await get(ref(db,'colaboradores/'+uid));
+  const colab = snapFresh.val();
+  const senhaCorreta = (colab?.senha || '').trim();
+  console.log('[Login] uid:', uid, '| senha digitada:', senha, '| senha salva:', senhaCorreta);
+  if(!colab || senhaCorreta !== senha) {
     err.style.display='block';
     document.getElementById('inp-senha').value='';
     setTimeout(()=>err.style.display='none',3000);
     return;
   }
   // Se senha temporária, marca como usada
+  // Se senha temporária → mostra tela de troca obrigatória
   if(colab.senhaTemporaria) {
-    await set(ref(db,`colaboradores/${uid}/senhaTemporaria`), false);
+    _pendingUid   = uid;
+    _pendingColab = colab;
+    document.getElementById('step-senha').style.display    = 'none';
+    document.getElementById('step-trocar').style.display   = 'block';
+    document.getElementById('step-senha-sub').textContent  = '';
+    return;
   }
   // Registra login
   await set(ref(db,`logins/${hoje()}/${uid}`), {
     timestamp: Date.now(), hora: new Date().toLocaleTimeString('pt-BR')
   });
   ME = { uid, nome:colab.nome, cor:colab.cor||'blue', empresas:colab.empresas||{}, meta:colab.meta_pontos||100 };
+  iniciarApp();
+};
+
+window.confirmarTrocaSenha = async function() {
+  const nova = document.getElementById('inp-nova-senha')?.value?.trim();
+  const conf = document.getElementById('inp-conf-senha')?.value?.trim();
+  const err  = document.getElementById('err-trocar');
+  if(!nova || nova.length < 6 || nova !== conf) {
+    if(err) err.style.display = 'block';
+    setTimeout(()=>{ if(err) err.style.display='none'; }, 3000);
+    return;
+  }
+  if(!_pendingUid) return;
+  // Salva nova senha e remove flag temporária
+  await set(ref(db,`colaboradores/${_pendingUid}/senha`), nova);
+  await set(ref(db,`colaboradores/${_pendingUid}/senhaTemporaria`), false);
+  // Carrega colaboradores atualizados e faz login
+  const snap = await get(ref(db,'colaboradores'));
+  STATE.colaboradores = snap.val() || {};
+  const colab = STATE.colaboradores[_pendingUid];
+  ME = { uid:_pendingUid, nome:colab.nome, cor:colab.cor||'blue',
+         empresas:colab.empresas||{}, meta:colab.meta_pontos||100 };
+  // Registra login
+  await set(ref(db,`logins/${hoje()}/${_pendingUid}`), {
+    timestamp: Date.now(), hora: new Date().toLocaleTimeString('pt-BR')
+  });
+  _pendingUid   = null;
+  _pendingColab = null;
   iniciarApp();
 };
 
@@ -689,85 +742,90 @@ function renderKanban(eid) {
   const container = document.getElementById('kanban-container');
   if(!container || !eid) return;
 
-  const emp     = STATE.empresas[eid] || {};
-  const padrao  = STATE.tarefasPadrao || {};
-  const et      = STATE.tarefas[eid] || {};
-  const esp     = Object.entries(emp.tarefas_especificas||{});
+  const emp    = STATE.empresas[eid] || {};
+  const padrao = STATE.tarefasPadrao || {};
+  const et     = STATE.tarefas[eid] || {};
+  const esp    = Object.entries(emp.tarefas_especificas||{});
 
-  const pd = Object.entries(padrao).filter(([,t])=>t?.tipo==='diaria'&&t?.ativa!==false&&!et[Object.keys(padrao).find(k=>padrao[k]===t)]?.desativada);
-  const ps = Object.entries(padrao).filter(([,t])=>t?.tipo==='semanal'&&t?.ativa!==false);
-  const pm = Object.entries(padrao).filter(([,t])=>t?.tipo==='mensal'&&t?.ativa!==false);
-
-  // Recalcula (sem filtrar desativadas para mostrar na UI)
-  const padraoD = Object.entries(padrao).filter(([,t])=>t?.tipo==='diaria'&&t?.ativa!==false);
+  const padraoD = Object.entries(padrao).filter(([,t])=>t?.tipo==='diaria' &&t?.ativa!==false);
   const padraoS = Object.entries(padrao).filter(([,t])=>t?.tipo==='semanal'&&t?.ativa!==false);
-  const padraoM = Object.entries(padrao).filter(([,t])=>t?.tipo==='mensal'&&t?.ativa!==false);
+  const padraoM = Object.entries(padrao).filter(([,t])=>t?.tipo==='mensal' &&t?.ativa!==false);
 
-  const fD = padraoD.filter(([tid])=>et[tid]?.status==='feito'&&!et[tid]?.desativada).length;
-  const fS = padraoS.filter(([tid])=>et[tid]?.status==='feito'&&!et[tid]?.desativada).length;
-  const fM = padraoM.filter(([tid])=>et[tid]?.status==='feito'&&!et[tid]?.desativada).length;
-  const fE = esp.filter(([tid])=>et[tid]?.status==='feito').length;
-  const ativD = padraoD.filter(([tid])=>!et[tid]?.desativada).length;
-  const ativS = padraoS.filter(([tid])=>!et[tid]?.desativada).length;
-  const ativM = padraoM.filter(([tid])=>!et[tid]?.desativada).length;
-
-  const mkItem = (tid, t, tipo) => {
+  // Click único no card → toggle pendente/feito
+  const mkItem = (tid, t) => {
     const task = et[tid] || {};
-    const desativ = task.desativada;
-    if(desativ) return ''; // Colaboradora não vê tarefas desativadas
-    const st = task.status || 'pendente';
-    const stCls = {feito:'feito',andamento:'andamento',pendente:''}[st]||'';
-    const obs = task.observacao || '';
-    const obsPre = obs ? `<div class="kan-obs-tag">📝 ${obs.substring(0,40)}${obs.length>40?'...':''}</div>` : '';
-    return `<div class="kan-item ${stCls}" id="ki-${eid}-${tid}">
-      <div class="kan-item-txt">${t.titulo||tid}</div>
-      ${obsPre}
-      <div class="kan-item-footer">
-        <div class="kan-status-row">
-          <button class="kan-s-btn ${st==='pendente'?'p-on':''}" title="Pendente"
-            onclick="setStatus('${eid}','${tid}','pendente')">○</button>
-          <button class="kan-s-btn ${st==='andamento'?'a-on':''}" title="Em andamento"
-            onclick="setStatus('${eid}','${tid}','andamento')">◑</button>
-          <button class="kan-s-btn ${st==='feito'?'f-on':''}" title="Concluída"
-            onclick="setStatus('${eid}','${tid}','feito')">✓</button>
-        </div>
-        <button class="kan-obs-btn" onclick="abrirObs('${eid}','${tid}','${(t.titulo||tid).replace(/'/g,'')}')">
-          ${obs?'✏️ Editar obs':'💬 Obs'}
-        </button>
+    if(task.desativada) return ''; // Não mostra tarefas desativadas
+    const feito = task.status === 'feito';
+    const obs   = task.observacao || '';
+    return `<div class="kan-item${feito?' feito':''}" onclick="toggleFeito('${eid}','${tid}')" title="${feito?'Clique para reabrir':'Clique para marcar como feito'}">
+      <div class="kan-check">${feito?'✓':''}</div>
+      <div class="kan-item-content">
+        <div class="kan-item-txt">${t.titulo||tid}</div>
+        ${feito&&task.feita_por?`<div class="kan-item-meta">✓ ${task.feita_por}</div>`:''}
+        ${obs?`<div class="kan-item-obs">💬 ${obs.substring(0,50)}${obs.length>50?'...':''}</div>`:''}
       </div>
+      <button class="kan-obs-icon" onclick="event.stopPropagation();abrirObs('${eid}','${tid}','${(t.titulo||tid).replace(/'/g,'')}')" title="Adicionar observação">💬</button>
     </div>`;
   };
 
-  const mkColuna = (id, ico, titulo, cor, items, feitas, total, extras=false, empId='') => {
+  // Contagens
+  const countFeito = (arr) => arr.filter(([tid])=>et[tid]?.status==='feito'&&!et[tid]?.desativada).length;
+  const countAtiv  = (arr) => arr.filter(([tid])=>!et[tid]?.desativada).length;
+  const fD=countFeito(padraoD), fS=countFeito(padraoS), fM=countFeito(padraoM);
+  const fE=esp.filter(([tid])=>et[tid]?.status==='feito').length;
+  const aD=countAtiv(padraoD), aS=countAtiv(padraoS), aM=countAtiv(padraoM);
+
+  const mkCol = (id, ico, titulo, cor, items, feitas, total, addBtn='') => {
     const pct = total>0?Math.round(feitas/total*100):0;
-    const colItems = items.join('');
-    return `<div class="kan-col open" id="kcol-${id}">
-      <div class="kan-col-head" onclick="toggleCol('${id}')">
-        <span class="kan-col-icon">${ico}</span>
-        <span class="kan-col-title" style="color:${cor}">${titulo}</span>
-        <div class="kan-col-stats">
+    const allDone = total>0 && feitas===total;
+    return `<div class="kan-col${allDone?' all-done':''}">
+      <div class="kan-col-head">
+        <div class="kan-col-head-top">
+          <span class="kan-col-icon">${ico}</span>
+          <span class="kan-col-title" style="color:${cor}">${titulo}</span>
           <span class="kan-col-count">${feitas}/${total}</span>
-          <div class="kan-prog-mini"><div class="kan-prog-fill" style="background:${cor};width:${pct}%"></div></div>
         </div>
-        <span class="kan-toggle">▶</span>
+        <div class="kan-col-prog-track">
+          <div style="height:100%;border-radius:99px;background:${cor};width:${pct}%;transition:width .6s ease"></div>
+        </div>
       </div>
       <div class="kan-col-body">
-        ${colItems || '<div class="empty" style="padding:16px 0"><div class="empty-ico" style="font-size:20px">✓</div>Sem tarefas</div>'}
-        ${extras ? `<button class="kan-add-btn" onclick="solicitarTarefa('${empId}')">＋ Solicitar tarefa personalizada</button>` : ''}
+        ${items||'<div style="text-align:center;padding:16px;color:var(--text3);font-family:var(--mono);font-size:10px">Nenhuma tarefa</div>'}
+        ${addBtn}
       </div>
     </div>`;
   };
 
   container.innerHTML =
-    mkColuna('d-'+eid,'🔵','Diárias','var(--cyan)',
-      padraoD.map(([tid,t])=>mkItem(tid,t,'diaria')), fD, ativD) +
-    mkColuna('s-'+eid,'🟡','Semanais','var(--purple)',
-      padraoS.map(([tid,t])=>mkItem(tid,t,'semanal')), fS, ativS) +
-    mkColuna('m-'+eid,'🟠','Mensais','var(--amber)',
-      padraoM.map(([tid,t])=>mkItem(tid,t,'mensal')), fM, ativM) +
-    mkColuna('e-'+eid,'🔴','Personalizadas','var(--green)',
-      esp.map(([tid,t])=>mkItem(tid,t,'esp')), fE, esp.length, true, eid);
+    mkCol('d', '🔵', 'Diárias',      'var(--cyan)',
+      padraoD.map(([tid,t])=>mkItem(tid,t)).join(''), fD, aD) +
+    mkCol('s', '🟡', 'Semanais',     'var(--purple)',
+      padraoS.map(([tid,t])=>mkItem(tid,t)).join(''), fS, aS) +
+    mkCol('m', '🟠', 'Mensais',      'var(--amber)',
+      padraoM.map(([tid,t])=>mkItem(tid,t)).join(''), fM, aM) +
+    mkCol('e', '🔴', 'Personalizadas','var(--green)',
+      esp.map(([tid,t])=>mkItem(tid,t)).join(''), fE, esp.length,
+      `<button class="kan-add-btn" onclick="solicitarTarefa('${eid}')">＋ Solicitar tarefa</button>`);
 }
+
+// Toggle simples: pendente ↔ feito com um clique
+window.toggleFeito = async function(eid, tid) {
+  const et  = STATE.tarefas[eid] || {};
+  const cur = et[tid]?.status || 'pendente';
+  const novo= cur === 'feito' ? 'pendente' : 'feito';
+  const payload = {
+    status:    novo,
+    feita_por: novo==='feito' ? ME.nome : '',
+    feita_em:  novo==='feito' ? Date.now() : null,
+    uid_resp:  ME.uid
+  };
+  const am = anoMes();
+  await update(ref(db,`tarefas/${am}/${eid}/${tid}`), payload);
+  if(!STATE.tarefas[eid]) STATE.tarefas[eid]={};
+  Object.assign(STATE.tarefas[eid][tid]=STATE.tarefas[eid][tid]||{}, payload);
+  renderKanban(eid);
+};
+
 
 window.toggleCol = function(id) {
   const col = document.getElementById('kcol-'+id);
