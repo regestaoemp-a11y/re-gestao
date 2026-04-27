@@ -215,6 +215,64 @@ textarea.fi{resize:vertical;min-height:64px;line-height:1.5;}
   box-shadow:0 0 6px var(--green);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{box-shadow:0 0 6px var(--green);}50%{box-shadow:0 0 14px var(--green);}}
 
+/* ══ CALENDÁRIO DIÁRIAS ═════════════════════════════════ */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px;}
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;}
+.cal-dh{font-size:8px;font-family:var(--mono);color:var(--text3);text-align:center;
+  padding:4px 0;text-transform:uppercase;letter-spacing:.5px;}
+.cal-day{border-radius:8px;padding:6px 4px;text-align:center;cursor:pointer;
+  border:1px solid var(--bdr);background:var(--bg3);transition:all .2s;position:relative;}
+.cal-day:hover:not(.cal-vazio):not(.cal-fds){border-color:var(--bdr2);transform:scale(1.05);}
+.cal-day.cal-vazio{background:transparent;border-color:transparent;cursor:default;}
+.cal-day.cal-fds{background:var(--bg2);opacity:.35;cursor:default;}
+.cal-day.cal-hoje{border-color:var(--blue2);box-shadow:0 0 0 2px rgba(59,127,245,0.2);}
+.cal-day.cal-feito{background:rgba(16,214,122,0.12);border-color:rgba(16,214,122,0.35);}
+.cal-day.cal-feito-outro{background:rgba(6,182,212,0.08);border-color:rgba(6,182,212,0.25);}
+.cal-day.cal-atrasado{background:rgba(240,62,62,0.07);border-color:rgba(240,62,62,0.2);}
+.cal-day.cal-futuro{opacity:.45;}
+.cal-num{font-size:11px;font-weight:700;font-family:var(--mono);line-height:1;color:var(--text2);}
+.cal-day.cal-hoje .cal-num{color:var(--blue2);}
+.cal-day.cal-feito .cal-num{color:var(--green);}
+.cal-day.cal-atrasado .cal-num{color:#f87171;}
+.cal-ico{font-size:10px;line-height:1;margin-top:2px;}
+.cal-resp{font-size:7px;font-family:var(--mono);color:var(--text3);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* Tarefas do dia selecionado */
+.cal-selected-day{background:var(--bg2);border:1px solid var(--bdr2);border-radius:10px;
+  padding:12px 14px;margin-top:10px;}
+.cal-day-title{font-size:9px;font-family:var(--mono);font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--blue2);margin-bottom:10px;display:flex;
+  align-items:center;justify-content:space-between;}
+.cal-day-empty{text-align:center;padding:16px;color:var(--text3);font-family:var(--mono);font-size:10px;}
+
+/* ══ SEMANAS ════════════════════════════════════════════ */
+.semanas-nav{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.sem-btn{flex:1;min-width:60px;padding:8px 6px;border-radius:8px;border:1px solid var(--bdr);
+  background:var(--bg3);cursor:pointer;text-align:center;transition:all .2s;}
+.sem-btn:hover{border-color:var(--bdr2);}
+.sem-btn.active{background:rgba(168,85,247,0.12);border-color:rgba(168,85,247,0.35);}
+.sem-btn.all-done{background:rgba(16,214,122,0.1);border-color:rgba(16,214,122,0.3);}
+.sem-lbl{font-size:9px;font-family:var(--mono);font-weight:700;color:var(--purple);}
+.sem-btn.active .sem-lbl{color:var(--purple);}
+.sem-datas{font-size:8px;font-family:var(--mono);color:var(--text3);margin-top:2px;}
+.sem-prog{font-size:9px;font-family:var(--mono);color:var(--green);margin-top:2px;}
+
+/* ══ SEÇÃO DE COLUNA ════════════════════════════════════ */
+.kan-section{background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;
+  margin-bottom:12px;overflow:hidden;}
+.kan-section-head{padding:12px 14px;border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+.kan-section-head:hover{background:rgba(255,255,255,0.02);}
+.kan-section-icon{font-size:16px;flex-shrink:0;}
+.kan-section-title{font-size:11px;font-weight:700;letter-spacing:.5px;flex:1;}
+.kan-section-badge{font-size:9px;font-family:var(--mono);background:var(--bg3);
+  border:1px solid var(--bdr);border-radius:99px;padding:2px 8px;color:var(--text3);}
+.kan-section-body{padding:12px 14px;display:flex;flex-direction:column;gap:0;}
+.kan-section.collapsed .kan-section-body{display:none;}
+.kan-section-toggle{color:var(--text3);font-size:10px;transition:transform .2s;flex-shrink:0;}
+.kan-section.collapsed .kan-section-toggle{transform:rotate(-90deg);}
+
 /* ══ MODAL OBS ═══════════════════════════════════════════ */
 .modal-overlay{position:fixed;inset:0;background:rgba(2,4,13,0.88);z-index:800;
   display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px);padding:16px;}
@@ -311,22 +369,55 @@ textarea.fi{resize:vertical;min-height:64px;line-height:1.5;}
     <!-- ═══ VIEW: TAREFAS (KANBAN) ═══ -->
     <div class="view active" id="view-tarefas">
 
-      <!-- Seletor de empresa -->
-      <div class="emp-selector">
+      <!-- Seletor de empresa + navegação de mês -->
+      <div class="emp-selector" style="flex-wrap:wrap;gap:8px">
         <span class="emp-ico">🏢</span>
-        <select id="sel-empresa" onchange="trocarEmpresa(this.value)">
+        <select id="sel-empresa" onchange="trocarEmpresa(this.value)" style="flex:1;min-width:140px">
           <option value="">Selecione o cliente...</option>
         </select>
-        <span class="emp-arrow">▾</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <button onclick="navMes(-1)" style="background:var(--bg3);border:1px solid var(--bdr);
+            border-radius:7px;color:var(--text2);cursor:pointer;padding:5px 10px;font-size:13px">‹</button>
+          <span id="label-mes-nav" style="font-size:11px;font-family:var(--mono);
+            color:var(--blue2);min-width:80px;text-align:center">Abr 2026</span>
+          <button onclick="navMes(1)" id="btn-mes-prox" style="background:var(--bg3);border:1px solid var(--bdr);
+            border-radius:7px;color:var(--text2);cursor:pointer;padding:5px 10px;font-size:13px">›</button>
+        </div>
       </div>
 
-      <!-- Kanban horizontal estilo Trello -->
-      <div class="kanban-board" id="kanban-container">
-        <div style="display:flex;align-items:center;justify-content:center;
-          width:100%;color:var(--text3);font-family:var(--mono);font-size:11px;
-          flex-direction:column;gap:8px;padding:40px 0">
-          <span style="font-size:28px">🏢</span>
-          Selecione um cliente acima para ver as tarefas
+      <!-- Resumo de progresso -->
+      <div id="prog-resumo" style="display:none;margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div style="background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;
+            padding:10px 12px;text-align:center">
+            <div style="font-size:9px;font-family:var(--mono);color:var(--cyan);
+              letter-spacing:1px;margin-bottom:4px">🔵 DIÁRIAS</div>
+            <div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--cyan)"
+              id="prog-d">0/0</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;
+            padding:10px 12px;text-align:center">
+            <div style="font-size:9px;font-family:var(--mono);color:var(--purple);
+              letter-spacing:1px;margin-bottom:4px">🟡 SEMANAIS</div>
+            <div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--purple)"
+              id="prog-s">0/0</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;
+            padding:10px 12px;text-align:center">
+            <div style="font-size:9px;font-family:var(--mono);color:var(--amber);
+              letter-spacing:1px;margin-bottom:4px">🟠 MENSAIS</div>
+            <div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--amber)"
+              id="prog-m">0/0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Container do kanban com calendário -->
+      <div id="kanban-container">
+        <div style="text-align:center;padding:40px 16px;color:var(--text3);
+          font-family:var(--mono);font-size:11px">
+          <div style="font-size:28px;margin-bottom:8px">🏢</div>
+          Selecione um cliente para ver as tarefas
         </div>
       </div>
 
@@ -491,6 +582,12 @@ const db    = getDatabase(fbApp);
 // ── HELPERS ──────────────────────────────────────────────
 const hoje    = () => new Date().toISOString().split('T')[0];
 const anoMes  = () => { const d=new Date(); return `${d.getFullYear()}_${String(d.getMonth()+1).padStart(2,'0')}`; };
+const anoMesNav = () => `${NAV.ano}_${String(NAV.mes+1).padStart(2,'0')}`;
+const diasNoMes = (ano,mes) => new Date(ano, mes+1, 0).getDate();
+const isUtil = (ano,mes,dia) => { const d=new Date(ano,mes,dia); return d.getDay()!==0&&d.getDay()!==6; };
+const fmtDia = (ano,mes,dia) => `${ano}-${String(mes+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+const nomesMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const nomesMesAbr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const getIni  = nome => nome.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const COR_MAP = {
   blue:  {bg:'rgba(59,127,245,0.15)',txt:'#5a9bff'},
@@ -503,9 +600,18 @@ const COR_MAP = {
 
 // ── ESTADO ───────────────────────────────────────────────
 let ME = { uid:null, nome:'', cor:'blue', empresas:{}, meta:100 };
+let STATE = { colaboradores:{}, empresas:{}, tarefasPadrao:{}, tarefas:{}, tarefasNav:{}, empresaAtual:null, unsubs:[] };
 let _pendingUid   = null;
 let _pendingColab = null;
 const SENHA_PADRAO = 'RE123456';
+
+// Navegação de mês
+let NAV = {
+  ano:  new Date().getFullYear(),
+  mes:  new Date().getMonth(),      // 0-indexed
+  semSel: 0,                        // semana selecionada (0=primeira)
+  diaSel: new Date().toISOString().split('T')[0]  // dia selecionado
+};
 let STATE = {
   colaboradores:{}, empresas:{}, tarefasPadrao:{},
   tarefas:{}, empresaAtual:null, unsubs:[]
@@ -669,13 +775,16 @@ function carregarDados() {
   });
   STATE.unsubs.push(unTP);
 
-  // Tarefas do mês
+  // Tarefas do mês atual
   const unT = onValue(ref(db,`tarefas/${anoMes()}`), snap => {
     STATE.tarefas = snap.val() || {};
     if(STATE.empresaAtual) renderKanban(STATE.empresaAtual);
     renderMeuMes();
   });
   STATE.unsubs.push(unT);
+
+  // Atualiza label do mês
+  atualizarLabelMes();
 }
 
 function popularSelectEmpresas() {
@@ -728,132 +837,415 @@ window.navegarPara = function(view, btn) {
 
 window.trocarEmpresa = function(eid) {
   STATE.empresaAtual = eid || null;
-  if(eid) renderKanban(eid);
-  else {
+  const pr = document.getElementById('prog-resumo');
+  if(!eid) {
     document.getElementById('kanban-container').innerHTML =
-      '<div class="empty"><div class="empty-ico">🏢</div>Selecione um cliente acima para ver as tarefas</div>';
+      '<div style="text-align:center;padding:40px 16px;color:var(--text3);font-family:var(--mono);font-size:11px"><div style="font-size:28px;margin-bottom:8px">🏢</div>Selecione um cliente para ver as tarefas</div>';
+    if(pr) pr.style.display='none';
+    return;
+  }
+  if(pr) pr.style.display='block';
+  carregarTarefasMes().then(()=>renderKanban(eid));
+};
+
+// Carrega tarefas do mês navegado
+async function carregarTarefasMes() {
+  const am = anoMesNav();
+  const snap = await get(ref(db,`tarefas/${am}`));
+  STATE.tarefasNav = snap.val() || {};
+}
+
+// ── NAVEGAÇÃO DE MÊS ─────────────────────────────────────
+window.navMes = async function(dir) {
+  const agora = new Date();
+  NAV.mes += dir;
+  if(NAV.mes > 11) { NAV.mes=0; NAV.ano++; }
+  if(NAV.mes < 0)  { NAV.mes=11; NAV.ano--; }
+  // Não permite navegar para o futuro
+  const btnProx = document.getElementById('btn-mes-prox');
+  const isAtual = NAV.ano===agora.getFullYear() && NAV.mes===agora.getMonth();
+  const isFuturo= NAV.ano > agora.getFullYear() || (NAV.ano===agora.getFullYear() && NAV.mes>agora.getMonth());
+  if(isFuturo) { NAV.mes -= dir; if(NAV.mes>11){NAV.mes=0;NAV.ano++;}if(NAV.mes<0){NAV.mes=11;NAV.ano--;} return; }
+  if(btnProx) btnProx.style.opacity = isAtual ? '.35' : '1';
+  // Reseta dia selecionado para hoje ou último dia do mês
+  if(isAtual) NAV.diaSel = agora.toISOString().split('T')[0];
+  else NAV.diaSel = fmtDia(NAV.ano, NAV.mes, diasNoMes(NAV.ano,NAV.mes));
+  NAV.semSel = 0;
+  atualizarLabelMes();
+  if(STATE.empresaAtual) {
+    await carregarTarefasMes();
+    renderKanban(STATE.empresaAtual);
   }
 };
 
-// ═══════════════════════════════════════════════════════
-// KANBAN DE TAREFAS
-// ═══════════════════════════════════════════════════════
+function atualizarLabelMes() {
+  const el = document.getElementById('label-mes-nav');
+  if(el) el.textContent = nomesMesAbr[NAV.mes]+' '+NAV.ano;
+  const agora = new Date();
+  const isAtual = NAV.ano===agora.getFullYear() && NAV.mes===agora.getMonth();
+  const btn = document.getElementById('btn-mes-prox');
+  if(btn) btn.style.opacity = isAtual ? '.35' : '1';
+}
+
+// ══ RENDER KANBAN PRINCIPAL ══════════════════════════════
 function renderKanban(eid) {
   const container = document.getElementById('kanban-container');
   if(!container || !eid) return;
 
   const emp    = STATE.empresas[eid] || {};
   const padrao = STATE.tarefasPadrao || {};
-  const et     = STATE.tarefas[eid] || {};
-  const esp    = Object.entries(emp.tarefas_especificas||{});
+  const et     = STATE.tarefasNav || STATE.tarefas[eid] || {};
 
   const padraoD = Object.entries(padrao).filter(([,t])=>t?.tipo==='diaria' &&t?.ativa!==false);
   const padraoS = Object.entries(padrao).filter(([,t])=>t?.tipo==='semanal'&&t?.ativa!==false);
   const padraoM = Object.entries(padrao).filter(([,t])=>t?.tipo==='mensal' &&t?.ativa!==false);
+  const esp     = Object.entries(emp.tarefas_especificas||{});
 
-  // Click único no card → toggle pendente/feito
-  const mkItem = (tid, t) => {
-    const task = et[tid] || {};
-    if(task.desativada) return ''; // Não mostra tarefas desativadas
-    const feito = task.status === 'feito';
-    const obs   = task.observacao || '';
-    return `<div class="kan-item${feito?' feito':''}" onclick="toggleFeito('${eid}','${tid}')" title="${feito?'Clique para reabrir':'Clique para marcar como feito'}">
-      <div class="kan-check">${feito?'✓':''}</div>
-      <div class="kan-item-content">
-        <div class="kan-item-txt">${t.titulo||tid}</div>
-        ${feito&&task.feita_por?`<div class="kan-item-meta">✓ ${task.feita_por}</div>`:''}
-        ${obs?`<div class="kan-item-obs">💬 ${obs.substring(0,50)}${obs.length>50?'...':''}</div>`:''}
-      </div>
-      <button class="kan-obs-icon" onclick="event.stopPropagation();abrirObs('${eid}','${tid}','${(t.titulo||tid).replace(/'/g,'')}')" title="Adicionar observação">💬</button>
-    </div>`;
-  };
+  // Dias úteis do mês
+  const totalDias = diasNoMes(NAV.ano, NAV.mes);
+  const diasUteis = [];
+  for(let d=1; d<=totalDias; d++) {
+    if(isUtil(NAV.ano, NAV.mes, d)) diasUteis.push(d);
+  }
 
-  // Contagens
-  const countFeito = (arr) => arr.filter(([tid])=>et[tid]?.status==='feito'&&!et[tid]?.desativada).length;
-  const countAtiv  = (arr) => arr.filter(([tid])=>!et[tid]?.desativada).length;
-  const fD=countFeito(padraoD), fS=countFeito(padraoS), fM=countFeito(padraoM);
-  const fE=esp.filter(([tid])=>et[tid]?.status==='feito').length;
-  const aD=countAtiv(padraoD), aS=countAtiv(padraoS), aM=countAtiv(padraoM);
+  // Semanas do mês
+  const semanas = calcularSemanas(NAV.ano, NAV.mes);
 
-  const mkCol = (id, ico, titulo, cor, items, feitas, total, addBtn='') => {
-    const pct = total>0?Math.round(feitas/total*100):0;
-    const allDone = total>0 && feitas===total;
-    return `<div class="kan-col${allDone?' all-done':''}">
-      <div class="kan-col-head">
-        <div class="kan-col-head-top">
-          <span class="kan-col-icon">${ico}</span>
-          <span class="kan-col-title" style="color:${cor}">${titulo}</span>
-          <span class="kan-col-count">${feitas}/${total}</span>
-        </div>
-        <div class="kan-col-prog-track">
-          <div style="height:100%;border-radius:99px;background:${cor};width:${pct}%;transition:width .6s ease"></div>
-        </div>
-      </div>
-      <div class="kan-col-body">
-        ${items||'<div style="text-align:center;padding:16px;color:var(--text3);font-family:var(--mono);font-size:10px">Nenhuma tarefa</div>'}
-        ${addBtn}
-      </div>
-    </div>`;
-  };
+  // Progresso geral
+  let fD=0, tD=0, fS=0, tS=0, fM=0, tM=0;
+  diasUteis.forEach(d => {
+    const dKey = fmtDia(NAV.ano, NAV.mes, d);
+    padraoD.forEach(([tid])=>{
+      if(et[eid]?.[`diaria_${tid}_${dKey}`]?.desativada) return;
+      tD++;
+      if(et[eid]?.[`diaria_${tid}_${dKey}`]?.status==='feito') fD++;
+    });
+  });
+  semanas.forEach((_,si)=>{
+    padraoS.forEach(([tid])=>{
+      tS++;
+      if(et[eid]?.[`semanal_${tid}_sem${si}`]?.status==='feito') fS++;
+    });
+  });
+  padraoM.forEach(([tid])=>{
+    tM++;
+    if(et[eid]?.[`mensal_${tid}`]?.status==='feito') fM++;
+  });
+  const set2=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set2('prog-d',`${fD}/${tD}`);
+  set2('prog-s',`${fS}/${tS}`);
+  set2('prog-m',`${fM}/${tM}`);
 
   container.innerHTML =
-    mkCol('d', '🔵', 'Diárias',      'var(--cyan)',
-      padraoD.map(([tid,t])=>mkItem(tid,t)).join(''), fD, aD) +
-    mkCol('s', '🟡', 'Semanais',     'var(--purple)',
-      padraoS.map(([tid,t])=>mkItem(tid,t)).join(''), fS, aS) +
-    mkCol('m', '🟠', 'Mensais',      'var(--amber)',
-      padraoM.map(([tid,t])=>mkItem(tid,t)).join(''), fM, aM) +
-    mkCol('e', '🔴', 'Personalizadas','var(--green)',
-      esp.map(([tid,t])=>mkItem(tid,t)).join(''), fE, esp.length,
-      `<button class="kan-add-btn" onclick="solicitarTarefa('${eid}')">＋ Solicitar tarefa</button>`);
+    renderSecaoDiarias(eid, padraoD, diasUteis, et) +
+    renderSecaoSemanais(eid, padraoS, semanas, et) +
+    renderSecaoMensais(eid, padraoM, et) +
+    renderSecaoPersonalizadas(eid, esp, et);
 }
 
-// Toggle simples: pendente ↔ feito com um clique
-window.toggleFeito = async function(eid, tid) {
-  const et  = STATE.tarefas[eid] || {};
-  const cur = et[tid]?.status || 'pendente';
-  const novo= cur === 'feito' ? 'pendente' : 'feito';
-  const payload = {
-    status:    novo,
-    feita_por: novo==='feito' ? ME.nome : '',
-    feita_em:  novo==='feito' ? Date.now() : null,
-    uid_resp:  ME.uid
-  };
-  const am = anoMes();
-  await update(ref(db,`tarefas/${am}/${eid}/${tid}`), payload);
-  if(!STATE.tarefas[eid]) STATE.tarefas[eid]={};
-  Object.assign(STATE.tarefas[eid][tid]=STATE.tarefas[eid][tid]||{}, payload);
-  renderKanban(eid);
+// ── SEÇÃO: DIÁRIAS com calendário ────────────────────────
+function renderSecaoDiarias(eid, padraoD, diasUteis, et) {
+  if(!padraoD.length) return '';
+  const agora = new Date();
+  const isAtual = NAV.ano===agora.getFullYear() && NAV.mes===agora.getMonth();
+  const hoje2 = agora.toISOString().split('T')[0];
+
+  // Monta grade de calendário
+  const totalDias = diasNoMes(NAV.ano, NAV.mes);
+  const primeiroDow = new Date(NAV.ano, NAV.mes, 1).getDay(); // 0=dom
+
+  // Para cada dia do mês, calcula status geral (quantas tarefas feitas naquele dia)
+  const statusDia = {};
+  for(let d=1; d<=totalDias; d++) {
+    const dKey = fmtDia(NAV.ano, NAV.mes, d);
+    if(!isUtil(NAV.ano, NAV.mes, d)) { statusDia[d]='fds'; continue; }
+    const futuro = dKey > hoje2;
+    if(futuro && isAtual) { statusDia[d]='futuro'; continue; }
+    let feitas=0, total=0, outroFez=false;
+    padraoD.forEach(([tid])=>{
+      const tk = et[eid]?.[`diaria_${tid}_${dKey}`];
+      if(tk?.desativada) return;
+      total++;
+      if(tk?.status==='feito') {
+        feitas++;
+        if(tk.uid_resp && tk.uid_resp !== ME.uid) outroFez=true;
+      }
+    });
+    if(total===0) statusDia[d]='util';
+    else if(feitas===total) statusDia[d] = outroFez ? 'feito-outro' : 'feito';
+    else if(feitas>0) statusDia[d]='parcial';
+    else statusDia[d]='atrasado';
+  }
+
+  // Grade 7 colunas
+  const dias7 = ['D','S','T','Q','Q','S','S'];
+  let grid = `<div class="cal-header">${dias7.map(d=>`<div class="cal-dh">${d}</div>`).join('')}</div>`;
+  grid += '<div class="cal-grid">';
+  // Vazios antes do dia 1
+  for(let i=0;i<primeiroDow;i++) grid += '<div class="cal-day cal-vazio"></div>';
+  for(let d=1; d<=totalDias; d++) {
+    const dKey = fmtDia(NAV.ano, NAV.mes, d);
+    const st   = statusDia[d];
+    const isH  = dKey === hoje2;
+    const isSel= dKey === NAV.diaSel;
+    const ico  = st==='feito'?'✓':st==='feito-outro'?'✓':st==='parcial'?'◑':st==='atrasado'?'!':'';
+    const extra = isSel ? ';box-shadow:0 0 0 2px var(--blue2);background:rgba(59,127,245,0.12)' : '';
+    grid += `<div class="cal-day cal-${st}${isH?' cal-hoje':''}" style="${extra}"
+      onclick="${st==='util'||st==='feito'||st==='parcial'||st==='atrasado'||st==='feito-outro'?`selecionarDia('${dKey}')`:''}"
+      title="${dKey}">
+      <div class="cal-num">${d}</div>
+      ${ico?`<div class="cal-ico">${ico}</div>`:''}
+    </div>`;
+  }
+  grid += '</div>';
+
+  // Tarefas do dia selecionado
+  const dayTasks = renderTarefasDia(eid, padraoD, NAV.diaSel, et);
+
+  return `<div class="kan-section" id="sec-diarias">
+    <div class="kan-section-head" onclick="toggleSecao('sec-diarias')">
+      <span class="kan-section-icon">🔵</span>
+      <span class="kan-section-title" style="color:var(--cyan)">Diárias</span>
+      <span class="kan-section-badge" id="badge-d">calendário</span>
+      <span class="kan-section-toggle">▾</span>
+    </div>
+    <div class="kan-section-body">
+      ${grid}
+      ${dayTasks}
+    </div>
+  </div>`;
+}
+
+function renderTarefasDia(eid, padraoD, dKey, et) {
+  const d = new Date(dKey+'T12:00:00');
+  const diasSemana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const label = `${diasSemana[d.getDay()]}, ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+  const agora = new Date();
+  const hoje2 = agora.toISOString().split('T')[0];
+  const futuro = dKey > hoje2 && (NAV.ano===agora.getFullYear()&&NAV.mes===agora.getMonth());
+
+  const items = padraoD.map(([tid,t])=>{
+    const tkey = `diaria_${tid}_${dKey}`;
+    const task = et[eid]?.[tkey] || {};
+    if(task.desativada) return '';
+    const feito = task.status === 'feito';
+    const minha = task.uid_resp === ME.uid;
+    const outraP= feito && !minha && task.feita_por ? task.feita_por.split(' ')[0] : '';
+    return `<div class="kan-item${feito?' feito':''}" ${!futuro?`onclick="toggleFeitoDia('${eid}','${tid}','${dKey}')"`:'style="opacity:.4;cursor:default"'}>
+      <div class="kan-check">${feito?'✓':''}</div>
+      <div class="kan-item-content">
+        <div class="kan-item-txt">${t.titulo}</div>
+        ${feito&&task.feita_por?`<div class="kan-item-meta">✓ ${outraP||task.feita_por.split(' ')[0]}</div>`:''}
+      </div>
+      ${!futuro?`<button class="kan-obs-icon" onclick="event.stopPropagation();abrirObs('${eid}','${tkey}','${t.titulo.replace(/'/g,'')}')">💬</button>`:''}
+    </div>`;
+  }).join('');
+
+  return `<div class="cal-selected-day">
+    <div class="cal-day-title">
+      <span>${label}</span>
+      ${futuro?'<span style="font-size:9px;color:var(--text3);font-family:var(--mono)">Dia futuro</span>':''}
+    </div>
+    ${items||'<div class="cal-day-empty">Nenhuma tarefa para este dia</div>'}
+  </div>`;
+}
+
+window.selecionarDia = function(dKey) {
+  NAV.diaSel = dKey;
+  if(STATE.empresaAtual) renderKanban(STATE.empresaAtual);
 };
 
+// ── SEÇÃO: SEMANAIS ──────────────────────────────────────
+function calcularSemanas(ano, mes) {
+  const total = diasNoMes(ano, mes);
+  const semanas = [];
+  let sem = [];
+  for(let d=1; d<=total; d++) {
+    sem.push(d);
+    const dow = new Date(ano, mes, d).getDay();
+    if(dow===0 || d===total) { semanas.push([...sem]); sem=[]; }
+  }
+  if(sem.length) semanas.push(sem);
+  return semanas.filter(s=>s.length);
+}
 
-window.toggleCol = function(id) {
-  const col = document.getElementById('kcol-'+id);
-  if(col) col.classList.toggle('open');
+function renderSecaoSemanais(eid, padraoS, semanas, et) {
+  if(!padraoS.length) return '';
+  const agora = new Date();
+  const hoje2 = agora.toISOString().split('T')[0];
+
+  const semBtns = semanas.map((sem,si)=>{
+    const d1 = fmtDia(NAV.ano,NAV.mes,sem[0]);
+    const d2 = fmtDia(NAV.ano,NAV.mes,sem[sem.length-1]);
+    let feitas=0;
+    padraoS.forEach(([tid])=>{ if(et[eid]?.[`semanal_${tid}_sem${si}`]?.status==='feito') feitas++; });
+    const allDone = feitas===padraoS.length&&padraoS.length>0;
+    const futuro  = d1 > hoje2 && (NAV.ano===agora.getFullYear()&&NAV.mes===agora.getMonth());
+    const ativo   = NAV.semSel===si;
+    const d1s=`${String(sem[0]).padStart(2,'0')}/${String(NAV.mes+1).padStart(2,'0')}`;
+    const d2s=`${String(sem[sem.length-1]).padStart(2,'0')}/${String(NAV.mes+1).padStart(2,'0')}`;
+    return `<div class="sem-btn${ativo?' active':''}${allDone?' all-done':''}"
+      onclick="selecionarSemana(${si})"
+      style="${futuro?'opacity:.4':''}" title="${d1s} a ${d2s}">
+      <div class="sem-lbl">Sem ${si+1}</div>
+      <div class="sem-datas">${d1s}→${d2s}</div>
+      ${feitas>0?`<div class="sem-prog">${feitas}/${padraoS.length}</div>`:''}
+    </div>`;
+  }).join('');
+
+  const si = NAV.semSel;
+  const sem = semanas[si] || semanas[0];
+  const items = padraoS.map(([tid,t])=>{
+    const tkey  = `semanal_${tid}_sem${si}`;
+    const task  = et[eid]?.[tkey] || {};
+    const feito = task.status==='feito';
+    const d1 = sem ? fmtDia(NAV.ano,NAV.mes,sem[0]) : '';
+    const futuro = d1 > hoje2 && (NAV.ano===agora.getFullYear()&&NAV.mes===agora.getMonth());
+    return `<div class="kan-item${feito?' feito':''}" ${!futuro?`onclick="toggleFeitoSemana('${eid}','${tid}',${si})"`:'style="opacity:.4;cursor:default"'}>
+      <div class="kan-check">${feito?'✓':''}</div>
+      <div class="kan-item-content">
+        <div class="kan-item-txt">${t.titulo}</div>
+        ${feito&&task.feita_por?`<div class="kan-item-meta">✓ ${task.feita_por.split(' ')[0]}</div>`:''}
+      </div>
+      ${!futuro?`<button class="kan-obs-icon" onclick="event.stopPropagation();abrirObs('${eid}','${tkey}','${t.titulo.replace(/'/g,'')}')">💬</button>`:''}
+    </div>`;
+  }).join('');
+
+  return `<div class="kan-section" id="sec-semanais">
+    <div class="kan-section-head" onclick="toggleSecao('sec-semanais')">
+      <span class="kan-section-icon">🟡</span>
+      <span class="kan-section-title" style="color:var(--purple)">Semanais</span>
+      <span class="kan-section-badge">${semanas.length} semanas</span>
+      <span class="kan-section-toggle">▾</span>
+    </div>
+    <div class="kan-section-body">
+      <div class="semanas-nav">${semBtns}</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${items}</div>
+    </div>
+  </div>`;
+}
+
+window.selecionarSemana = function(si) {
+  NAV.semSel = si;
+  if(STATE.empresaAtual) renderKanban(STATE.empresaAtual);
 };
 
-// ═══════════════════════════════════════════════════════
-// STATUS DE TAREFA (salva no Firebase — aparece no gestor)
-// ═══════════════════════════════════════════════════════
-window.setStatus = async function(eid, tid, novoStatus) {
-  const am = anoMes();
-  const payload = {
-    status:    novoStatus,
-    feita_por: ME.nome,
-    feita_em:  Date.now(),
-    uid_resp:  ME.uid
-  };
-  await update(ref(db,`tarefas/${am}/${eid}/${tid}`), payload);
-  // Atualiza estado local
-  if(!STATE.tarefas[eid]) STATE.tarefas[eid]={};
-  Object.assign(STATE.tarefas[eid][tid]=STATE.tarefas[eid][tid]||{}, payload);
-  renderKanban(eid);
+// ── SEÇÃO: MENSAIS ───────────────────────────────────────
+function renderSecaoMensais(eid, padraoM, et) {
+  if(!padraoM.length) return '';
+  const agora = new Date();
+  const isFuturo = NAV.ano>agora.getFullYear()||(NAV.ano===agora.getFullYear()&&NAV.mes>agora.getMonth());
+  const items = padraoM.map(([tid,t])=>{
+    const tkey  = `mensal_${tid}`;
+    const task  = et[eid]?.[tkey] || {};
+    const feito = task.status==='feito';
+    return `<div class="kan-item${feito?' feito':''}" ${!isFuturo?`onclick="toggleFeitoMensal('${eid}','${tid}')"`:'style="opacity:.4;cursor:default"'}>
+      <div class="kan-check">${feito?'✓':''}</div>
+      <div class="kan-item-content">
+        <div class="kan-item-txt">${t.titulo}</div>
+        ${feito&&task.feita_por?`<div class="kan-item-meta">✓ ${task.feita_por.split(' ')[0]}${task.feita_em?' · '+new Date(task.feita_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):''}` +`</div>`:''}
+      </div>
+      ${!isFuturo?`<button class="kan-obs-icon" onclick="event.stopPropagation();abrirObs('${eid}','${tkey}','${t.titulo.replace(/'/g,'')}')">💬</button>`:''}
+    </div>`;
+  }).join('');
+
+  const fM = padraoM.filter(([tid])=>et[eid]?.[`mensal_${tid}`]?.status==='feito').length;
+  return `<div class="kan-section" id="sec-mensais">
+    <div class="kan-section-head" onclick="toggleSecao('sec-mensais')">
+      <span class="kan-section-icon">🟠</span>
+      <span class="kan-section-title" style="color:var(--amber)">Mensais — ${nomesMes[NAV.mes]} ${NAV.ano}</span>
+      <span class="kan-section-badge">${fM}/${padraoM.length}</span>
+      <span class="kan-section-toggle">▾</span>
+    </div>
+    <div class="kan-section-body" style="display:flex;flex-direction:column;gap:6px">${items}</div>
+  </div>`;
+}
+
+// ── SEÇÃO: PERSONALIZADAS ────────────────────────────────
+function renderSecaoPersonalizadas(eid, esp, et) {
+  const items = esp.map(([tid,t])=>{
+    const tkey  = `esp_${tid}`;
+    const task  = et[eid]?.[tkey] || {};
+    const feito = task.status==='feito';
+    return `<div class="kan-item${feito?' feito':''}" onclick="toggleFeitoEsp('${eid}','${tid}')">
+      <div class="kan-check">${feito?'✓':''}</div>
+      <div class="kan-item-content">
+        <div class="kan-item-txt">${t.titulo}</div>
+        ${feito&&task.feita_por?`<div class="kan-item-meta">✓ ${task.feita_por.split(' ')[0]}</div>`:''}
+      </div>
+      <button class="kan-obs-icon" onclick="event.stopPropagation();abrirObs('${eid}','${tkey}','${(t.titulo||tid).replace(/'/g,'')}')">💬</button>
+    </div>`;
+  }).join('') || '<div style="text-align:center;padding:12px;color:var(--text3);font-family:var(--mono);font-size:10px">Nenhuma tarefa personalizada</div>';
+
+  const fE = esp.filter(([tid])=>et[eid]?.[`esp_${tid}`]?.status==='feito').length;
+  return `<div class="kan-section" id="sec-esp">
+    <div class="kan-section-head" onclick="toggleSecao('sec-esp')">
+      <span class="kan-section-icon">🔴</span>
+      <span class="kan-section-title" style="color:var(--green)">Personalizadas</span>
+      <span class="kan-section-badge">${fE}/${esp.length}</span>
+      <span class="kan-section-toggle">▾</span>
+    </div>
+    <div class="kan-section-body" style="display:flex;flex-direction:column;gap:6px">${items}</div>
+  </div>`;
+}
+
+// ── TOGGLE SEÇÃO ─────────────────────────────────────────
+window.toggleSecao = function(id) {
+  document.getElementById(id)?.classList.toggle('collapsed');
 };
+
 
 // ═══════════════════════════════════════════════════════
 // OBSERVAÇÕES
 // ═══════════════════════════════════════════════════════
 let _obsAtual = { eid:null, tid:null };
+
+// ─── TOGGLES COM DATA ────────────────────────────────────
+window.toggleFeitoDia = async function(eid, tid, dKey) {
+  const am   = anoMesNav();
+  const tkey = `diaria_${tid}_${dKey}`;
+  const cur  = STATE.tarefasNav?.[eid]?.[tkey]?.status || 'pendente';
+  const novo = cur==='feito'?'pendente':'feito';
+  const p    = {status:novo,feita_por:novo==='feito'?ME.nome:'',feita_em:novo==='feito'?Date.now():null,uid_resp:ME.uid};
+  await update(ref(db,`tarefas/${am}/${eid}/${tkey}`), p);
+  if(!STATE.tarefasNav[eid]) STATE.tarefasNav[eid]={};
+  Object.assign(STATE.tarefasNav[eid][tkey]=STATE.tarefasNav[eid][tkey]||{},p);
+  renderKanban(eid);
+};
+window.toggleFeitoSemana = async function(eid, tid, si) {
+  const am   = anoMesNav();
+  const tkey = `semanal_${tid}_sem${si}`;
+  const cur  = STATE.tarefasNav?.[eid]?.[tkey]?.status || 'pendente';
+  const novo = cur==='feito'?'pendente':'feito';
+  const p    = {status:novo,feita_por:novo==='feito'?ME.nome:'',feita_em:novo==='feito'?Date.now():null,uid_resp:ME.uid};
+  await update(ref(db,`tarefas/${am}/${eid}/${tkey}`), p);
+  if(!STATE.tarefasNav[eid]) STATE.tarefasNav[eid]={};
+  Object.assign(STATE.tarefasNav[eid][tkey]=STATE.tarefasNav[eid][tkey]||{},p);
+  renderKanban(eid);
+};
+window.toggleFeitoMensal = async function(eid, tid) {
+  const am   = anoMesNav();
+  const tkey = `mensal_${tid}`;
+  const cur  = STATE.tarefasNav?.[eid]?.[tkey]?.status || 'pendente';
+  const novo = cur==='feito'?'pendente':'feito';
+  const p    = {status:novo,feita_por:novo==='feito'?ME.nome:'',feita_em:novo==='feito'?Date.now():null,uid_resp:ME.uid};
+  await update(ref(db,`tarefas/${am}/${eid}/${tkey}`), p);
+  if(!STATE.tarefasNav[eid]) STATE.tarefasNav[eid]={};
+  Object.assign(STATE.tarefasNav[eid][tkey]=STATE.tarefasNav[eid][tkey]||{},p);
+  renderKanban(eid);
+};
+window.toggleFeitoEsp = async function(eid, tid) {
+  const am   = anoMesNav();
+  const tkey = `esp_${tid}`;
+  const cur  = STATE.tarefasNav?.[eid]?.[tkey]?.status || 'pendente';
+  const novo = cur==='feito'?'pendente':'feito';
+  const p    = {status:novo,feita_por:novo==='feito'?ME.nome:'',feita_em:novo==='feito'?Date.now():null,uid_resp:ME.uid};
+  await update(ref(db,`tarefas/${am}/${eid}/${tkey}`), p);
+  if(!STATE.tarefasNav[eid]) STATE.tarefasNav[eid]={};
+  Object.assign(STATE.tarefasNav[eid][tkey]=STATE.tarefasNav[eid][tkey]||{},p);
+  renderKanban(eid);
+};
+
 
 window.abrirObs = function(eid, tid, titulo) {
   _obsAtual = {eid, tid};
