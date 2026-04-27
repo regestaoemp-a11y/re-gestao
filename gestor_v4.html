@@ -244,6 +244,8 @@ body::after{content:'';position:fixed;top:-300px;right:-200px;width:700px;height
   padding:9px 12px;font-size:12px;color:var(--text);font-family:var(--font);
   outline:none;transition:border-color .2s,box-shadow .2s;appearance:none;}
 .fi:focus{border-color:rgba(59,127,245,.45);box-shadow:0 0 0 3px rgba(59,127,245,.08);}
+.fi-err{border-color:rgba(240,62,62,.5)!important;box-shadow:0 0 0 3px rgba(240,62,62,.08)!important;animation:shake .3s ease;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
 .fi::placeholder{color:var(--text3);}
 select.fi option{background:var(--bg3);}
 textarea.fi{resize:vertical;min-height:80px;line-height:1.5;}
@@ -293,6 +295,76 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.5;}
 .tab-btn:hover:not(.active){color:var(--text2);}
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
+
+
+/* ══ KANBAN DE TAREFAS ════════════════════════════════════ */
+.client-kanban{background:var(--bg2);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;transition:border-color .2s;}
+.client-kanban:hover{border-color:var(--bdr2);}
+.ck-header{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;
+  border-bottom:1px solid var(--bdr);background:var(--bg3);user-select:none;}
+.ck-header:hover{background:var(--bg4);}
+.ck-toggle{font-size:11px;color:var(--text3);transition:transform .2s;flex-shrink:0;}
+.ck-header.open .ck-toggle{transform:rotate(90deg);}
+.ck-emp-av{width:32px;height:32px;border-radius:8px;background:var(--blue3);border:1px solid var(--bdr2);
+  display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.ck-emp-name{font-size:13px;font-weight:700;flex:1;}
+.ck-emp-sub{font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px;}
+.ck-prog-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.ck-pct{font-size:12px;font-weight:700;font-family:var(--mono);}
+.ck-prog-mini{width:80px;height:5px;background:var(--bg4);border-radius:99px;overflow:hidden;}
+.ck-prog-mini-fill{height:100%;border-radius:99px;transition:width .8s ease;}
+
+.ck-body{display:none;padding:16px 18px;}
+.ck-body.open{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+
+/* Coluna do Kanban */
+.ck-col{background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;
+  display:flex;flex-direction:column;min-height:200px;}
+.ck-col-head{padding:10px 12px;border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.ck-col-label{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:var(--mono);display:flex;align-items:center;justify-content:space-between;}
+.ck-col-count{font-size:9px;font-family:var(--mono);background:var(--bg4);
+  border:1px solid var(--bdr);border-radius:99px;padding:1px 7px;color:var(--text3);}
+.ck-col-prog{height:2px;border-radius:99px;margin-top:6px;}
+
+/* Itens de tarefa */
+.ck-items{flex:1;padding:8px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;max-height:400px;}
+.ck-item{background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;
+  padding:8px 10px;cursor:pointer;transition:all .15s;position:relative;}
+.ck-item:hover{border-color:var(--bdr2);transform:translateY(-1px);box-shadow:0 2px 10px rgba(0,0,0,0.15);}
+.ck-item.feito{opacity:.55;border-left:3px solid var(--green);}
+.ck-item.andamento{border-left:3px solid var(--amber);}
+.ck-item.pendente{border-left:3px solid var(--bdr);}
+.ck-item-txt{font-size:11px;color:var(--text2);line-height:1.4;}
+.ck-item.feito .ck-item-txt{text-decoration:line-through;color:var(--text3);}
+.ck-item-meta{display:flex;align-items:center;justify-content:space-between;margin-top:5px;}
+.ck-item-resp{font-size:8px;font-family:var(--mono);color:var(--text3);}
+.ck-item-status{display:flex;gap:3px;}
+.ck-status-btn{width:18px;height:18px;border-radius:4px;border:1px solid var(--bdr);
+  background:transparent;cursor:pointer;font-size:9px;display:flex;align-items:center;
+  justify-content:center;transition:all .15s;}
+.ck-status-btn:hover{border-color:var(--bdr2);}
+.ck-status-btn.active-p{background:rgba(59,127,245,0.15);border-color:var(--blue2);color:var(--blue2);}
+.ck-status-btn.active-a{background:rgba(245,166,35,0.15);border-color:var(--amber);color:var(--amber);}
+.ck-status-btn.active-f{background:rgba(16,214,122,0.15);border-color:var(--green);color:var(--green);}
+
+/* Tarefa desativada por cliente */
+.ck-item.desativada{opacity:.3;border-style:dashed;}
+.ck-item.desativada .ck-item-txt{text-decoration:line-through;}
+
+/* Toggle ativo/inativo da tarefa padrão neste cliente */
+.ck-item-toggle{position:absolute;top:6px;right:6px;font-size:10px;color:var(--text3);
+  cursor:pointer;opacity:0;transition:opacity .15s;}
+.ck-item:hover .ck-item-toggle{opacity:1;}
+
+/* Coluna personalizada — add btn */
+.ck-add-btn{margin:6px 8px 8px;padding:7px;border:1px dashed var(--bdr2);border-radius:7px;
+  background:transparent;color:var(--text3);font-size:10px;font-family:var(--mono);
+  cursor:pointer;text-align:center;transition:all .2s;display:block;width:calc(100% - 16px);}
+.ck-add-btn:hover{border-color:var(--blue);color:var(--blue2);background:var(--blue3);}
+
+@media(max-width:1100px){.ck-body.open{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:700px){.ck-body.open{grid-template-columns:1fr;}}
 
 /* ══ TEMA LIGHT ══════════════════════════════════════ */
 body.light{
@@ -592,9 +664,14 @@ body.light .topbar{background:rgba(240,244,255,0.97);}
         <span class="zone-tag z1">Zona 01</span>
         <span class="zone-desc">Visão de Caixa · Prioridade do dia</span>
         <div class="zone-line"></div>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalSaldo()" style="flex-shrink:0">
-          ＋ Lançar Saldo
-        </button>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="btn btn-ghost btn-sm" onclick="sincronizarOmie()" id="btn-sync-omie">
+            ↻ Atualizar Omie
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalSaldo()">
+            ＋ Lançar Saldo
+          </button>
+        </div>
       </div>
 
       <div class="grid-4" style="margin-bottom:16px">
@@ -629,7 +706,12 @@ body.light .topbar{background:rgba(240,244,255,0.97);}
         <span class="zone-tag z2">Zona 02</span>
         <span class="zone-desc">Projeção de Caixa · Dia a dia até fim do mês</span>
         <div class="zone-line"></div>
-        <span id="fk-proj-end" style="font-size:10px;font-family:var(--mono);color:var(--text3);flex-shrink:0">calculando...</span>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+          <span id="fk-vencidos-badge" style="display:none;font-size:9px;font-family:var(--mono);
+            color:#f87171;background:rgba(240,62,62,0.1);border:1px solid rgba(240,62,62,0.2);
+            padding:2px 8px;border-radius:4px"></span>
+          <span id="fk-proj-end" style="font-size:10px;font-family:var(--mono);color:var(--text3)">calculando...</span>
+        </div>
       </div>
 
       <div class="grid-2" style="margin-bottom:16px">
@@ -835,50 +917,65 @@ body.light .topbar{background:rgba(240,244,255,0.97);}
     <!-- ═══════════ VIEW: TAREFAS ═══════════ -->
     <div class="view" id="view-tarefas">
 
+      <!-- Barra de controle -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <select class="fi" id="tarefa-filtro-emp" onchange="filtrarTarefasPorEmpresa(this.value)"
-            style="width:220px;padding:7px 12px;font-size:11px">
-            <option value="">Todos os clientes</option>
+            style="width:230px;padding:7px 12px;font-size:11px">
+            <option value="">📋 Todos os clientes</option>
           </select>
           <div class="period-filter">
             <button class="pf-btn active" onclick="filtrarTarefasMes('atual',this)">Mês atual</button>
             <button class="pf-btn" onclick="filtrarTarefasMes('anterior',this)">Mês ant.</button>
           </div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span style="font-size:9px;font-family:var(--mono);color:var(--text3)" id="tarefas-resumo">-- / -- concluídas</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="tarefas-resumo" style="font-size:9px;font-family:var(--mono);color:var(--text3)">-- / -- concluídas</span>
+          <button class="btn btn-ghost btn-sm" onclick="expandirTodas()">⊞ Expandir todas</button>
+          <button class="btn btn-ghost btn-sm" onclick="recolherTodas()">⊟ Recolher todas</button>
         </div>
       </div>
 
-      <!-- KPIs de tarefas -->
-      <div class="grid-4" style="margin-bottom:16px">
-        <div class="kpi-card cyan">
-          <div class="kpi-label">Diárias concluídas</div>
-          <div class="kpi-value" id="tk-diarias" style="color:var(--cyan)">--/--</div>
+      <!-- KPIs rápidos -->
+      <div class="grid-4" style="margin-bottom:18px">
+        <div class="kpi-card cyan" style="padding:12px 16px">
+          <div class="kpi-label">🔵 Diárias</div>
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <div class="kpi-value" id="tk-diarias" style="color:var(--cyan);font-size:22px">--</div>
+            <span style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="tk-diarias-t">/--</span>
+          </div>
           <div class="kpi-prog-track"><div class="kpi-prog-fill" id="tk-prog-d" style="background:var(--cyan);width:0%"></div></div>
         </div>
-        <div class="kpi-card purple">
-          <div class="kpi-label">Semanais concluídas</div>
-          <div class="kpi-value" id="tk-semanais" style="color:var(--purple)">--/--</div>
+        <div class="kpi-card purple" style="padding:12px 16px">
+          <div class="kpi-label">🟡 Semanais</div>
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <div class="kpi-value" id="tk-semanais" style="color:var(--purple);font-size:22px">--</div>
+            <span style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="tk-semanais-t">/--</span>
+          </div>
           <div class="kpi-prog-track"><div class="kpi-prog-fill" id="tk-prog-s" style="background:var(--purple);width:0%"></div></div>
         </div>
-        <div class="kpi-card amber">
-          <div class="kpi-label">Mensais concluídas</div>
-          <div class="kpi-value" id="tk-mensais" style="color:var(--amber)">--/--</div>
+        <div class="kpi-card amber" style="padding:12px 16px">
+          <div class="kpi-label">🟠 Mensais</div>
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <div class="kpi-value" id="tk-mensais" style="color:var(--amber);font-size:22px">--</div>
+            <span style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="tk-mensais-t">/--</span>
+          </div>
           <div class="kpi-prog-track"><div class="kpi-prog-fill" id="tk-prog-m" style="background:var(--amber);width:0%"></div></div>
         </div>
-        <div class="kpi-card green">
-          <div class="kpi-label">Extras realizadas</div>
-          <div class="kpi-value" id="tk-extras" style="color:var(--green)">--</div>
-          <div class="kpi-sub">+2 pts cada</div>
+        <div class="kpi-card green" style="padding:12px 16px">
+          <div class="kpi-label">🔴 Personalizadas</div>
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <div class="kpi-value" id="tk-extras" style="color:var(--green);font-size:22px">--</div>
+            <span style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="tk-extras-t">/--</span>
+          </div>
+          <div class="kpi-prog-track"><div class="kpi-prog-fill" id="tk-prog-e" style="background:var(--green);width:0%"></div></div>
         </div>
       </div>
 
-      <!-- Lista de empresas com tarefas -->
-      <div id="tarefas-empresas-list" style="display:flex;flex-direction:column;gap:12px">
+      <!-- Kanban por cliente -->
+      <div id="tarefas-kanban-container" style="display:flex;flex-direction:column;gap:16px">
         <div style="text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:11px">
-          Carregando tarefas...
+          Carregando Kanban de tarefas...
         </div>
       </div>
 
@@ -1352,7 +1449,7 @@ const ultimoDiaUtil = () => {
 };
 const fmtBRL = n => 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtBRL0 = n => 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
-const gerarSenhaTemp = () => 'RE-'+Math.floor(1000+Math.random()*9000);
+const gerarSenhaTemp = () => 'RE123456'; // Senha padrão — colaboradora troca no 1º acesso
 
 // ─── COR MAP ──────────────────────────────────────────────
 const COR_MAP = {
@@ -1406,8 +1503,68 @@ window.fazerLogout = function() {
 };
 
 // ─── INICIAR APP ──────────────────────────────────────────
+
+// ─── SEED TAREFAS PADRÃO BPO ─────────────────────────────
+// Roda 1x: verifica se já existem e insere caso o banco esteja vazio
+async function seedTarefasPadrao() {
+  const snap = await get(ref(db,'tarefas_padrao'));
+  if(snap.exists() && Object.keys(snap.val()||{}).length > 0) return; // já populado
+
+  const PADRAO = [
+    // ── DIÁRIAS ─────────────────────────────────────────
+    {titulo:'Conferir contas a pagar do dia',          tipo:'diaria', pontos:1},
+    {titulo:'Conferir contas a receber do dia',         tipo:'diaria', pontos:1},
+    {titulo:'Realizar conciliação bancária diária',     tipo:'diaria', pontos:1},
+    {titulo:'Verificar entradas via PIX, cartão e dinheiro', tipo:'diaria', pontos:1},
+    {titulo:'Classificar receitas e despesas no sistema',tipo:'diaria', pontos:1},
+    {titulo:'Validar saldos bancários vs sistema',      tipo:'diaria', pontos:1},
+    {titulo:'Atualizar fluxo de caixa (curto prazo)',   tipo:'diaria', pontos:1},
+    {titulo:'Identificar divergências financeiras',     tipo:'diaria', pontos:1},
+    {titulo:'Sinalizar cobranças pendentes',            tipo:'diaria', pontos:1},
+    {titulo:'Enviar dúvidas/inconsistências ao cliente',tipo:'diaria', pontos:1},
+    {titulo:'Conferir comprovantes de pagamento',       tipo:'diaria', pontos:1},
+    {titulo:'Registrar movimentações não identificadas',tipo:'diaria', pontos:1},
+    // ── SEMANAIS ────────────────────────────────────────
+    {titulo:'Atualizar fluxo de caixa semanal',         tipo:'semanal', pontos:1},
+    {titulo:'Revisar contas a pagar da semana seguinte',tipo:'semanal', pontos:1},
+    {titulo:'Revisar contas a receber em aberto',       tipo:'semanal', pontos:1},
+    {titulo:'Fazer follow-up de inadimplência',         tipo:'semanal', pontos:1},
+    {titulo:'Conferir cartões (taxas, recebimentos e antecipações)', tipo:'semanal', pontos:1},
+    {titulo:'Revisar conciliações da semana',           tipo:'semanal', pontos:1},
+    {titulo:'Validar lançamentos realizados pela equipe',tipo:'semanal', pontos:1},
+    {titulo:'Ajustar classificações financeiras incorretas', tipo:'semanal', pontos:1},
+    {titulo:'Gerar relatório simples de posição financeira', tipo:'semanal', pontos:1},
+    {titulo:'Enviar resumo semanal ao cliente',         tipo:'semanal', pontos:1},
+    // ── MENSAIS ─────────────────────────────────────────
+    {titulo:'Fechamento financeiro do mês',             tipo:'mensal', pontos:2},
+    {titulo:'Conferência completa de conciliação bancária', tipo:'mensal', pontos:2},
+    {titulo:'Conferência de cartões de crédito/débito', tipo:'mensal', pontos:2},
+    {titulo:'Apuração de receitas e despesas totais',   tipo:'mensal', pontos:2},
+    {titulo:'Estruturação da DRE gerencial',            tipo:'mensal', pontos:2},
+    {titulo:'Atualização do fluxo de caixa mensal',     tipo:'mensal', pontos:2},
+    {titulo:'Análise de resultados (lucro/prejuízo)',   tipo:'mensal', pontos:2},
+    {titulo:'Identificação de inconsistências no mês',  tipo:'mensal', pontos:1},
+    {titulo:'Preparação de relatórios para o cliente',  tipo:'mensal', pontos:2},
+    {titulo:'Realizar reunião mensal com cliente',      tipo:'mensal', pontos:2},
+    {titulo:'Envio de relatórios financeiros',          tipo:'mensal', pontos:1},
+    {titulo:'Conferência de impostos (provisionamento)',tipo:'mensal', pontos:2},
+    {titulo:'Conferência de folha e encargos',          tipo:'mensal', pontos:1},
+  ];
+
+  const updates = {};
+  PADRAO.forEach((t,i) => {
+    const uid = t.tipo+'_'+(i+1).toString().padStart(2,'0');
+    updates['tarefas_padrao/'+uid] = {
+      ...t, ativa:true, ordem:i, criadoEm: Date.now()
+    };
+  });
+  await update(ref(db), updates);
+  console.log('[RE] Tarefas padrão BPO criadas:', PADRAO.length);
+}
+
 function iniciarApp() {
   startClock();
+  seedTarefasPadrao(); // popula padrão BPO se banco vazio
   carregarDadosBase();
   setTimeout(() => {
     navegarPara('fin');
@@ -1574,284 +1731,489 @@ function diasSemana(ds) {
 }
 
 // ─── OMIE SYNC ────────────────────────────────────────────
-async function sincronizarOmie() {
+window.sincronizarOmie = async function sincronizarOmie() {
   const dot = document.getElementById('omie-dot');
   const sta = document.getElementById('omie-status');
-  if(sta) sta.textContent = 'Sincronizando...';
+  const stt = document.getElementById('fin-sync-status');
+  const btn = document.getElementById('btn-sync-omie');
+
+  if(sta) sta.textContent = 'Buscando Omie...';
   if(dot) { dot.style.background='var(--amber)'; dot.style.boxShadow='0 0 8px var(--amber)'; }
+  if(btn) btn.disabled = true;
+
+  // Busca CAR e CAP em paralelo com timeout de 30s cada
+  const fetchOmie = async (action) => {
+    const url = OMIE_PROXY + '?action=' + action + '&t=' + Date.now();
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 35000); // 35 segundos (v9 tem delays)
+    try {
+      const r = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } catch(e) {
+      clearTimeout(timer);
+      throw e;
+    }
+  };
+
   try {
-    const r = await fetch(OMIE_PROXY+'?action=dashboard_v2', {signal:AbortSignal.timeout(8000)});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const d = await r.json();
-    STATE.omie = d;
+    // Busca CAR e resumo do mês em paralelo
+    if(sta) sta.textContent = 'Buscando CAR + CAP...';
+
+    // Busca sequencial para evitar rate limit do Omie (429)
+    if(sta) sta.textContent = 'Buscando dados Omie...';
+    const carData    = await fetchOmie('contas_receber');
+    const capData    = await fetchOmie('contas_pagar');
+    const resumoData = await fetchOmie('resumo_mes');
+
+    // Verifica erros
+    if(carData.erro) throw new Error('CAR: ' + carData.msg);
+    if(capData.erro) throw new Error('CAP: ' + capData.msg);
+
+    // Monta objeto consolidado
+    STATE.omie = {
+      a_receber:    carData.total    || 0,
+      a_pagar:      capData.total    || 0,
+      recebido_mes: resumoData.recebido_mes || 0,
+      pago_mes:     resumoData.pago_mes     || 0,
+      vencido:      0,
+      qtd_car:      carData.qtd     || 0,
+      qtd_cap:      capData.qtd     || 0,
+      qtd_venc:     0,
+      titulos_car:  carData.titulos  || [],
+      titulos_cap:  capData.titulos  || [],
+      titulos_vencidos: [],
+      projecao_diaria:  buildProjecaoLocal(carData.titulos, capData.titulos),
+      _sync:  new Date().toISOString(),
+      _demo:  false,
+      _cache: false
+    };
+
     if(sta) sta.textContent = 'Omie · ao vivo';
     if(dot) { dot.style.background='var(--green)'; dot.style.boxShadow='0 0 8px var(--green)'; }
-    const stt = document.getElementById('fin-sync-status');
-    if(stt) stt.textContent = 'Omie sync: '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    if(STATE.viewAtual==='fin') renderFinanceiro();
-  } catch(e) {
-    if(sta) sta.textContent = 'Omie · offline';
+    const hora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    if(stt) stt.textContent = '✓ Omie sync: ' + hora;
+    if(btn) { btn.disabled=false; btn.textContent='↻ Atualizar Omie'; }
+
+    // Salva cache Firebase
+    try {
+      await set(ref(db,'cache_omie/ultimo'), { ...STATE.omie, _salvo: Date.now() });
+    } catch(e) {}
+
+    if(STATE.viewAtual === 'fin') renderFinanceiro();
+
+  } catch(err) {
+    console.warn('[Omie]', err.message);
+    if(btn) { btn.disabled=false; btn.textContent='↻ Tentar novamente'; }
+
+    // Tenta cache do Firebase
+    try {
+      const snap = await get(ref(db,'cache_omie/ultimo'));
+      if(snap.val()) {
+        STATE.omie = { ...snap.val(), _cache:true, _demo:false };
+        if(sta) sta.textContent = 'Omie · cache';
+        if(dot) { dot.style.background='var(--amber)'; dot.style.boxShadow='0 0 8px var(--amber)'; }
+        const ts = STATE.omie._salvo
+          ? new Date(STATE.omie._salvo).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+          : '--';
+        if(stt) stt.textContent = '⚠ Cache · última sync: ' + ts;
+        if(STATE.viewAtual === 'fin') renderFinanceiro();
+        return;
+      }
+    } catch(e2) {}
+
+    // Sem dados
+    if(sta) sta.textContent = 'Omie · erro';
     if(dot) { dot.style.background='#f87171'; dot.style.boxShadow='0 0 8px #f87171'; }
-    // Usa dados de demonstração
+    if(stt) stt.textContent = '✗ ' + err.message;
     STATE.omie = {
-      a_receber: 14200, a_pagar: 9850,
-      recebido_mes: 32000, pago_mes: 24000,
-      titulos_car: [{nome:'Cliente A',valor:5400,vencimento:'2025-05-10'},
-                    {nome:'Cliente B',valor:3800,vencimento:'2025-05-15'},
-                    {nome:'Cliente C',valor:5000,vencimento:'2025-05-20'}],
-      titulos_cap: [{nome:'Salários',valor:8500,vencimento:'2025-05-05'},
-                    {nome:'Aluguel',valor:1350,vencimento:'2025-05-10'}],
-      _demo: true
+      a_receber:0, a_pagar:0, recebido_mes:0, pago_mes:0,
+      vencido:0, qtd_car:0, qtd_cap:0, qtd_venc:0,
+      titulos_car:[], titulos_cap:[], projecao_diaria:[], _demo:true
     };
-    if(STATE.viewAtual==='fin') renderFinanceiro();
+    if(STATE.viewAtual === 'fin') renderFinanceiro();
   }
+};
+
+// Gera projeção diária localmente a partir dos títulos
+function buildProjecaoLocal(car, cap) {
+  const now   = new Date();
+  const ano   = now.getFullYear();
+  const mes   = now.getMonth();
+  const total = new Date(ano, mes+1, 0).getDate();
+  const diaH  = now.getDate();
+  const dias  = [];
+  for(let d=1; d<=total; d++) {
+    let entradas=0, saidas=0;
+    (car||[]).forEach(t => {
+      if(!t.vencimento) return;
+      const vd = new Date(t.vencimento+'T12:00:00');
+      if(vd.getDate()===d && vd.getMonth()===mes && vd.getFullYear()===ano)
+        entradas += t.valor||0;
+    });
+    (cap||[]).forEach(t => {
+      if(!t.vencimento) return;
+      const vd = new Date(t.vencimento+'T12:00:00');
+      if(vd.getDate()===d && vd.getMonth()===mes && vd.getFullYear()===ano)
+        saidas += t.valor||0;
+    });
+    dias.push({ dia:d, futuro:d>diaH, entradas, saidas });
+  }
+  return dias;
 }
+
+
 
 // ─── FINANCEIRO ───────────────────────────────────────────
 function renderFinanceiro() {
-  const o = STATE.omie || {};
-  const saldo = STATE.saldoManual?.valor || 0;
+  const o      = STATE.omie || {};
+  const saldo  = STATE.saldoManual?.valor || 0;
+  const isDemo = o._demo || false;
+  const isCache= o._cache || false;
 
-  // KPIs
   const set2 = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+
+  // ── Saldo badge ──────────────────────────────────────────
   const saldoData = STATE.saldoManual?.data
-    ? `Lançado em ${new Date(STATE.saldoManual.data+'T12:00:00').toLocaleDateString('pt-BR')}`
+    ? 'Lançado em ' + new Date(STATE.saldoManual.data+'T12:00:00').toLocaleDateString('pt-BR')
     : 'Clique em "Lançar Saldo" para atualizar';
   set2('fk-saldo', fmtBRL0(saldo));
   set2('fk-saldo-data', saldoData);
-  set2('fk-car', fmtBRL0(o.a_receber));
-  set2('fk-cap', fmtBRL0(o.a_pagar));
-  set2('fk-car-qtd', (o.titulos_car?.length||0)+' títulos');
-  set2('fk-cap-qtd', (o.titulos_cap?.length||0)+' títulos');
-  set2('fk-recebido', fmtBRL0(o.recebido_mes));
-  set2('fk-pago', fmtBRL0(o.pago_mes));
-
-  // Lucro estimado
-  const lucro = (o.recebido_mes||0) - (o.pago_mes||0);
-  const margem = o.recebido_mes > 0 ? Math.round(lucro/o.recebido_mes*100) : 0;
-  set2('fk-lucro', fmtBRL0(lucro));
-  set2('fk-margem-sub', `Margem estimada: ${margem}%`);
-  const fkLucroEl = document.getElementById('fk-lucro');
-  if(fkLucroEl) fkLucroEl.style.color = lucro>=0?'var(--green)':'#f87171';
-
-  // Progresso recebido
-  const mrr = (o.recebido_mes||0) + (o.a_receber||0);
-  const pctRec = mrr>0 ? Math.min(Math.round((o.recebido_mes||0)/mrr*100),100) : 0;
-  const pctPag = (o.recebido_mes||0)>0 ? Math.min(Math.round((o.pago_mes||0)/(o.recebido_mes||0)*100),100) : 0;
-  const progRec = document.getElementById('fk-prog-rec');
-  const progPag = document.getElementById('fk-prog-pag');
-  if(progRec) setTimeout(()=>progRec.style.width=pctRec+'%',200);
-  if(progPag) setTimeout(()=>progPag.style.width=pctPag+'%',200);
-  set2('fk-mrr-pct', pctRec+'% recebido');
-  set2('fk-burn-pct', pctPag+'% da receita');
-
-  // Saldo badge
-  const badge = document.getElementById('fk-saldo-badge');
-  if(badge) {
-    if(STATE.saldoManual?.obs) badge.textContent = STATE.saldoManual.obs;
-    else badge.textContent = STATE.saldoManual ? '✓ Manual' : '→ Manual';
+  const saldoBadge = document.getElementById('fk-saldo-badge');
+  if(saldoBadge) {
+    saldoBadge.textContent = STATE.saldoManual?.obs || (STATE.saldoManual ? '✓ Atualizado' : '→ Lançar saldo');
   }
 
-  // Títulos
-  renderTitulosList('car-list', 'car-count', o.titulos_car, 'green');
-  renderTitulosList('cap-list', 'cap-count', o.titulos_cap, 'amber');
+  // ── CAR / CAP ────────────────────────────────────────────
+  set2('fk-car',      fmtBRL0(o.a_receber));
+  set2('fk-cap',      fmtBRL0(o.a_pagar));
+  set2('fk-car-qtd',  (o.qtd_car||0) + ' títulos');
+  set2('fk-cap-qtd',  (o.qtd_cap||0) + ' títulos');
 
-  // Ticker
-  const t = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-  t('tick-caixa', fmtBRL0(saldo));
-  t('tick-car', fmtBRL0(o.a_receber));
-  t('tick-cap', fmtBRL0(o.a_pagar));
+  // ── Recebido / Pago no mês ───────────────────────────────
+  set2('fk-recebido', fmtBRL0(o.recebido_mes));
+  set2('fk-pago',     fmtBRL0(o.pago_mes));
 
-  // Projeção
+  // Barra de progresso — % do previsto recebido
+  const totalPrevisto = (o.recebido_mes||0) + (o.a_receber||0);
+  const pctRec = totalPrevisto > 0
+    ? Math.min(Math.round((o.recebido_mes||0) / totalPrevisto * 100), 100) : 0;
+  const pctPag = (o.recebido_mes||0) > 0
+    ? Math.min(Math.round((o.pago_mes||0) / (o.recebido_mes||0) * 100), 100) : 0;
+  const progRec = document.getElementById('fk-prog-rec');
+  const progPag = document.getElementById('fk-prog-pag');
+  if(progRec) setTimeout(()=>progRec.style.width=pctRec+'%', 200);
+  if(progPag) setTimeout(()=>progPag.style.width=pctPag+'%', 200);
+  set2('fk-mrr-pct',  pctRec + '% recebido');
+  set2('fk-burn-pct', pctPag + '% da receita');
+
+  // ── Lucro ────────────────────────────────────────────────
+  const lucro  = (o.recebido_mes||0) - (o.pago_mes||0);
+  const margem = (o.recebido_mes||0) > 0
+    ? Math.round(lucro / (o.recebido_mes||0) * 100) : 0;
+  set2('fk-lucro', fmtBRL0(lucro));
+  set2('fk-margem-sub', 'Margem do mês: ' + margem + '%');
+  const lucroEl = document.getElementById('fk-lucro');
+  if(lucroEl) lucroEl.style.color = lucro >= 0 ? 'var(--green)' : '#f87171';
+
+  // ── Alerta vencidos ──────────────────────────────────────
+  if(o.vencido > 0) {
+    const bar  = document.getElementById('alert-bar');
+    const txt  = document.getElementById('alert-bar-text');
+    if(bar && txt) {
+      bar.style.display = 'flex';
+      txt.textContent = '⚠ ' + (o.qtd_venc||0) + ' título(s) vencido(s) em aberto: ' + fmtBRL0(o.vencido);
+    }
+  }
+
+  // ── Demo / cache warning ─────────────────────────────────
+  const syncEl = document.getElementById('fin-sync-status');
+  if(syncEl && isDemo) syncEl.textContent = '⚠ Dados de demonstração (Omie offline)';
+  if(syncEl && isCache) {
+    const ts = o._salvo ? new Date(o._salvo).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '--';
+    syncEl.textContent = '⚠ Cache local · última sync: ' + ts;
+  }
+
+  // ── Projeção ─────────────────────────────────────────────
   calcularProjecao();
   desenharGrafico();
+
+  // ── Títulos listas ───────────────────────────────────────
+  renderTitulosList('car-list', 'car-count', o.titulos_car,      'green');
+  renderTitulosList('cap-list', 'cap-count', o.titulos_cap,      'amber');
+
+  // ── Ticker ───────────────────────────────────────────────
+  const t2 = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  t2('tick-caixa', fmtBRL0(saldo));
+  t2('tick-car',   fmtBRL0(o.a_receber));
+  t2('tick-cap',   fmtBRL0(o.a_pagar));
 }
 
+
 function renderTitulosList(listId, countId, titulos, cor) {
-  const list = document.getElementById(listId);
+  const list  = document.getElementById(listId);
   const count = document.getElementById(countId);
   if(!list) return;
   const arr = titulos || [];
-  if(count) count.textContent = arr.length+' títulos';
+  if(count) count.textContent = arr.length + ' títulos';
+
   if(!arr.length) {
-    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-family:var(--mono);font-size:11px">Nenhum título nos próximos 15 dias</div>';
+    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-family:var(--mono);font-size:11px">Nenhum título nos próximos 30 dias</div>';
     return;
   }
-  const corCls = {green:'bg',amber:'ba',red:'br'};
+
+  const hoje2 = new Date().toISOString().split('T')[0];
+  const corPrincipal = cor === 'green' ? 'var(--green)' : 'var(--amber)';
+  const corBorda     = cor === 'green' ? 'rgba(16,214,122,0.5)' : 'rgba(245,166,35,0.5)';
+
   list.innerHTML = arr.map(t => {
-    const venc = t.vencimento ? new Date(t.vencimento+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '--';
-    const hoje2 = new Date().toISOString().split('T')[0];
     const vencida = t.vencimento && t.vencimento < hoje2;
+    const vencDate= t.vencimento
+      ? new Date(t.vencimento + 'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})
+      : '--';
+    const diasRestantes = t.vencimento
+      ? Math.round((new Date(t.vencimento+'T12:00:00') - new Date()) / 86400000)
+      : null;
+    const diasLabel = diasRestantes !== null
+      ? (vencida
+          ? '<span style="color:#f87171">Venceu há ' + Math.abs(diasRestantes) + 'd</span>'
+          : diasRestantes === 0
+            ? '<span style="color:var(--amber)">Vence hoje</span>'
+            : '<span style="color:var(--text3)">em ' + diasRestantes + 'd</span>')
+      : '';
+
     return `<div style="display:flex;align-items:center;justify-content:space-between;
-      padding:8px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;
-      border-left:3px solid var(--${cor==='green'?'green':'amber'})">
-      <div>
-        <div style="font-size:11px;font-weight:600">${t.nome||'—'}</div>
-        <div style="font-size:9px;font-family:var(--mono);color:${vencida?'#f87171':'var(--text3)'};margin-top:1px">
-          ${vencida?'⚠ Vencido':'Vence'} ${venc}
+      padding:9px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;
+      border-left:3px solid ${vencida?'#f87171':corBorda};transition:border-color .15s">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${t.nome||'—'}
+        </div>
+        <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px;display:flex;gap:8px">
+          <span>${vencida?'⚠ Vencido':'📅'} ${vencDate}</span>
+          ${diasLabel}
+          ${t.numero?'<span>Nº '+t.numero+'</span>':''}
         </div>
       </div>
-      <div style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--${cor==='green'?'green':'amber'})">${fmtBRL0(t.valor)}</div>
+      <div style="font-size:12px;font-weight:700;font-family:var(--mono);color:${corPrincipal};flex-shrink:0;margin-left:8px">
+        ${fmtBRL0(t.valor)}
+      </div>
     </div>`;
   }).join('');
 }
 
+
 function calcularProjecao() {
+  const o     = STATE.omie || {};
   const saldo = STATE.saldoManual?.valor || 0;
-  const o = STATE.omie || {};
-  const rec = o.a_receber || 0;
-  const pag = o.a_pagar || 0;
-  const hoje2 = new Date();
-  const totalDias = diasNoMes(hoje2);
-  const diaH = diaAtual(hoje2);
-  const diasRestantes = totalDias - diaH;
-  // Projeção simplificada: distribui entradas e saídas
-  const projFinal = saldo + rec - pag;
+  const proj  = o.projecao_diaria || [];
+
+  // Acumula saldo dia a dia a partir do saldo manual
+  let acum = saldo;
+  let projFinal = saldo;
+  if(proj.length) {
+    proj.forEach(d => { acum += (d.entradas||0) - (d.saidas||0); });
+    projFinal = acum;
+  } else {
+    // fallback simples
+    projFinal = saldo + (o.a_receber||0) - (o.a_pagar||0);
+  }
+
   const set2 = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   set2('fk-proj', fmtBRL0(projFinal));
+
   const badge = document.getElementById('fk-proj-badge');
   if(badge) {
-    badge.textContent = projFinal >= 0 ? '✓ Caixa positivo' : '⚠ Risco de caixa negativo';
-    badge.className = 'kpi-badge ' + (projFinal >= 0 ? 'bg' : 'br');
+    badge.textContent   = projFinal >= 0 ? '✓ Caixa positivo' : '⚠ Risco de caixa negativo';
+    badge.className     = 'kpi-badge ' + (projFinal >= 0 ? 'bg' : 'br');
   }
-  const projEnd = document.getElementById('fk-proj-end');
+
+  const now    = new Date();
+  const diaH   = now.getDate();
+  const totD   = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const projEnd= document.getElementById('fk-proj-end');
   if(projEnd) {
-    projEnd.textContent = `Projeção ${diaH}/${totalDias}: ${fmtBRL0(projFinal)}`;
-    projEnd.style.color = projFinal>=0?'var(--green)':'#f87171';
+    projEnd.textContent = 'Projeção dia ' + diaH + '/' + totD + ': ' + fmtBRL0(projFinal);
+    projEnd.style.color = projFinal >= 0 ? 'var(--green)' : '#f87171';
   }
+
   const tickProj = document.getElementById('tick-proj');
-  if(tickProj) { tickProj.textContent = fmtBRL0(projFinal); tickProj.style.color = projFinal>=0?'var(--green)':'#f87171'; }
+  if(tickProj) {
+    tickProj.textContent = fmtBRL0(projFinal);
+    tickProj.style.color = projFinal >= 0 ? 'var(--green)' : '#f87171';
+  }
+
+  // Guarda para o gráfico usar
+  STATE._projFinal  = projFinal;
+  STATE._projDiaria = proj;
+
+  // Badge vencidos
+  const vBadge = document.getElementById('fk-vencidos-badge');
+  if(vBadge) {
+    const qtdVenc = STATE.omie?.qtd_venc || 0;
+    const vlVenc  = STATE.omie?.vencido   || 0;
+    if(qtdVenc > 0) { vBadge.style.display='inline'; vBadge.textContent='⚠ '+qtdVenc+' vencido(s): '+fmtBRL0(vlVenc); }
+    else { vBadge.style.display='none'; }
+  }
 }
 
-// ─── GRÁFICO PROJEÇÃO ────────────────────────────────────
+
 function desenharGrafico() {
   const canvas = document.getElementById('chart-caixa');
   if(!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const isLight = document.body.classList.contains('light');
-  const o = STATE.omie || {};
-  const saldoInicial = STATE.saldoManual?.valor || 0;
-  const hoje2 = new Date();
-  const totalDias = diasNoMes(hoje2);
-  const diaH = diaAtual(hoje2);
+  const ctx      = canvas.getContext('2d');
+  const isLight  = document.body.classList.contains('light');
+  const saldo0   = STATE.saldoManual?.valor || 0;
+  const projArr  = STATE._projDiaria || STATE.omie?.projecao_diaria || [];
+  const now      = new Date();
+  const totalDias= new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const diaH     = now.getDate();
 
-  // Distribuição de entradas/saídas ao longo do mês
-  const recDia = (o.a_receber||0) / Math.max(totalDias - diaH, 1);
-  const pagDia = (o.a_pagar||0) / Math.max(totalDias - diaH, 1);
-
-  // Distribui títulos por data de vencimento
-  const entradas = new Array(totalDias+1).fill(0);
-  const saidas   = new Array(totalDias+1).fill(0);
-  (o.titulos_car||[]).forEach(t => {
-    if(t.vencimento) {
-      const d = new Date(t.vencimento+'T12:00:00').getDate();
-      if(d>0&&d<=totalDias) entradas[d] += (t.valor||0);
-    }
-  });
-  (o.titulos_cap||[]).forEach(t => {
-    if(t.vencimento) {
-      const d = new Date(t.vencimento+'T12:00:00').getDate();
-      if(d>0&&d<=totalDias) saidas[d] += (t.valor||0);
-    }
-  });
-
+  // Monta array de saldos acumulados dia a dia
   const saldos = [];
   const labels = [];
-  let acum = saldoInicial;
-  for(let d=1; d<=totalDias; d++) {
+  let acum = saldo0;
+
+  for(let d = 1; d <= totalDias; d++) {
     if(d > diaH) {
-      acum += entradas[d] - saidas[d];
-      // Distribui o restante proporcionalmente
-      if(!entradas[d] && !saidas[d] && d > diaH) {
-        acum += recDia - pagDia;
-      }
+      const dp = projArr.find(p => p.dia === d);
+      if(dp) acum += (dp.entradas||0) - (dp.saidas||0);
     }
     saldos.push(Math.round(acum));
     labels.push(d);
   }
 
-  const W = canvas.parentElement.offsetWidth - 40 || 540;
+  // Canvas sizing
+  const W = (canvas.parentElement?.offsetWidth - 40) || 540;
   const H = 180;
-  canvas.width = W; canvas.height = H;
-  const pad = {t:16,r:16,b:8,l:16};
-  const w = W-pad.l-pad.r, h = H-pad.t-pad.b;
-  const pe = saldoInicial * 0.3; // ponto de equilíbrio (30% do saldo inicial como mínimo saudável)
-  const minV = Math.min(...saldos, pe, 0) * 1.1;
-  const maxV = Math.max(...saldos, saldoInicial) * 1.1;
-  const yS = v => pad.t + h - ((v-minV)/(maxV-minV||1))*h;
-  const xS = i => pad.l + (i/(saldos.length-1||1))*w;
+  canvas.width  = W;
+  canvas.height = H;
+  const pad = {t:16, r:16, b:20, l:16};
+  const w = W - pad.l - pad.r;
+  const h = H - pad.t - pad.b;
 
-  ctx.clearRect(0,0,W,H);
+  const minV = Math.min(...saldos, 0) * 1.15;
+  const maxV = Math.max(...saldos, saldo0 * 1.1, 1000);
+  const yS = v => pad.t + h - ((v - minV) / (maxV - minV || 1)) * h;
+  const xS = i => pad.l + (i / (saldos.length - 1 || 1)) * w;
 
-  // Grid
-  ctx.strokeStyle = isLight?'rgba(0,0,0,0.04)':'rgba(255,255,255,0.03)';
-  ctx.lineWidth=1;
-  for(let i=0;i<=4;i++) {
+  ctx.clearRect(0, 0, W, H);
+
+  // ── Grid horizontal ──────────────────────────────────────
+  ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  for(let i = 0; i <= 4; i++) {
     const y = pad.t + (h/4)*i;
-    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W-pad.r, y); ctx.stroke();
   }
 
-  // Linha zero
-  if(minV<0) {
+  // ── Linha zero ───────────────────────────────────────────
+  if(minV < 0) {
     const y0 = yS(0);
-    ctx.strokeStyle='rgba(240,62,62,0.25)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
-    ctx.beginPath(); ctx.moveTo(pad.l,y0); ctx.lineTo(W-pad.r,y0); ctx.stroke();
+    ctx.strokeStyle = 'rgba(240,62,62,0.3)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(pad.l, y0); ctx.lineTo(W-pad.r, y0); ctx.stroke();
     ctx.setLineDash([]);
   }
 
-  // Linha PE
-  const yPE = yS(pe);
-  ctx.strokeStyle='rgba(240,62,62,0.4)'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
-  ctx.beginPath(); ctx.moveTo(pad.l,yPE); ctx.lineTo(W-pad.r,yPE); ctx.stroke();
-  ctx.setLineDash([]);
+  // ── Linha de equilíbrio (10% do saldo) ───────────────────
+  if(saldo0 > 0) {
+    const pe  = saldo0 * 0.15;
+    const yPE = yS(pe);
+    ctx.strokeStyle = 'rgba(240,62,62,0.4)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(pad.l, yPE); ctx.lineTo(W-pad.r, yPE); ctx.stroke();
+    ctx.setLineDash([]);
+  }
 
-  // Área gradiente
-  const grad = ctx.createLinearGradient(0,pad.t,0,H);
-  grad.addColorStop(0,'rgba(59,127,245,0.20)');
-  grad.addColorStop(1,'rgba(59,127,245,0)');
+  // ── Área gradiente ───────────────────────────────────────
+  const grad = ctx.createLinearGradient(0, pad.t, 0, H);
+  grad.addColorStop(0, 'rgba(59,127,245,0.22)');
+  grad.addColorStop(1, 'rgba(59,127,245,0)');
   ctx.beginPath();
   ctx.moveTo(xS(0), yS(saldos[0]));
-  saldos.forEach((v,i)=>{ if(i>0) ctx.lineTo(xS(i),yS(v)); });
+  saldos.forEach((v,i) => { if(i>0) ctx.lineTo(xS(i), yS(v)); });
   ctx.lineTo(xS(saldos.length-1), H-pad.b);
   ctx.lineTo(xS(0), H-pad.b);
   ctx.closePath();
-  ctx.fillStyle = grad; ctx.fill();
+  ctx.fillStyle = grad;
+  ctx.fill();
 
-  // Linha principal
-  ctx.beginPath(); ctx.moveTo(xS(0),yS(saldos[0]));
-  saldos.forEach((v,i)=>{ if(i>0) ctx.lineTo(xS(i),yS(v)); });
-  ctx.strokeStyle='#3b7ff5'; ctx.lineWidth=2.5;
-  ctx.shadowColor='rgba(59,127,245,0.5)'; ctx.shadowBlur=8;
-  ctx.stroke(); ctx.shadowBlur=0;
+  // ── Linha principal ──────────────────────────────────────
+  ctx.beginPath();
+  ctx.moveTo(xS(0), yS(saldos[0]));
+  saldos.forEach((v,i) => { if(i>0) ctx.lineTo(xS(i), yS(v)); });
+  ctx.strokeStyle = '#3b7ff5';
+  ctx.lineWidth   = 2.5;
+  ctx.shadowColor = 'rgba(59,127,245,0.5)';
+  ctx.shadowBlur  = 6;
+  ctx.stroke();
+  ctx.shadowBlur  = 0;
 
-  // Marcadores de entradas (verde) e saídas (âmbar)
-  for(let d=diaH+1; d<=totalDias; d++) {
-    if(entradas[d]>0) {
-      ctx.beginPath(); ctx.arc(xS(d-1),yS(saldos[d-1]),4,0,Math.PI*2);
-      ctx.fillStyle='var(--green)'; ctx.fill();
+  // ── Marcadores de entradas/saídas do Omie ────────────────
+  projArr.forEach(dp => {
+    if(!dp.futuro) return;
+    const i = dp.dia - 1;
+    if(dp.entradas > 0) {
+      ctx.beginPath();
+      ctx.arc(xS(i), yS(saldos[i]), 4, 0, Math.PI*2);
+      ctx.fillStyle = 'var(--green)';
+      ctx.fill();
     }
-    if(saidas[d]>0) {
-      ctx.beginPath(); ctx.arc(xS(d-1),yS(saldos[d-1]),4,0,Math.PI*2);
-      ctx.fillStyle='var(--amber)'; ctx.fill();
+    if(dp.saidas > 0) {
+      ctx.beginPath();
+      ctx.arc(xS(i), yS(saldos[i]), 4, 0, Math.PI*2);
+      ctx.fillStyle = 'var(--amber)';
+      ctx.fill();
     }
-  }
+  });
 
-  // Ponto hoje
-  const iH = diaH-1;
-  ctx.beginPath(); ctx.arc(xS(iH),yS(saldos[iH]),6,0,Math.PI*2);
-  ctx.fillStyle='#3b7ff5'; ctx.shadowColor='rgba(59,127,245,0.7)'; ctx.shadowBlur=10;
-  ctx.fill(); ctx.shadowBlur=0;
+  // ── Ponto HOJE ───────────────────────────────────────────
+  const iH = diaH - 1;
+  ctx.beginPath();
+  ctx.arc(xS(iH), yS(saldos[iH]), 6, 0, Math.PI*2);
+  ctx.fillStyle   = '#3b7ff5';
+  ctx.shadowColor = 'rgba(59,127,245,0.8)';
+  ctx.shadowBlur  = 12;
+  ctx.fill();
+  ctx.shadowBlur  = 0;
 
-  // Ponto fim
-  const iFim = saldos.length-1;
-  ctx.beginPath(); ctx.arc(xS(iFim),yS(saldos[iFim]),5,0,Math.PI*2);
-  ctx.fillStyle = saldos[iFim]>=0?'var(--green)':'#f03e3e';
-  ctx.shadowColor = saldos[iFim]>=0?'var(--green)':'#f03e3e'; ctx.shadowBlur=8;
-  ctx.fill(); ctx.shadowBlur=0;
+  // Label "hoje"
+  ctx.fillStyle = isLight ? 'rgba(0,0,0,0.45)' : 'rgba(220,232,255,0.45)';
+  ctx.font      = '9px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('hoje', xS(iH), yS(saldos[iH]) - 10);
 
-  // Labels eixo X
-  const labelsEl = document.getElementById('chart-labels');
+  // ── Ponto FIM DO MÊS ─────────────────────────────────────
+  const iFim  = saldos.length - 1;
+  const corFim= saldos[iFim] >= 0 ? 'var(--green)' : '#f03e3e';
+  ctx.beginPath();
+  ctx.arc(xS(iFim), yS(saldos[iFim]), 5, 0, Math.PI*2);
+  ctx.fillStyle   = corFim;
+  ctx.shadowColor = corFim;
+  ctx.shadowBlur  = 8;
+  ctx.fill();
+  ctx.shadowBlur  = 0;
+
+  // Label do valor final
+  ctx.fillStyle = isLight ? 'rgba(0,0,0,0.55)' : 'rgba(220,232,255,0.55)';
+  ctx.font      = '9px DM Mono, monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(fmtBRL0(saldos[iFim]), xS(iFim), yS(saldos[iFim]) - 10);
+
+  // ── Eixo X — dias ────────────────────────────────────────
+  ctx.fillStyle = isLight ? 'rgba(0,0,0,0.3)' : 'rgba(220,232,255,0.28)';
+  ctx.font      = '8px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  [1, 5, 10, 15, 20, 25, totalDias].forEach(d => {
+    const i = d - 1;
+    ctx.fillText(d, xS(i), H - 4);
+  });
 }
+
 
 window.filtroProjecao = function(p) {
   document.querySelectorAll('#view-fin .pf-btn').forEach(b=>b.classList.remove('active'));
@@ -2215,121 +2577,268 @@ window.verDetalheColab = function(uid) { /* TODO: modal detalhado */ };
 function renderTarefasView() {
   const am = anoMes();
   const empresas = Object.entries(STATE.empresas||{}).filter(([,e])=>e?.status!=='inativo');
-  const tarefasEmp = STATE.tarefas || {};
-  const padrao = STATE.tarefasPadrao || {};
+  const padrao   = STATE.tarefasPadrao || {};
+  const tarefasEmpDb = STATE.tarefas || {}; // {empId: {tarefaId: {status,...}}}
 
-  // Atualiza select de filtro
+  // Preenche select de filtro
   const sel = document.getElementById('tarefa-filtro-emp');
-  if(sel && sel.options.length<=1) {
+  if(sel) {
+    const curVal = sel.value;
+    while(sel.options.length > 1) sel.remove(1);
     empresas.forEach(([eid,e]) => {
-      const opt = document.createElement('option');
-      opt.value = eid; opt.textContent = e.nome;
+      const opt = new Option(e.nome, eid);
       sel.appendChild(opt);
     });
+    if(curVal) sel.value = curVal;
   }
 
-  // KPIs
-  let totD=0, feitD=0, totS=0, feitS=0, totM=0, feitM=0, totE=0;
-  empresas.forEach(([eid]) => {
-    const tasks = tarefasEmp[eid] || {};
-    // Conta tarefas padrão + específicas
-    Object.values(padrao).forEach(tp => {
-      if(!tp) return;
-      if(tp.tipo==='diaria') { totD++; if(tasks[tp.id||'']?.status==='feito'||tasks['d_'+tp.titulo?.replace(/\s/g,'_')]?.status==='feito') feitD++; }
-      else if(tp.tipo==='semanal') { totS++; }
-      else if(tp.tipo==='mensal') { totM++; }
-    });
+  const filtroEid = sel?.value || '';
+  const empsFiltradas = filtroEid ? empresas.filter(([eid])=>eid===filtroEid) : empresas;
+
+  // Separar tarefas padrão por tipo
+  const padraoD = Object.entries(padrao).filter(([,t])=>t?.tipo==='diaria'&&t?.ativa!==false);
+  const padraoS = Object.entries(padrao).filter(([,t])=>t?.tipo==='semanal'&&t?.ativa!==false);
+  const padraoM = Object.entries(padrao).filter(([,t])=>t?.tipo==='mensal'&&t?.ativa!==false);
+
+  // KPIs globais
+  let kD=0,kDt=0,kS=0,kSt=0,kM=0,kMt=0,kE=0,kEt=0;
+  empsFiltradas.forEach(([eid,e]) => {
+    const et = tarefasEmpDb[eid] || {};
+    const esp= Object.entries(e.tarefas_especificas||{});
+    padraoD.forEach(([tid])=>{ const desativ=et[tid]?.desativada; if(!desativ){kDt++; if(et[tid]?.status==='feito') kD++;} });
+    padraoS.forEach(([tid])=>{ const desativ=et[tid]?.desativada; if(!desativ){kSt++; if(et[tid]?.status==='feito') kS++;} });
+    padraoM.forEach(([tid])=>{ const desativ=et[tid]?.desativada; if(!desativ){kMt++; if(et[tid]?.status==='feito') kM++;} });
+    esp.forEach(([tid])=>{ kEt++; if(et[tid]?.status==='feito') kE++; });
   });
 
-  const set2 = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-  set2('tk-diarias', `${feitD}/${totD}`);
-  set2('tk-semanais', `${feitS}/${totS}`);
-  set2('tk-mensais', `${feitM}/${totM}`);
-  set2('tarefas-resumo', `${feitD+feitS+feitM} / ${totD+totS+totM} concluídas`);
+  const set2=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  const prog=(id,v,t)=>{const el=document.getElementById(id);if(el)setTimeout(()=>el.style.width=(t?Math.round(v/t*100):0)+'%',200);};
+  set2('tk-diarias',kD); set2('tk-diarias-t','/'+kDt);
+  set2('tk-semanais',kS); set2('tk-semanais-t','/'+kSt);
+  set2('tk-mensais',kM); set2('tk-mensais-t','/'+kMt);
+  set2('tk-extras',kE); set2('tk-extras-t','/'+kEt);
+  prog('tk-prog-d',kD,kDt); prog('tk-prog-s',kS,kSt);
+  prog('tk-prog-m',kM,kMt); prog('tk-prog-e',kE,kEt);
+  set2('tarefas-resumo',`${kD+kS+kM+kE} / ${kDt+kSt+kMt+kEt} concluídas`);
 
-  const pD = document.getElementById('tk-prog-d');
-  const pS = document.getElementById('tk-prog-s');
-  const pM = document.getElementById('tk-prog-m');
-  if(pD) setTimeout(()=>pD.style.width=(totD?Math.round(feitD/totD*100):0)+'%',200);
-  if(pS) setTimeout(()=>pS.style.width=(totS?Math.round(feitS/totS*100):0)+'%',200);
-  if(pM) setTimeout(()=>pM.style.width=(totM?Math.round(feitM/totM*100):0)+'%',200);
-
-  // Lista por empresa
-  const container = document.getElementById('tarefas-empresas-list');
+  // Renderiza Kanbans
+  const container = document.getElementById('tarefas-kanban-container');
   if(!container) return;
-  if(!empresas.length) {
+
+  if(!empsFiltradas.length) {
     container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:11px">Nenhuma empresa cadastrada.</div>';
     return;
   }
 
-  const padraoArr = Object.entries(padrao).filter(([,t])=>t?.ativa!==false);
-  container.innerHTML = empresas.map(([eid,e]) => {
-    const tasks = tarefasEmp[eid] || {};
-    const diarias  = padraoArr.filter(([,t])=>t.tipo==='diaria');
-    const semanais = padraoArr.filter(([,t])=>t.tipo==='semanal');
-    const mensais  = padraoArr.filter(([,t])=>t.tipo==='mensal');
-    const extras   = e.tarefas_extras || {};
+  container.innerHTML = empsFiltradas.map(([eid,e]) => {
+    const et  = tarefasEmpDb[eid] || {};
+    const esp = Object.entries(e.tarefas_especificas||{});
 
-    const renderTarefaItem = ([tid,t],tipo) => {
-      const key = `${eid}_${tid}`;
-      const task = tasks[tid] || {};
-      const feito = task.status==='feito';
-      const cor = tipo==='diaria'?'cyan':tipo==='semanal'?'purple':tipo==='mensal'?'amber':'green';
-      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;
-        background:${feito?'rgba(16,214,122,0.04)':'var(--bg4)'};
-        border:1px solid ${feito?'rgba(16,214,122,0.2)':'var(--bdr)'};
-        border-radius:7px;margin-bottom:4px;opacity:${feito?'0.7':'1'}">
-        <div style="width:16px;height:16px;border-radius:4px;border:1px solid var(--bdr2);
-          background:${feito?'var(--green)':'transparent'};display:flex;align-items:center;
-          justify-content:center;font-size:10px;flex-shrink:0;cursor:pointer"
-          onclick="toggleTarefa('${eid}','${tid}','${feito?'pendente':'feito'}')">${feito?'✓':''}</div>
-        <span style="font-size:11px;color:${feito?'var(--text3)':'var(--text2)'};${feito?'text-decoration:line-through':''};flex:1">${t.titulo||tid}</span>
-        ${task.feita_por?`<span style="font-size:9px;font-family:var(--mono);color:var(--text3)">${task.feita_por}</span>`:''}
-      </div>`;
-    };
-
-    const totalT = diarias.length+semanais.length+mensais.length+Object.keys(extras).length;
-    const feitasT = diarias.filter(([tid])=>tasks[tid]?.status==='feito').length
-      + semanais.filter(([tid])=>tasks[tid]?.status==='feito').length
-      + mensais.filter(([tid])=>tasks[tid]?.status==='feito').length;
-    const pct = totalT>0?Math.round(feitasT/totalT*100):0;
+    // Totais por coluna
+    const cD = padraoD.filter(([tid])=>!et[tid]?.desativada);
+    const cS = padraoS.filter(([tid])=>!et[tid]?.desativada);
+    const cM = padraoM.filter(([tid])=>!et[tid]?.desativada);
+    const fD = cD.filter(([tid])=>et[tid]?.status==='feito').length;
+    const fS = cS.filter(([tid])=>et[tid]?.status==='feito').length;
+    const fM = cM.filter(([tid])=>et[tid]?.status==='feito').length;
+    const fE = esp.filter(([tid])=>et[tid]?.status==='feito').length;
+    const tot = cD.length+cS.length+cM.length+esp.length;
+    const feit= fD+fS+fM+fE;
+    const pct = tot>0?Math.round(feit/tot*100):0;
     const pctColor = pct>=80?'var(--green)':pct>=50?'var(--amber)':'#f87171';
 
-    return `<div class="card" style="margin-bottom:0">
-      <div class="card-accent" style="background:${pct>=80?'var(--green)':pct>=50?'var(--amber)':'#f87171'}"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div>
-          <div style="font-size:14px;font-weight:700">${e.nome}</div>
-          <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px">${e.segmento||''}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:11px;font-family:var(--mono);color:${pctColor}">${feitasT}/${totalT} · ${pct}%</span>
-          <div style="width:60px;height:4px;background:var(--bg4);border-radius:99px;overflow:hidden">
-            <div style="height:100%;border-radius:99px;background:${pctColor};width:${pct}%;transition:width .8s"></div>
-          </div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
-        <div>
-          <div style="font-size:8px;font-family:var(--mono);color:var(--cyan);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">📅 Diárias</div>
-          ${diarias.length?diarias.map(t=>renderTarefaItem(t,'diaria')).join(''):'<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">—</div>'}
-        </div>
-        <div>
-          <div style="font-size:8px;font-family:var(--mono);color:var(--purple);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">📆 Semanais</div>
-          ${semanais.length?semanais.map(t=>renderTarefaItem(t,'semanal')).join(''):'<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">—</div>'}
-        </div>
-        <div>
-          <div style="font-size:8px;font-family:var(--mono);color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">🗓 Mensais</div>
-          ${mensais.length?mensais.map(t=>renderTarefaItem(t,'mensal')).join(''):'<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">—</div>'}
-        </div>
-        <div>
-          <div style="font-size:8px;font-family:var(--mono);color:var(--green);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">✨ Extras</div>
-          ${Object.keys(extras).length?Object.entries(extras).map(t=>renderTarefaItem(t,'extra')).join(''):'<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">Nenhuma</div>'}
-        </div>
-      </div>
-    </div>`;
+    const renderItem = (tid, t, tipo, desativada=false) => {
+      const task = et[tid] || {};
+      const st = desativada ? 'desativada' : (task.status||'pendente');
+      const stCls = {feito:'feito',andamento:'andamento',pendente:'pendente',desativada:'desativada'}[st]||'pendente';
+      const resp  = task.feita_por ? `👤 ${task.feita_por}` : '';
+      const ativo_p = st==='pendente'&&!desativada;
+      const ativo_a = st==='andamento'&&!desativada;
+      const ativo_f = st==='feito'&&!desativada;
+      return (
+        `<div class="ck-item ${stCls}" id="cki-${eid}-${tid}">` +
+          (tipo==='padrao'
+            ? `<span class="ck-item-toggle" onclick="toggleDesativarTarefa('${eid}','${tid}',${desativada})" ` +
+              `title="${desativada?'Reativar':'Desativar'} para este cliente">${desativada?'◉':'○'}</span>`
+            : `<span class="ck-item-toggle" onclick="removerTarefaEsp('${eid}','${tid}')" title="Excluir">✕</span>`) +
+          `<div class="ck-item-txt">${t.titulo||tid}</div>` +
+          `<div class="ck-item-meta">` +
+            `<span class="ck-item-resp">${resp}</span>` +
+            (desativada
+              ? `<span style="font-size:8px;font-family:var(--mono);color:var(--text3)">desativada</span>`
+              : `<div class="ck-item-status">` +
+                  `<button class="ck-status-btn${ativo_p?' active-p':''}" title="Pendente" ` +
+                  `onclick="setStatusTarefa('${eid}','${tid}','pendente')">○</button>` +
+                  `<button class="ck-status-btn${ativo_a?' active-a':''}" title="Em andamento" ` +
+                  `onclick="setStatusTarefa('${eid}','${tid}','andamento')">◑</button>` +
+                  `<button class="ck-status-btn${ativo_f?' active-f':''}" title="Concluída" ` +
+                  `onclick="setStatusTarefa('${eid}','${tid}','feito')">✓</button>` +
+                `</div>`) +
+          `</div>` +
+        `</div>`
+      );
+    };
+
+    // Coluna D
+    const colD = [
+      ...cD.map(([tid,t]) => renderItem(tid,t,'padrao',false)),
+      ...padraoD.filter(([tid])=>et[tid]?.desativada).map(([tid,t]) => renderItem(tid,t,'padrao',true)),
+    ].join('');
+
+    // Coluna S
+    const colS = [
+      ...cS.map(([tid,t]) => renderItem(tid,t,'padrao',false)),
+      ...padraoS.filter(([tid])=>et[tid]?.desativada).map(([tid,t]) => renderItem(tid,t,'padrao',true)),
+    ].join('');
+
+    // Coluna M
+    const colM = [
+      ...cM.map(([tid,t]) => renderItem(tid,t,'padrao',false)),
+      ...padraoM.filter(([tid])=>et[tid]?.desativada).map(([tid,t]) => renderItem(tid,t,'padrao',true)),
+    ].join('');
+
+    // Coluna Personalizada
+    const colE = esp.map(([tid,t]) => renderItem(tid,t,'esp',false)).join('') ||
+      '<div style="font-size:10px;color:var(--text3);font-family:var(--mono);padding:8px 4px">Nenhuma tarefa personalizada</div>';
+
+    const mkProg = (f,t,cor) => {
+      const p = t>0?Math.round(f/t*100):0;
+      return `<div class="ck-col-prog" style="background:linear-gradient(90deg,${cor} ${p}%,var(--bdr) ${p}%)"></div>`;
+    };
+
+    return (
+      `<div class="client-kanban" id="ck-${eid}">` +
+
+        // Header clicável
+        `<div class="ck-header open" onclick="toggleKanban('${eid}')">` +
+          `<span class="ck-toggle">▶</span>` +
+          `<div class="ck-emp-av">🏢</div>` +
+          `<div style="flex:1">` +
+            `<div class="ck-emp-name">${e.nome}</div>` +
+            `<div class="ck-emp-sub">${e.segmento||''} · ${e.contato||''}</div>` +
+          `</div>` +
+          `<div class="ck-prog-wrap">` +
+            `<span class="ck-pct" style="color:${pctColor}">${pct}%</span>` +
+            `<div class="ck-prog-mini"><div class="ck-prog-mini-fill" style="width:${pct}%;background:${pctColor}"></div></div>` +
+            `<span style="font-size:9px;font-family:var(--mono);color:var(--text3)">${feit}/${tot}</span>` +
+          `</div>` +
+        `</div>` +
+
+        // Body Kanban — 4 colunas
+        `<div class="ck-body open" id="ckb-${eid}">` +
+
+          // Col 1: Diárias
+          `<div class="ck-col">` +
+            `<div class="ck-col-head">` +
+              `<div class="ck-col-label" style="color:var(--cyan)">` +
+                `🔵 Diárias <span class="ck-col-count">${fD}/${cD.length}</span>` +
+              `</div>` +
+              mkProg(fD,cD.length,'var(--cyan)') +
+            `</div>` +
+            `<div class="ck-items">${colD||'<div style="font-size:10px;color:var(--text3);font-family:var(--mono);padding:8px 4px">Sem tarefas</div>'}</div>` +
+          `</div>` +
+
+          // Col 2: Semanais
+          `<div class="ck-col">` +
+            `<div class="ck-col-head">` +
+              `<div class="ck-col-label" style="color:var(--purple)">` +
+                `🟡 Semanais <span class="ck-col-count">${fS}/${cS.length}</span>` +
+              `</div>` +
+              mkProg(fS,cS.length,'var(--purple)') +
+            `</div>` +
+            `<div class="ck-items">${colS||'<div style="font-size:10px;color:var(--text3);font-family:var(--mono);padding:8px 4px">Sem tarefas</div>'}</div>` +
+          `</div>` +
+
+          // Col 3: Mensais
+          `<div class="ck-col">` +
+            `<div class="ck-col-head">` +
+              `<div class="ck-col-label" style="color:var(--amber)">` +
+                `🟠 Mensais <span class="ck-col-count">${fM}/${cM.length}</span>` +
+              `</div>` +
+              mkProg(fM,cM.length,'var(--amber)') +
+            `</div>` +
+            `<div class="ck-items">${colM||'<div style="font-size:10px;color:var(--text3);font-family:var(--mono);padding:8px 4px">Sem tarefas</div>'}</div>` +
+          `</div>` +
+
+          // Col 4: Personalizadas
+          `<div class="ck-col">` +
+            `<div class="ck-col-head">` +
+              `<div class="ck-col-label" style="color:var(--green)">` +
+                `🔴 Personalizadas <span class="ck-col-count">${fE}/${esp.length}</span>` +
+              `</div>` +
+              mkProg(fE,esp.length,'var(--green)') +
+            `</div>` +
+            `<div class="ck-items">${colE}</div>` +
+            `<button class="ck-add-btn" onclick="abrirAddTarefaEsp('${eid}')">＋ Adicionar tarefa personalizada</button>` +
+          `</div>` +
+
+        `</div>` + // ck-body
+      `</div>`    // client-kanban
+    );
   }).join('');
 }
+
+// ── Controles do Kanban ──────────────────────────────────
+window.toggleKanban = function(eid) {
+  const header = document.querySelector(`#ck-${eid} .ck-header`);
+  const body   = document.getElementById('ckb-'+eid);
+  if(!body) return;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if(header) header.classList.toggle('open', !isOpen);
+};
+
+window.expandirTodas = function() {
+  document.querySelectorAll('.ck-body').forEach(b=>b.classList.add('open'));
+  document.querySelectorAll('.ck-header').forEach(h=>h.classList.add('open'));
+};
+window.recolherTodas = function() {
+  document.querySelectorAll('.ck-body').forEach(b=>b.classList.remove('open'));
+  document.querySelectorAll('.ck-header').forEach(h=>h.classList.remove('open'));
+};
+
+// ── Status de tarefa ────────────────────────────────────
+window.setStatusTarefa = async function(eid, tid, novoStatus) {
+  const am = anoMes();
+  const payload = { status:novoStatus, atualizadoEm:Date.now() };
+  if(novoStatus==='feito') payload.feita_por = 'Gestor';
+  if(novoStatus==='feito') payload.feita_em  = Date.now();
+  await update(ref(db,`tarefas/${am}/${eid}/${tid}`), payload);
+  // Atualiza STATE local para re-render instantâneo
+  if(!STATE.tarefas[eid]) STATE.tarefas[eid] = {};
+  Object.assign(STATE.tarefas[eid][tid] = STATE.tarefas[eid][tid]||{}, payload);
+  renderTarefasView();
+};
+
+// ── Desativar tarefa padrão para cliente específico ─────
+window.toggleDesativarTarefa = async function(eid, tid, estaDesativada) {
+  const am = anoMes();
+  const path = `tarefas/${am}/${eid}/${tid}/desativada`;
+  await set(ref(db, path), !estaDesativada);
+  if(!STATE.tarefas[eid]) STATE.tarefas[eid] = {};
+  if(!STATE.tarefas[eid][tid]) STATE.tarefas[eid][tid] = {};
+  STATE.tarefas[eid][tid].desativada = !estaDesativada;
+  renderTarefasView();
+};
+
+// ── Add tarefa personalizada via botão no Kanban ─────────
+window.abrirAddTarefaEsp = function(eid) {
+  const emp = STATE.empresas?.[eid];
+  const titulo = emp?.nome || eid;
+  // Reutiliza o modal de empresa existente — pré-preenche e foca
+  navegarPara('cfg');
+  setTimeout(()=>{
+    mudarTabCfg('empresas', document.querySelector('.tab-btn:nth-child(2)'));
+    setTimeout(()=>{
+      const inputEl = document.getElementById('te-titulo-'+eid);
+      if(inputEl) {
+        inputEl.scrollIntoView({behavior:'smooth',block:'center'});
+        inputEl.focus();
+      }
+    }, 400);
+  }, 300);
+};
+
 
 window.toggleTarefa = async function(empId, tarefaId, novoStatus) {
   const am = anoMes();
@@ -2341,14 +2850,13 @@ window.toggleTarefa = async function(empId, tarefaId, novoStatus) {
 window.filtrarTarefasPorEmpresa = function(eid) {
   renderTarefasView();
 };
-
 window.filtrarTarefasMes = function(m, btn) {
   document.querySelectorAll('#view-tarefas .pf-btn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
+  // TODO: carregar mês diferente do Firebase
   renderTarefasView();
 };
-
-function atualizarKPIsTarefas() { /* chamado ao mudar tarefas */ }
+function atualizarKPIsTarefas() { if(STATE.viewAtual==='tarefas') renderTarefasView(); }
 
 // ─── CRM KANBAN ───────────────────────────────────────────
 const CRM_COLUNAS = [
@@ -2601,26 +3109,89 @@ function renderCfgEmpresas() {
   const entries = Object.entries(STATE.empresas||{});
   const ativos = entries.filter(([,e])=>e?.status!=='inativo');
   if(count) count.textContent = ativos.length+' empresas';
-  if(!entries.length) {
+  if(!ativos.length) {
     list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">Nenhuma empresa cadastrada.</div>';
     return;
   }
-  list.innerHTML = entries.filter(([,e])=>e?.status!=='inativo').map(([eid,e]) => {
-    return `<div class="item-row">
-      <div style="width:34px;height:34px;border-radius:8px;background:var(--blue3);border:1px solid var(--bdr2);
-        display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🏢</div>
-      <div class="item-info">
-        <div class="item-name">${e.nome||eid}</div>
-        <div class="item-sub">${e.segmento||''} · CNPJ: ${e.cnpj||'—'} · ${e.contato||''}</div>
-        <div class="item-badges">
-          <span class="badge bb">Contrato: ${fmtBRL0(e.valor_contrato)}</span>
-          <span class="badge bg">● Ativa</span>
-        </div>
-      </div>
-      <div class="item-actions">
-        <button class="btn btn-danger btn-sm" onclick="removerEmpresa('${eid}','${(e.nome||eid).replace("'","")}')">Remover</button>
-      </div>
-    </div>`;
+
+  const tipoMap = {diaria:'📅',semanal:'📆',mensal:'🗓',isolada:'📌'};
+  const tipoCls = {diaria:'bc',semanal:'bp',mensal:'ba',isolada:'bb'};
+
+  list.innerHTML = ativos.map(([eid,e]) => {
+    const tarefasEsp = Object.entries(e.tarefas_especificas||{});
+
+    const tarefasHtml = tarefasEsp.length
+      ? tarefasEsp.map(([tid,t]) =>
+          `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;` +
+          `background:var(--bg4);border:1px solid var(--bdr);border-radius:6px;margin-bottom:4px">` +
+          `<span style="font-size:11px;flex:1">${tipoMap[t.tipo]||'📌'} ${t.titulo}</span>` +
+          `<span class="badge ${tipoCls[t.tipo]||'bb'}" style="font-size:8px">${t.tipo||'isolada'}</span>` +
+          `<button onclick="removerTarefaEsp('${eid}','${tid}')" ` +
+          `style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:0 2px" ` +
+          `title="Remover">✕</button></div>`
+        ).join('')
+      : '<div style="font-size:10px;color:var(--text3);font-family:var(--mono);padding:4px 0">Nenhuma tarefa isolada ainda</div>';
+
+    const nomeEsc = (e.nome||eid).replace(/'/g,"");
+    return (
+      `<div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:12px;` +
+      `padding:14px 16px;margin-bottom:10px">` +
+
+        // Cabeçalho empresa
+        `<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">` +
+          `<div style="width:36px;height:36px;border-radius:8px;background:var(--blue3);` +
+          `border:1px solid var(--bdr2);display:flex;align-items:center;justify-content:center;` +
+          `font-size:14px;flex-shrink:0">🏢</div>` +
+          `<div style="flex:1">` +
+            `<div style="font-size:13px;font-weight:700">${e.nome||eid}</div>` +
+            `<div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px">` +
+              `${e.segmento||''} · CNPJ: ${e.cnpj||'—'} · ${e.contato||''}` +
+            `</div>` +
+            `<div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap">` +
+              `<span class="badge bb">Contrato: ${fmtBRL0(e.valor_contrato)}</span>` +
+              `<span class="badge bg">● Ativa</span>` +
+              (tarefasEsp.length ? `<span class="badge bc">${tarefasEsp.length} tarefa(s) isolada(s)</span>` : '') +
+            `</div>` +
+          `</div>` +
+          `<button class="btn btn-danger btn-sm" onclick="removerEmpresa('${eid}','${nomeEsc}')">Remover</button>` +
+        `</div>` +
+
+        // Divisor
+        `<div style="height:1px;background:var(--bdr);margin-bottom:12px"></div>` +
+
+        // Tarefas isoladas
+        `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">` +
+
+          // Lista lado esquerdo
+          `<div>` +
+            `<div style="font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;` +
+            `color:var(--text3);font-family:var(--mono);margin-bottom:8px">` +
+            `📌 Tarefas isoladas — só este cliente</div>` +
+            `<div id="te-list-${eid}">${tarefasHtml}</div>` +
+          `</div>` +
+
+          // Formulário lado direito
+          `<div>` +
+            `<div style="font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;` +
+            `color:var(--text3);font-family:var(--mono);margin-bottom:8px">` +
+            `＋ Adicionar tarefa isolada</div>` +
+            `<input type="text" class="fi" id="te-titulo-${eid}" ` +
+            `placeholder="Ex: Enviar DRE mensal ao sócio" ` +
+            `style="padding:8px 10px;font-size:11px;margin-bottom:6px">` +
+            `<div style="display:flex;gap:6px">` +
+              `<select class="fi" id="te-tipo-${eid}" style="padding:8px 10px;font-size:11px;flex:1">` +
+                `<option value="diaria">📅 Diária</option>` +
+                `<option value="semanal">📆 Semanal</option>` +
+                `<option value="mensal" selected>🗓 Mensal</option>` +
+                `<option value="isolada">📌 Única / isolada</option>` +
+              `</select>` +
+              `<button class="btn btn-success btn-sm" onclick="adicionarTarefaEsp('${eid}')">＋ Add</button>` +
+            `</div>` +
+          `</div>` +
+
+        `</div>` +  // grid
+      `</div>`     // card empresa
+    );
   }).join('');
 }
 
@@ -2649,6 +3220,70 @@ window.removerEmpresa = async function(eid, nome) {
   confirmar('Remover '+nome+'?','A empresa ficará inativa e poderá ser reativada.',async()=>{
     await set(ref(db,'empresas/'+eid+'/status'),'inativo');
   });
+};
+
+// ─── TAREFAS ISOLADAS POR EMPRESA ────────────────────────
+window.adicionarTarefaEsp = async function(eid) {
+  const tituloEl = document.getElementById('te-titulo-'+eid);
+  const tipoEl   = document.getElementById('te-tipo-'+eid);
+  const titulo   = tituloEl?.value?.trim();
+  const tipo     = tipoEl?.value || 'mensal';
+  if(!titulo) {
+    tituloEl?.classList.add('fi-err');
+    setTimeout(()=>tituloEl?.classList.remove('fi-err'),1200);
+    return;
+  }
+  const tid = 'te_'+Date.now();
+  await set(ref(db,'empresas/'+eid+'/tarefas_especificas/'+tid), {
+    titulo, tipo, ativa:true, criadoEm:Date.now()
+  });
+  if(tituloEl) tituloEl.value = '';
+  // Atualiza só o card desta empresa sem re-renderizar tudo
+  const snap = await get(ref(db,'empresas/'+eid+'/tarefas_especificas'));
+  const tasks = snap.val() || {};
+  const tipoMap = {diaria:'📅',semanal:'📆',mensal:'🗓',isolada:'📌'};
+  const tipoCls = {diaria:'bc',semanal:'bp',mensal:'ba',isolada:'bb'};
+  const listEl = document.getElementById('te-list-'+eid);
+  if(listEl) {
+    const entries = Object.entries(tasks);
+    if(!entries.length) {
+      listEl.innerHTML = '<div style="font-size:10px;color:var(--text3);font-family:var(--mono);padding:4px 0">Nenhuma tarefa isolada ainda</div>';
+    } else {
+      listEl.innerHTML = entries.map(([id,t]) =>
+        `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;` +
+        `background:var(--bg4);border:1px solid var(--bdr);border-radius:6px;margin-bottom:4px">` +
+        `<span style="font-size:11px;flex:1">${tipoMap[t.tipo]||'📌'} ${t.titulo}</span>` +
+        `<span class="badge ${tipoCls[t.tipo]||'bb'}" style="font-size:8px">${t.tipo||'isolada'}</span>` +
+        `<button onclick="removerTarefaEsp('${eid}','${id}')" ` +
+        `style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:0 2px">✕</button></div>`
+      ).join('');
+    }
+  }
+};
+
+window.removerTarefaEsp = async function(eid, tid) {
+  await remove(ref(db,'empresas/'+eid+'/tarefas_especificas/'+tid));
+  // Atualiza lista
+  const snap = await get(ref(db,'empresas/'+eid+'/tarefas_especificas'));
+  const tasks = snap.val() || {};
+  const tipoMap = {diaria:'📅',semanal:'📆',mensal:'🗓',isolada:'📌'};
+  const tipoCls = {diaria:'bc',semanal:'bp',mensal:'ba',isolada:'bb'};
+  const listEl = document.getElementById('te-list-'+eid);
+  if(listEl) {
+    const entries = Object.entries(tasks);
+    if(!entries.length) {
+      listEl.innerHTML = '<div style="font-size:10px;color:var(--text3);font-family:var(--mono);padding:4px 0">Nenhuma tarefa isolada ainda</div>';
+    } else {
+      listEl.innerHTML = entries.map(([id,t]) =>
+        `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;` +
+        `background:var(--bg4);border:1px solid var(--bdr);border-radius:6px;margin-bottom:4px">` +
+        `<span style="font-size:11px;flex:1">${tipoMap[t.tipo]||'📌'} ${t.titulo}</span>` +
+        `<span class="badge ${tipoCls[t.tipo]||'bb'}" style="font-size:8px">${t.tipo||'isolada'}</span>` +
+        `<button onclick="removerTarefaEsp('${eid}','${id}')" ` +
+        `style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:0 2px">✕</button></div>`
+      ).join('');
+    }
+  }
 };
 
 // ─── CONFIG: TAREFAS PADRÃO ──────────────────────────────
