@@ -65,7 +65,7 @@ body::after{content:'';position:fixed;top:-300px;right:-200px;width:700px;height
 .lg-title{font-size:23px;font-weight:800;margin-top:12px;letter-spacing:-0.5px;}
 .lg-title span{color:var(--blue2);}
 .lg-sub{font-size:9px;color:var(--text3);font-family:var(--mono);letter-spacing:2.5px;text-transform:uppercase;margin-top:5px;}
-.lg-card{width:390px;background:rgba(8,13,28,0.92);border:1px solid var(--bdr2);
+.lg-card{width:420px;background:rgba(8,13,28,0.92);border:1px solid var(--bdr2);
   border-radius:18px;padding:34px 38px;backdrop-filter:blur(28px);position:relative;overflow:hidden;}
 .lg-card::before{content:'';position:absolute;top:0;left:-100%;right:0;height:1px;
   background:linear-gradient(90deg,transparent,rgba(59,127,245,0.7),transparent);
@@ -82,11 +82,17 @@ body::after{content:'';position:fixed;top:-300px;right:-200px;width:700px;height
 .lg-input-lbl{display:block;font-size:8px;letter-spacing:2px;text-transform:uppercase;
   color:var(--text3);font-family:var(--mono);margin-bottom:7px;}
 .lg-input{width:100%;background:rgba(6,10,25,0.85);border:1px solid var(--bdr);
-  border-radius:10px;padding:13px 16px;font-size:22px;color:var(--blue2);
-  font-family:var(--mono);letter-spacing:6px;text-align:center;outline:none;
-  transition:border-color .2s,box-shadow .2s;}
+  border-radius:10px;padding:13px 16px;font-size:13px;color:var(--blue2);
+  font-family:var(--mono);letter-spacing:0.5px;text-align:left;outline:none;
+  transition:border-color .2s,box-shadow .2s;text-overflow:ellipsis;}
 .lg-input:focus{border-color:rgba(59,127,245,0.5);box-shadow:0 0 0 3px rgba(59,127,245,0.09);}
-.lg-input::placeholder{letter-spacing:3px;font-size:14px;color:rgba(59,127,245,.2);}
+.lg-input::placeholder{letter-spacing:1px;font-size:12px;color:rgba(59,127,245,.2);}
+#login-senha{font-size:16px;letter-spacing:3px;}
+.lg-input-wrap{position:relative;display:flex;align-items:center;margin-bottom:10px;}
+.lg-input-wrap .lg-input{margin-bottom:0;padding-right:44px;}
+.lg-eye{position:absolute;right:12px;background:none;border:none;cursor:pointer;
+  color:var(--text3);font-size:16px;padding:4px;line-height:1;transition:color .2s;}
+.lg-eye:hover{color:var(--blue2);}
 .lg-btn{width:100%;border:none;border-radius:10px;padding:15px;font-size:10px;font-weight:700;
   color:#fff;cursor:pointer;font-family:var(--mono);letter-spacing:2.5px;text-transform:uppercase;
   background:linear-gradient(135deg,#1a50c8,#2d3ac8);
@@ -837,15 +843,29 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
   <div class="lg-card">
     <div class="lcc lcc-tl"></div><div class="lcc lcc-tr"></div>
     <div class="lcc lcc-bl"></div><div class="lcc lcc-br"></div>
-    <div class="lg-lbl">Autenticação · Robson Silva</div>
-    <label class="lg-input-lbl">Código de acesso</label>
-    <input type="password" class="lg-input" id="pw-input" placeholder="• • • • • •" maxlength="10"
-      onkeydown="if(event.key==='Enter') tentarLogin()">
-    <button class="lg-btn" onclick="tentarLogin()">→ Acessar Painel</button>
-    <div class="lg-err" id="pw-error">Acesso negado · Código incorreto</div>
+    <div class="lg-lbl">Autenticação · Acesso C-Level</div>
+    <label class="lg-input-lbl">E-mail</label>
+    <div class="lg-input-wrap" style="margin-bottom:14px">
+      <input type="email" class="lg-input" id="login-email" placeholder="seu@email.com.br"
+        autocomplete="email"
+        onkeydown="if(event.key==='Enter') document.getElementById('login-senha').focus()">
+    </div>
+    <label class="lg-input-lbl">Senha</label>
+    <div class="lg-input-wrap">
+      <input type="password" class="lg-input" id="login-senha" placeholder="sua senha"
+        autocomplete="current-password"
+        onkeydown="if(event.key==='Enter') tentarLogin()">
+      <button class="lg-eye" type="button" onclick="toggleVerSenha('login-senha', this)" title="Ver senha">👁</button>
+    </div>
+    <button class="lg-btn" onclick="tentarLogin()" id="btn-login-main">→ Acessar Painel</button>
+    <div class="lg-err" id="pw-error" style="display:none">E-mail ou senha incorretos</div>
+    <div style="text-align:center;margin-top:10px">
+      <span onclick="abrirResetSenha()" style="font-size:9px;font-family:var(--mono);
+        color:var(--text3);cursor:pointer;text-decoration:underline">Esqueci minha senha</span>
+    </div>
     <div class="lg-foot">
       <span class="sdot-g"></span>
-      Firebase conectado · Omie integrado
+      Firebase Auth · Acesso seguro por e-mail
     </div>
   </div>
 </div>
@@ -941,16 +961,22 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
           <div class="kpi-badge bg" id="fk-saldo-badge">→ Manual</div>
         </div>
         <div class="kpi-card green">
-          <div class="kpi-label">A receber (CAR)</div>
+          <div class="kpi-label">A receber · pendente</div>
           <div class="kpi-value" id="fk-car" style="color:var(--green)">R$ --</div>
-          <div class="kpi-sub">Omie · contas a receber</div>
-          <div class="kpi-badge bc" id="fk-car-qtd">-- títulos</div>
+          <div class="kpi-sub" style="display:flex;align-items:center;justify-content:space-between">
+            <span id="fk-car-qtd" style="font-size:9px">-- títulos</span>
+            <span style="font-size:9px;color:var(--text3)">Recebido: <span id="fk-car-recebido" style="color:var(--green)">R$ --</span></span>
+          </div>
+          <div class="kpi-badge bc" id="fk-car-total-badge" style="margin-top:6px">Total previsto: R$ --</div>
         </div>
         <div class="kpi-card amber">
-          <div class="kpi-label">A pagar (CAP)</div>
+          <div class="kpi-label">A pagar · pendente</div>
           <div class="kpi-value" id="fk-cap" style="color:var(--amber)">R$ --</div>
-          <div class="kpi-sub">Omie · contas a pagar</div>
-          <div class="kpi-badge ba" id="fk-cap-qtd">-- títulos</div>
+          <div class="kpi-sub" style="display:flex;align-items:center;justify-content:space-between">
+            <span id="fk-cap-qtd" style="font-size:9px">-- títulos</span>
+            <span style="font-size:9px;color:var(--text3)">Pago: <span id="fk-cap-pago" style="color:var(--amber)">R$ --</span></span>
+          </div>
+          <div class="kpi-badge ba" id="fk-cap-total-badge" style="margin-top:6px">Total previsto: R$ --</div>
         </div>
         <div class="kpi-card purple">
           <div class="kpi-label">Projeção fim do mês</div>
@@ -983,8 +1009,18 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
               <button class="pf-btn" onclick="filtroProjecao('7d')">7 dias</button>
             </div>
           </div>
-          <div class="chart-area">
-            <canvas id="chart-caixa" width="600" height="180" style="width:100%;height:180px"></canvas>
+          <div class="chart-area" style="position:relative">
+            <canvas id="chart-caixa" width="600" height="180" style="width:100%;height:180px;cursor:crosshair"></canvas>
+            <div id="chart-tooltip" style="display:none;position:absolute;pointer-events:none;
+              background:var(--bg4);border:1px solid var(--bdr3);border-radius:8px;
+              padding:8px 12px;font-family:var(--mono);font-size:10px;color:var(--text);
+              box-shadow:0 4px 16px rgba(0,0,0,0.4);white-space:nowrap;z-index:10">
+              <div id="tt-dia" style="font-weight:600;color:var(--blue2);margin-bottom:4px"></div>
+              <div id="tt-saldo"></div>
+              <div id="tt-entradas" style="color:var(--green)"></div>
+              <div id="tt-saidas" style="color:var(--amber)"></div>
+              <div id="tt-alerta" style="color:#f87171;margin-top:2px"></div>
+            </div>
           </div>
           <div class="proj-legend">
             <span><span style="display:inline-block;width:10px;height:2px;background:var(--blue);border-radius:1px"></span> Saldo projetado</span>
@@ -1031,36 +1067,114 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
       <!-- Títulos detalhados -->
       <div class="zone-header" style="margin-top:0">
         <span class="zone-tag z3">Zona 03</span>
-        <span class="zone-desc">Vencimentos · Próximos 15 dias</span>
+        <span class="zone-desc">Contas a Receber · Situação detalhada</span>
         <div class="zone-line"></div>
         <span id="fin-sync-status" style="font-size:9px;font-family:var(--mono);color:var(--text3);flex-shrink:0">--:--</span>
       </div>
 
+      <!-- CAR: 3 colunas — pendente | atrasado | recebido -->
+      <div class="grid-4" style="margin-bottom:12px">
+        <div class="kpi-card green" style="border-left:3px solid var(--green)">
+          <div class="kpi-label" style="font-size:9px">📥 A Receber · Pendente</div>
+          <div class="kpi-value" id="car-pendente-val" style="color:var(--green);font-size:20px">R$ --</div>
+          <div class="kpi-sub" id="car-pendente-qtd" style="font-size:9px">-- títulos</div>
+        </div>
+        <div class="kpi-card red" style="border-left:3px solid var(--red)">
+          <div class="kpi-label" style="font-size:9px">⚠ A Receber · Atrasado</div>
+          <div class="kpi-value" id="car-atrasado-val" style="color:#f87171;font-size:20px">R$ --</div>
+          <div class="kpi-sub" id="car-atrasado-qtd" style="font-size:9px">-- títulos</div>
+        </div>
+        <div class="kpi-card" style="border-left:3px solid rgba(16,214,122,0.5)">
+          <div class="kpi-label" style="font-size:9px">✓ Recebido no Mês</div>
+          <div class="kpi-value" id="car-recebido-val" style="color:var(--green);font-size:20px">R$ --</div>
+          <div class="kpi-sub" style="font-size:9px">pagamentos confirmados</div>
+        </div>
+        <div class="kpi-card blue" style="border-left:3px solid var(--blue)">
+          <div class="kpi-label" style="font-size:9px">📊 Total Previsto (CAR)</div>
+          <div class="kpi-value" id="car-total-val" style="color:var(--blue2);font-size:20px">R$ --</div>
+          <div class="kpi-sub" id="car-total-pct" style="font-size:9px">-- % recebido</div>
+        </div>
+      </div>
+
+      <!-- Lista de títulos CAR -->
       <div class="grid-2" style="margin-bottom:16px">
-        <!-- A receber -->
         <div class="card">
           <div class="card-accent" style="background:var(--green)"></div>
           <div class="sec-header">
-            <span class="sec-title">📥 A Receber</span>
+            <span class="sec-title">📥 A Receber — Pendentes e Atrasados</span>
             <span class="sec-count" id="car-count">0 títulos</span>
           </div>
-          <div id="car-list" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto">
-            <div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">
-              Carregando do Omie...
-            </div>
+          <div id="car-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto">
+            <div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">Carregando do Omie...</div>
           </div>
         </div>
-        <!-- A pagar -->
+
+        <!-- CAP: resumo por situação -->
         <div class="card">
           <div class="card-accent" style="background:var(--amber)"></div>
           <div class="sec-header">
-            <span class="sec-title">📤 A Pagar</span>
+            <span class="sec-title">📤 A Pagar — Resumo por situação</span>
+            <span class="sec-count" id="cap-resumo-count">--</span>
+          </div>
+          <div id="cap-resumo-list" style="display:flex;flex-direction:column;gap:6px">
+            <div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">Carregando do Omie...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zona 04: CAP detalhado + alerta de caixa por dia -->
+      <div class="zone-header" style="margin-top:0">
+        <span class="zone-tag" style="background:rgba(245,166,35,0.15);color:var(--amber);border-color:rgba(245,166,35,0.3)">Zona 04</span>
+        <span class="zone-desc">Contas a Pagar · Detalhe + Alerta de Caixa Diário</span>
+        <div class="zone-line"></div>
+      </div>
+
+      <!-- CAP: 4 colunas — a vencer | atrasado | pago | parcial -->
+      <div class="grid-4" style="margin-bottom:12px">
+        <div class="kpi-card amber" style="border-left:3px solid var(--amber)">
+          <div class="kpi-label" style="font-size:9px">📅 A Pagar · A Vencer</div>
+          <div class="kpi-value" id="cap-avencer-val" style="color:var(--amber);font-size:20px">R$ --</div>
+          <div class="kpi-sub" id="cap-avencer-qtd" style="font-size:9px">-- títulos</div>
+        </div>
+        <div class="kpi-card red" style="border-left:3px solid var(--red)">
+          <div class="kpi-label" style="font-size:9px">🔴 A Pagar · Atrasado</div>
+          <div class="kpi-value" id="cap-atrasado-val" style="color:#f87171;font-size:20px">R$ --</div>
+          <div class="kpi-sub" id="cap-atrasado-qtd" style="font-size:9px">-- títulos</div>
+        </div>
+        <div class="kpi-card" style="border-left:3px solid rgba(245,166,35,0.5)">
+          <div class="kpi-label" style="font-size:9px">✓ Pago no Mês</div>
+          <div class="kpi-value" id="cap-pago-val" style="color:var(--green);font-size:20px">R$ --</div>
+          <div class="kpi-sub" style="font-size:9px">pagamentos realizados</div>
+        </div>
+        <div class="kpi-card purple" style="border-left:3px solid rgba(168,85,247,0.5)">
+          <div class="kpi-label" style="font-size:9px">½ Pago Parcialmente</div>
+          <div class="kpi-value" id="cap-parcial-val" style="color:var(--purple);font-size:20px">R$ --</div>
+          <div class="kpi-sub" id="cap-parcial-qtd" style="font-size:9px">-- títulos · saldo devedor</div>
+        </div>
+      </div>
+
+      <!-- Alerta de caixa por dia + lista CAP -->
+      <div class="grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-accent" style="background:var(--amber)"></div>
+          <div class="sec-header">
+            <span class="sec-title">📤 A Pagar — Títulos pendentes</span>
             <span class="sec-count" id="cap-count">0 títulos</span>
           </div>
-          <div id="cap-list" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto">
-            <div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">
-              Carregando do Omie...
-            </div>
+          <div id="cap-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto">
+            <div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">Carregando do Omie...</div>
+          </div>
+        </div>
+
+        <!-- Alertas diários de caixa -->
+        <div class="card">
+          <div class="card-accent" style="background:#f87171"></div>
+          <div class="sec-header">
+            <span class="sec-title">⚠ Alertas · Caixa insuficiente por dia</span>
+            <span class="sec-count" id="alertas-count">--</span>
+          </div>
+          <div id="alertas-caixa-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto">
+            <div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">Calculando...</div>
           </div>
         </div>
       </div>
@@ -1279,6 +1393,7 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
         <button class="tab-btn" onclick="mudarTabCfg('atribuicoes',this)">🔗 Atribuições</button>
         <button class="tab-btn" onclick="mudarTabCfg('alertas',this)">🔔 Alertas</button>
         <button class="tab-btn" onclick="mudarTabCfg('pontuacao',this)">🎯 Pontuação</button>
+        <button class="tab-btn" onclick="mudarTabCfg('acessos',this)">🔐 Acessos</button>
       </div>
 
       <!-- TAB: COLABORADORES -->
@@ -1480,6 +1595,23 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
         </div>
       </div>
 
+      <div class="tab-panel" id="cfg-acessos">
+        <div class="sec-header" style="margin-bottom:14px">
+          <span class="sec-title">🔐 Gestão de Acessos · login e papéis</span>
+        </div>
+        <div style="background:var(--blue3);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11px;font-family:var(--mono);color:var(--text3)">
+          Crie o login (e-mail + senha) de cada pessoa e defina o papel. A senha temporária aparece só uma vez — repasse para a pessoa. Quem esquecer, use "Resetar senha" (envia link por e-mail).
+        </div>
+        <div class="form-section" style="margin-bottom:18px">
+          <div class="form-title">Minha conta (Gestor)</div>
+          <div id="acesso-gestor"></div>
+        </div>
+        <div class="sec-header" style="margin-bottom:10px"><span class="sec-title" style="font-size:13px">Acessos da equipe</span></div>
+        <div id="acessos-list" style="display:flex;flex-direction:column;gap:10px">
+          <div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">Carregando...</div>
+        </div>
+      </div>
+
     </div><!-- /view-cfg -->
 
   </div><!-- /main-content -->
@@ -1674,9 +1806,11 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
      SCRIPTS: FIREBASE + LÓGICA PRINCIPAL
 ═══════════════════════════════════════════════════════ -->
 <script type="module">
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp, getApps, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, get, set, push, update, remove }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ─── CONFIG FIREBASE ──────────────────────────────────────
 const FB_CFG = {
@@ -1686,13 +1820,39 @@ const FB_CFG = {
   projectId:         "re-gestao-online",
   storageBucket:     "re-gestao-online.firebasestorage.app",
   messagingSenderId: "1070846495916",
-  appId:             "1:1070846495916:web:96052494779011627I2309"
+  appId:             "1:1070846495916:web:9605249477901162712309"
 };
 const OMIE_PROXY = "https://script.google.com/macros/s/AKfycbxnuTLKUK0We-vRj7NaZc7mXqx09U9FMHCH4DQufWi80vBMq04DPWEIup1rWDff2aX7Sw/exec";
-const SENHA_OK   = "RE2025";
+// SENHA_OK removida — sistema usa Firebase Auth (email + senha)
 
 const fbApp = getApps().length ? getApps()[0] : initializeApp(FB_CFG);
 const db    = getDatabase(fbApp);
+const auth  = getAuth(fbApp);
+
+// cria conta no Firebase Auth sem trocar a sessão atual (app secundário)
+async function criarContaAuth(email, senha){
+  const sec = initializeApp(FB_CFG, 'sec-'+Date.now());
+  const sAuth = getAuth(sec);
+  try {
+    const cred = await createUserWithEmailAndPassword(sAuth, email, senha);
+    await signOut(sAuth).catch(()=>{});
+    return cred.user.uid;
+  } finally {
+    try { await deleteApp(sec); } catch(e){}
+  }
+}
+function erroAuth(e){
+  const c = (e && e.code) || '';
+  if(c.includes('email-already-in-use')) return 'Esse e-mail já tem conta. Use "Resetar senha".';
+  if(c.includes('invalid-email')) return 'E-mail inválido.';
+  if(c.includes('weak-password')) return 'Senha fraca (mínimo 6 caracteres).';
+  if(c.includes('operation-not-allowed')) return 'Ative E-mail/senha no Firebase (Authentication).';
+  return 'Erro: ' + ((e && e.message) || 'desconhecido');
+}
+function msgCredencial(nome,email,senha){
+  return 'Olá, '+nome+'! 👋\n\nSeu acesso ao painel da RE Gestão:\n\n👤 E-mail: '+email+'\n🔑 Senha: '+senha+'\n\nÉ só abrir o painel e entrar. Pode trocar a senha quando quiser.';
+}
+async function copiarTxt(txt){ try { await navigator.clipboard.writeText(txt); return true; } catch(e){ return false; } }
 
 // ─── HELPERS DATA ─────────────────────────────────────────
 const hoje = () => new Date().toISOString().split('T')[0];
@@ -1738,27 +1898,98 @@ let STATE = {
   unsubs: []
 };
 
-// ─── LOGIN ────────────────────────────────────────────────
-window.tentarLogin = function() {
-  const v = document.getElementById('pw-input').value;
-  const err = document.getElementById('pw-error');
-  if (v === SENHA_OK) {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    iniciarApp();
+// ─── VER SENHA (toggle olhinho) ───────────────────────────
+window.toggleVerSenha = function(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  if(input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+    btn.title = 'Ocultar senha';
   } else {
-    err.style.display = 'block';
-    document.getElementById('pw-input').value = '';
-    setTimeout(()=>err.style.display='none', 3000);
+    input.type = 'password';
+    btn.textContent = '👁';
+    btn.title = 'Ver senha';
   }
 };
 
-window.fazerLogout = function() {
+// ─── LOGIN ────────────────────────────────────────────────
+const GESTOR_EMAIL = 'robson@regestaoempresarial.com.br'; // único e-mail com acesso C-Level
+
+window.tentarLogin = async function() {
+  const email  = (document.getElementById('login-email')?.value || '').trim();
+  const senha  = document.getElementById('login-senha')?.value || '';
+  const err    = document.getElementById('pw-error');
+  const btn    = document.getElementById('btn-login-main');
+
+  if(!email || !senha) {
+    err.textContent = 'Preencha e-mail e senha.';
+    err.style.display = 'block';
+    setTimeout(()=>err.style.display='none', 3000);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '↻ Autenticando...';
+  err.style.display = 'none';
+
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, senha);
+    const userEmail = cred.user.email?.toLowerCase() || '';
+
+    // Só permite acesso ao painel C-Level para o gestor
+    if(userEmail !== GESTOR_EMAIL.toLowerCase()) {
+      await signOut(auth);
+      err.textContent = 'Este painel é restrito ao gestor. Use o painel da equipe.';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '→ Acessar Painel';
+      return;
+    }
+
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    iniciarApp();
+  } catch(e) {
+    const cod = e.code || '';
+    // Mostra o código técnico para diagnóstico
+    let msg = 'Erro: ' + cod + ' · ' + (e.message||'');
+    if(cod.includes('user-not-found'))       msg = 'Usuário não encontrado no Firebase. Verifique o e-mail.';
+    else if(cod.includes('wrong-password'))  msg = 'Senha incorreta.';
+    else if(cod.includes('invalid-credential')) msg = 'E-mail ou senha incorretos (invalid-credential).';
+    else if(cod.includes('invalid-email'))   msg = 'Formato de e-mail inválido.';
+    else if(cod.includes('too-many-requests')) msg = 'Muitas tentativas. Aguarde alguns minutos.';
+    else if(cod.includes('network'))         msg = 'Sem conexão com internet.';
+    err.textContent = msg;
+    err.style.display = 'block';
+    err.style.fontSize = '8px';
+    btn.disabled = false;
+    btn.textContent = '→ Acessar Painel';
+  }
+};
+
+window.abrirResetSenha = async function() {
+  const email = (document.getElementById('login-email')?.value || '').trim() || GESTOR_EMAIL;
+  const err   = document.getElementById('pw-error');
+  try {
+    await sendPasswordResetEmail(auth, email);
+    err.textContent = '✓ E-mail de recuperação enviado para ' + email;
+    err.style.color = 'var(--green)';
+    err.style.display = 'block';
+    setTimeout(()=>{ err.style.display='none'; err.style.color=''; }, 5000);
+  } catch(e) {
+    err.textContent = 'Erro ao enviar: ' + (e.message||'verifique o e-mail digitado');
+    err.style.display = 'block';
+  }
+};
+
+window.fazerLogout = async function() {
   STATE.unsubs.forEach(u => { try{u();}catch(e){} });
   STATE.unsubs = [];
+  try { await signOut(auth); } catch(e){}
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('pw-input').value = '';
+  document.getElementById('login-senha').value = '';
 };
 
 // ─── INICIAR APP ──────────────────────────────────────────
@@ -1855,7 +2086,7 @@ function carregarDadosBase() {
     STATE.colaboradores = snap.val() || {};
     atualizarAlertBar();
     if(STATE.viewAtual==='equipe') renderEquipe();
-    if(STATE.viewAtual==='cfg') renderCfgColaboradores();
+    if(STATE.viewAtual==='cfg') { renderCfgColaboradores(); renderCfgAcessos(); }
     renderAtribColabChips();
   });
   STATE.unsubs.push(unColabs);
@@ -1956,6 +2187,7 @@ window.mudarTabCfg = function(id, btn) {
   if(id==='atribuicoes') renderAtribuicoes();
   if(id==='alertas')     renderAlertas();
   if(id==='pontuacao')   renderCfgPontuacao();
+  if(id==='acessos')     renderCfgAcessos();
 };
 
 // ─── ALERT BAR ────────────────────────────────────────────
@@ -2197,24 +2429,46 @@ function renderFinanceiro() {
   }
 
   // ── CAR / CAP ────────────────────────────────────────────
-  set2('fk-car',      fmtBRL0(o.a_receber));
-  set2('fk-cap',      fmtBRL0(o.a_pagar));
-  // Quando o proxy não fornece títulos individuais, mostra o total como referência
+  // a_pagar_futuro: títulos a vencer (não vencidos) — pode não existir em caches antigos
+  const apagarFuturo  = o.a_pagar_futuro || 0;
+  const apagarTotal   = (o.a_pagar || 0) + apagarFuturo; // vencido + a vencer = total real pendente
+  const aReceberTotal = (o.a_receber || 0) + (o.recebido_mes || 0); // pendente + já recebido = previsto total mês
+
+  // Guarda no STATE para a projeção usar
+  STATE._apagarTotal  = apagarTotal;
+  STATE._apagarFuturo = apagarFuturo;
+
+  // CAR: mostra o pendente e, ao lado, o que já entrou
+  set2('fk-car', fmtBRL0(o.a_receber));
+  set2('fk-car-recebido', fmtBRL0(o.recebido_mes));
   const carQtdEl = document.getElementById('fk-car-qtd');
+  if(carQtdEl) carQtdEl.textContent = o.qtd_car > 0 ? o.qtd_car + ' pendentes' : (o.a_receber > 0 ? 'Total Omie' : '0 títulos');
+  const carTotalBadge = document.getElementById('fk-car-total-badge');
+  if(carTotalBadge) carTotalBadge.textContent = 'Total previsto: ' + fmtBRL0(aReceberTotal);
+
+  // CAP: mostra o pendente TOTAL (vencido + a vencer) e, ao lado, o que já saiu
+  set2('fk-cap', fmtBRL0(apagarTotal));
+  set2('fk-cap-pago', fmtBRL0(o.pago_mes));
   const capQtdEl = document.getElementById('fk-cap-qtd');
-  if(carQtdEl) carQtdEl.textContent = o.qtd_car > 0 ? o.qtd_car + ' títulos' : (o.a_receber > 0 ? 'Total Omie' : '0 títulos');
-  if(capQtdEl) capQtdEl.textContent = o.qtd_cap > 0 ? o.qtd_cap + ' títulos' : (o.a_pagar   > 0 ? 'Total Omie' : '0 títulos');
+  if(capQtdEl) {
+    const qtdCap = o.qtd_cap || 0;
+    const vencLabel = o.qtd_venc > 0 ? ' (' + o.qtd_venc + ' vencido)' : '';
+    capQtdEl.textContent = qtdCap > 0 ? qtdCap + ' pendentes' + vencLabel : (apagarTotal > 0 ? 'Total Omie' : '0 títulos');
+  }
+  const capTotalBadge = document.getElementById('fk-cap-total-badge');
+  if(capTotalBadge) capTotalBadge.textContent = 'Total previsto: ' + fmtBRL0(apagarTotal + (o.pago_mes || 0));
 
   // ── Recebido / Pago no mês ───────────────────────────────
   set2('fk-recebido', fmtBRL0(o.recebido_mes));
   set2('fk-pago',     fmtBRL0(o.pago_mes));
 
   // Barra de progresso — % do previsto recebido
-  const totalPrevisto = (o.recebido_mes||0) + (o.a_receber||0);
+  const totalPrevisto = aReceberTotal;
   const pctRec = totalPrevisto > 0
     ? Math.min(Math.round((o.recebido_mes||0) / totalPrevisto * 100), 100) : 0;
-  const pctPag = (o.recebido_mes||0) > 0
-    ? Math.min(Math.round((o.pago_mes||0) / (o.recebido_mes||0) * 100), 100) : 0;
+  const totalPagarPrevisto = apagarTotal + (o.pago_mes || 0);
+  const pctPag = totalPagarPrevisto > 0
+    ? Math.min(Math.round((o.pago_mes||0) / totalPagarPrevisto * 100), 100) : 0;
   const progRec = document.getElementById('fk-prog-rec');
   const progPag = document.getElementById('fk-prog-pag');
   if(progRec) setTimeout(()=>progRec.style.width=pctRec+'%', 200);
@@ -2254,8 +2508,51 @@ function renderFinanceiro() {
   desenharGrafico();
 
   // ── Títulos listas ───────────────────────────────────────
-  renderTitulosList('car-list', 'car-count', o.titulos_car, 'green', o.a_receber);
-  renderTitulosList('cap-list', 'cap-count', o.titulos_cap, 'amber', o.a_pagar);
+  // CAR: separar pendentes de atrasados
+  const hoje2 = new Date().toISOString().split('T')[0];
+  const carPendentes = (o.titulos_car || []).filter(t => t.vencimento >= hoje2);
+  const carAtrasados = (o.titulos_car || []).filter(t => t.vencimento < hoje2);
+  const carPendenteVal = carPendentes.reduce((s,t)=>s+(t.valor||0),0) || o.a_receber || 0;
+  const carAtrasadoVal = carAtrasados.reduce((s,t)=>s+(t.valor||0),0) || o.vencido_car || 0;
+  const carRecebidoVal = o.recebido_mes || 0;
+  const carTotalVal    = carPendenteVal + carAtrasadoVal + carRecebidoVal;
+  const carPct         = carTotalVal > 0 ? Math.round(carRecebidoVal / carTotalVal * 100) : 0;
+
+  set2('car-pendente-val', fmtBRL0(carPendenteVal));
+  set2('car-pendente-qtd', (o.qtd_car || carPendentes.length || 0) + ' títulos');
+  set2('car-atrasado-val', fmtBRL0(carAtrasadoVal));
+  set2('car-atrasado-qtd', carAtrasados.length + ' títulos');
+  set2('car-recebido-val', fmtBRL0(carRecebidoVal));
+  set2('car-total-val',    fmtBRL0(carTotalVal));
+  set2('car-total-pct',    carPct + '% recebido');
+
+  // CAP: separar por situação (usando titulos_cap do proxy)
+  const capTitulos  = o.titulos_cap || [];
+  const capAvencer  = capTitulos.filter(t => t.vencimento >= hoje2 && !t.atrasado);
+  const capAtrasado = capTitulos.filter(t => t.vencimento < hoje2 || t.atrasado);
+  const capParcial  = capTitulos.filter(t => t.parcial);
+  const capAvencerVal  = capAvencer.reduce((s,t)=>s+(t.valor||0),0)  || (STATE._apagarFuturo || 0);
+  const capAtrasadoVal = capAtrasado.reduce((s,t)=>s+(t.valor||0),0) || (o.vencido || o.a_pagar || 0);
+  const capPagoVal     = o.pago_mes || 0;
+  const capParcialVal  = capParcial.reduce((s,t)=>s+(t.valor||0),0);
+
+  set2('cap-avencer-val',  fmtBRL0(capAvencerVal));
+  set2('cap-avencer-qtd',  (capAvencer.length || (o.qtd_cap||0)) + ' títulos');
+  set2('cap-atrasado-val', fmtBRL0(capAtrasadoVal));
+  set2('cap-atrasado-qtd', (capAtrasado.length || (o.qtd_venc||0)) + ' títulos');
+  set2('cap-pago-val',     fmtBRL0(capPagoVal));
+  set2('cap-parcial-val',  fmtBRL0(capParcialVal));
+  set2('cap-parcial-qtd',  capParcial.length + ' títulos · saldo devedor');
+
+  // Resumo CAP por situação (card direito da Zona 03)
+  renderCapResumo(capAvencerVal, capAtrasadoVal, capPagoVal, capParcialVal, STATE._apagarTotal || 0);
+
+  // Listas detalhadas de títulos
+  renderTitulosList('car-list', 'car-count', [...carAtrasados, ...carPendentes], 'green', carPendenteVal + carAtrasadoVal);
+  renderTitulosList('cap-list', 'cap-count', capTitulos.length ? capTitulos : o.titulos_cap, 'amber', STATE._apagarTotal || 0);
+
+  // Alertas de caixa insuficiente por dia
+  renderAlertasCaixaDiario();
 
   // ── Ticker ───────────────────────────────────────────────
   const t2 = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
@@ -2343,15 +2640,26 @@ function calcularProjecao() {
   const saldo = STATE.saldoManual?.valor || 0;
   const proj  = o.projecao_diaria || [];
 
+  // Usa o total real a pagar (vencido + a vencer) calculado no renderFinanceiro
+  const apagarTotal  = STATE._apagarTotal  || (o.a_pagar || 0);
+  const apagarFuturo = STATE._apagarFuturo || 0;
+
   // Acumula saldo dia a dia a partir do saldo manual
   let acum = saldo;
   let projFinal = saldo;
   if(proj.length) {
+    // O proxy fornece projeção diária com entradas/saídas por dia
+    // Mas pode estar sem os títulos a vencer — complementa com a_pagar_futuro se houver
+    const totalSaidasProj = proj.reduce((s,d)=>s+(d.saidas||0),0);
     proj.forEach(d => { acum += (d.entradas||0) - (d.saidas||0); });
+    // Se a projeção cobre só o vencido e há futuros, desconta a diferença do saldo final
+    if(apagarFuturo > 0 && totalSaidasProj < apagarTotal * 0.5) {
+      acum -= apagarFuturo;
+    }
     projFinal = acum;
   } else {
-    // fallback simples
-    projFinal = saldo + (o.a_receber||0) - (o.a_pagar||0);
+    // Fallback: usa totais completos (a_receber pendente + saldo - total a pagar)
+    projFinal = saldo + (o.a_receber||0) - apagarTotal;
   }
 
   const set2 = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
@@ -2549,6 +2857,76 @@ function desenharGrafico() {
     const i = d - 1;
     ctx.fillText(d, xS(i), H - 4);
   });
+
+  // ── Tooltip interativo ───────────────────────────────────
+  // Guarda metadados para o hover usar sem recalcular
+  canvas._chartMeta = { saldos, labels, projArr, xS, yS, pad, W, H, diaH, totalDias };
+
+  // Remove listener anterior se existir
+  const novoCanvas = canvas.cloneNode(true);
+  canvas.parentNode.replaceChild(novoCanvas, canvas);
+
+  const tt    = document.getElementById('chart-tooltip');
+  const wrap  = novoCanvas.parentElement;
+
+  // Redesenha para o novo elemento (cloneNode perde o conteúdo canvas)
+  const ctx2 = novoCanvas.getContext('2d');
+  ctx2.drawImage(canvas, 0, 0); // não funciona pq canvas foi substituído — redesenha
+
+  // Redesenha tudo no novo canvas
+  novoCanvas.width  = W;
+  novoCanvas.height = H;
+  const c2 = novoCanvas.getContext('2d');
+  // Grade
+  c2.strokeStyle = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.03)';
+  c2.lineWidth = 1;
+  for(let i=0;i<=4;i++){const y=pad.t+(H-pad.t-pad.b)/4*i;c2.beginPath();c2.moveTo(pad.l,y);c2.lineTo(W-pad.r,y);c2.stroke();}
+  if(minV<0){const y0=yS(0);c2.strokeStyle='rgba(240,62,62,0.3)';c2.lineWidth=1;c2.setLineDash([4,4]);c2.beginPath();c2.moveTo(pad.l,y0);c2.lineTo(W-pad.r,y0);c2.stroke();c2.setLineDash([]);}
+  if(saldo0>0){const pe=saldo0*0.15;const yPE=yS(pe);c2.strokeStyle='rgba(240,62,62,0.4)';c2.lineWidth=1;c2.setLineDash([5,4]);c2.beginPath();c2.moveTo(pad.l,yPE);c2.lineTo(W-pad.r,yPE);c2.stroke();c2.setLineDash([]);}
+  const grad2=c2.createLinearGradient(0,pad.t,0,H);grad2.addColorStop(0,'rgba(59,127,245,0.22)');grad2.addColorStop(1,'rgba(59,127,245,0)');
+  c2.beginPath();c2.moveTo(xS(0),yS(saldos[0]));saldos.forEach((v,i)=>{if(i>0)c2.lineTo(xS(i),yS(v));});c2.lineTo(xS(saldos.length-1),H-pad.b);c2.lineTo(xS(0),H-pad.b);c2.closePath();c2.fillStyle=grad2;c2.fill();
+  c2.beginPath();c2.moveTo(xS(0),yS(saldos[0]));saldos.forEach((v,i)=>{if(i>0)c2.lineTo(xS(i),yS(v));});c2.strokeStyle='#3b7ff5';c2.lineWidth=2.5;c2.shadowColor='rgba(59,127,245,0.5)';c2.shadowBlur=6;c2.stroke();c2.shadowBlur=0;
+  const cg2=isLight?'#16A34A':'#10d67a';const ca2=isLight?'#D97706':'#f5a623';
+  projArr.forEach(dp=>{if(!dp.futuro)return;const i=dp.dia-1;if(i<0||i>=saldos.length)return;if(dp.entradas>0){c2.beginPath();c2.arc(xS(i),yS(saldos[i]),4,0,Math.PI*2);c2.fillStyle=cg2;c2.fill();}if(dp.saidas>0){c2.beginPath();c2.arc(xS(i),yS(saldos[i]),4,0,Math.PI*2);c2.fillStyle=ca2;c2.fill();}});
+  c2.beginPath();c2.arc(xS(diaH-1),yS(saldos[diaH-1]),6,0,Math.PI*2);c2.fillStyle='#3b7ff5';c2.shadowColor='rgba(59,127,245,0.8)';c2.shadowBlur=12;c2.fill();c2.shadowBlur=0;
+  c2.fillStyle=isLight?'rgba(0,0,0,0.45)':'rgba(220,232,255,0.45)';c2.font='9px DM Mono,monospace';c2.textAlign='center';c2.fillText('hoje',xS(diaH-1),yS(saldos[diaH-1])-10);
+  const iF=saldos.length-1;const cF=saldos[iF]>=0?(isLight?'#16A34A':'#10d67a'):(isLight?'#DC2626':'#f03e3e');c2.beginPath();c2.arc(xS(iF),yS(saldos[iF]),5,0,Math.PI*2);c2.fillStyle=cF;c2.shadowColor=cF;c2.shadowBlur=8;c2.fill();c2.shadowBlur=0;
+  c2.fillStyle=isLight?'rgba(0,0,0,0.55)':'rgba(220,232,255,0.55)';c2.font='9px DM Mono,monospace';c2.textAlign='right';c2.fillText(fmtBRL0(saldos[iF]),xS(iF),yS(saldos[iF])-10);
+  c2.fillStyle=isLight?'rgba(0,0,0,0.3)':'rgba(220,232,255,0.28)';c2.font='8px DM Mono,monospace';c2.textAlign='center';[1,5,10,15,20,25,totalDias].forEach(d=>{c2.fillText(d,xS(d-1),H-4);});
+
+  // Hover
+  novoCanvas.addEventListener('mousemove', function(e) {
+    if(!tt) return;
+    const rect = novoCanvas.getBoundingClientRect();
+    const mx   = e.clientX - rect.left;
+    const scaleX = novoCanvas.width / rect.width;
+    const mxC  = mx * scaleX;
+    // Encontra o índice mais próximo
+    let melhorI = 0, melhorDist = Infinity;
+    saldos.forEach((_,i) => { const dist = Math.abs(xS(i) - mxC); if(dist < melhorDist){melhorDist=dist;melhorI=i;} });
+    const dia = melhorI + 1;
+    const sal = saldos[melhorI];
+    const dp  = projArr.find(p => p.dia === dia) || {};
+    const passado = dia <= diaH;
+
+    document.getElementById('tt-dia').textContent  = 'Dia ' + dia + (dia===diaH?' (hoje)':passado?' (passado)':' (projetado)');
+    document.getElementById('tt-saldo').textContent = 'Saldo: ' + fmtBRL0(sal);
+    document.getElementById('tt-entradas').textContent = dp.entradas > 0 ? '↑ Entrada: ' + fmtBRL0(dp.entradas) : '';
+    document.getElementById('tt-saidas').textContent   = dp.saidas   > 0 ? '↓ Saída: '  + fmtBRL0(dp.saidas)   : '';
+    const alertaEl = document.getElementById('tt-alerta');
+    if(sal < 0)            alertaEl.textContent = '⚠ Caixa negativo!';
+    else if(sal < saldo0 * 0.15) alertaEl.textContent = '⚠ Saldo no limite';
+    else                   alertaEl.textContent = '';
+
+    // Posiciona tooltip
+    const ttW  = 160;
+    let left   = mx + 12;
+    if(left + ttW > rect.width) left = mx - ttW - 12;
+    tt.style.left    = left + 'px';
+    tt.style.top     = (e.clientY - rect.top - 40) + 'px';
+    tt.style.display = 'block';
+  });
+  novoCanvas.addEventListener('mouseleave', function() { if(tt) tt.style.display='none'; });
 }
 
 
@@ -2557,6 +2935,103 @@ window.filtroProjecao = function(p) {
   event.target.classList.add('active');
   desenharGrafico();
 };
+
+// ─── RESUMO CAP POR SITUAÇÃO ──────────────────────────────
+function renderCapResumo(avencer, atrasado, pago, parcial, totalPendente) {
+  const el = document.getElementById('cap-resumo-list');
+  const ct = document.getElementById('cap-resumo-count');
+  if(!el) return;
+  const total = avencer + atrasado + pago + parcial;
+  if(ct) ct.textContent = fmtBRL0(totalPendente) + ' pendente';
+
+  const linhas = [
+    { label:'📅 A Vencer',         val: avencer,  cor:'var(--amber)', pct: total>0?Math.round(avencer/total*100):0 },
+    { label:'🔴 Atrasado',          val: atrasado, cor:'#f87171',      pct: total>0?Math.round(atrasado/total*100):0 },
+    { label:'✓ Pago no mês',        val: pago,     cor:'var(--green)', pct: total>0?Math.round(pago/total*100):0 },
+    { label:'½ Pago Parcialmente',  val: parcial,  cor:'var(--purple)',pct: total>0?Math.round(parcial/total*100):0 },
+  ];
+
+  el.innerHTML = linhas.map(l => `
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      padding:10px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px">
+      <div style="flex:1">
+        <div style="font-size:10px;font-weight:600;color:var(--text)">${l.label}</div>
+        <div style="height:4px;background:var(--bg4);border-radius:2px;margin-top:6px;overflow:hidden">
+          <div style="height:100%;width:${l.pct}%;background:${l.cor};border-radius:2px;transition:width .4s"></div>
+        </div>
+        <div style="font-size:8px;font-family:var(--mono);color:var(--text3);margin-top:3px">${l.pct}% do total</div>
+      </div>
+      <div style="font-size:14px;font-weight:700;font-family:var(--mono);color:${l.cor};margin-left:16px;flex-shrink:0">${fmtBRL0(l.val)}</div>
+    </div>`).join('');
+}
+
+// ─── ALERTAS DE CAIXA INSUFICIENTE POR DIA ───────────────
+function renderAlertasCaixaDiario() {
+  const el  = document.getElementById('alertas-caixa-list');
+  const ct  = document.getElementById('alertas-count');
+  if(!el) return;
+
+  const saldo0   = STATE.saldoManual?.valor || 0;
+  const projArr  = STATE._projDiaria || STATE.omie?.projecao_diaria || [];
+  const now      = new Date();
+  const totalDias= new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const diaH     = now.getDate();
+
+  // Reconstrói saldos acumulados
+  let acum = saldo0;
+  const diasData = [];
+  for(let d = 1; d <= totalDias; d++) {
+    const dp = projArr.find(p => p.dia === d) || {};
+    if(d >= diaH) acum += (dp.entradas||0) - (dp.saidas||0);
+    diasData.push({
+      dia: d,
+      saldo: Math.round(acum),
+      entradas: dp.entradas || 0,
+      saidas:   dp.saidas   || 0,
+      futuro:   d > diaH
+    });
+  }
+
+  // Filtra dias com problema: saldo negativo OU saldo < saídas do dia OU saldo < 15% do saldo inicial
+  const limite = saldo0 * 0.15;
+  const alertas = diasData.filter(d => d.futuro && (
+    d.saldo < 0 ||
+    (d.saidas > 0 && d.saldo < d.saidas) ||
+    d.saldo < limite
+  ));
+
+  if(ct) ct.textContent = alertas.length > 0 ? alertas.length + ' dia(s)' : '✓ Sem alertas';
+
+  if(!alertas.length) {
+    el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--green);font-family:var(--mono);font-size:11px">
+      ✓ Caixa suficiente em todos os dias projetados</div>`;
+    return;
+  }
+
+  el.innerHTML = alertas.map(d => {
+    const cor    = d.saldo < 0 ? '#f87171' : 'var(--amber)';
+    const ico    = d.saldo < 0 ? '🔴' : '⚠';
+    const status = d.saldo < 0 ? 'Caixa negativo' : 'Saldo no limite';
+    const dataFmt= new Date(now.getFullYear(), now.getMonth(), d.dia)
+      .toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    return `<div style="padding:10px 12px;background:rgba(240,62,62,0.06);
+      border:1px solid rgba(240,62,62,0.2);border-left:3px solid ${cor};
+      border-radius:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:${cor}">${ico} Dia ${d.dia} — ${dataFmt} · ${status}</div>
+          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px;display:flex;gap:10px">
+            ${d.saidas > 0 ? '<span>↓ Saídas: '+fmtBRL0(d.saidas)+'</span>' : ''}
+            ${d.entradas > 0 ? '<span>↑ Entradas: '+fmtBRL0(d.entradas)+'</span>' : ''}
+          </div>
+        </div>
+        <div style="font-size:13px;font-weight:700;font-family:var(--mono);color:${cor};flex-shrink:0;margin-left:8px">
+          ${fmtBRL0(d.saldo)}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
 
 // ─── SALDO MANUAL ────────────────────────────────────────
 window.abrirModalSaldo = function() {
@@ -3375,6 +3850,123 @@ function renderCfgColaboradores() {
     </div>`;
   }).join('');
 }
+
+// ─── GESTÃO DE ACESSOS (papéis por e-mail) ───────────────
+const emailKey = (e) => (e||'').trim().toLowerCase().replace(/[.#$\[\]\/@]/g,'_');
+const KNOWN_EMAILS = {
+  cassia:'cassia.martins@regestaoempresarial.com.br',
+  kenia:'kenia.paiva@regestaoempresarial.com.br',
+  willy:'willy@regestaoempresarial.com.br',
+  ludmila:'ludmila.ferron@regestaoempresarial.com.br'
+};
+function guessEmail(uid,nome){ const s=(uid+' '+(nome||'')).toLowerCase(); for(const k in KNOWN_EMAILS){ if(s.includes(k)) return KNOWN_EMAILS[k]; } return ''; }
+
+async function renderCfgAcessos() {
+  let rmap = {}; let ag = null;
+  try { rmap = (await get(ref(db,'roles_by_email'))).val() || {}; } catch(e){}
+  try { ag = (await get(ref(db,'acesso_gestor'))).val() || null; } catch(e){}
+  const byColab = {}; let gestorEntry = null;
+  Object.values(rmap).forEach(r => { if(!r) return; if(r.colabId) byColab[r.colabId]=r; if(r.role==='gestor' && !gestorEntry) gestorEntry=r; });
+  if(!gestorEntry && ag && ag.email) gestorEntry = {role:'gestor', email:ag.email};
+
+  const gEl = document.getElementById('acesso-gestor');
+  if(gEl) {
+    if(gestorEntry && gestorEntry.email) {
+      gEl.innerHTML = `<div class="item-row">
+        <div class="item-av" style="background:var(--blue);color:#fff">G</div>
+        <div class="item-info"><div class="item-name">${gestorEntry.email}</div><div class="item-sub">Papel: gestor · acesso total · ativa ✓</div></div>
+        <div class="item-actions"><button class="btn btn-ghost btn-sm" onclick="resetarAcesso('${gestorEntry.email}')">🔐 Resetar senha</button></div>
+      </div>`;
+    } else {
+      gEl.innerHTML = `<div class="form-row fr2" style="align-items:flex-end">
+        <div><label class="fl">Seu e-mail (gestor)</label><input type="email" class="fi" id="ac-gestor-email" value="robson@regestaoempresarial.com.br"></div>
+        <div><button class="btn btn-primary" onclick="criarAcessoGestor()">Salvar minha conta</button></div>
+      </div><div class="msg" id="msg-ac-gestor"></div>`;
+    }
+  }
+
+  const list = document.getElementById('acessos-list');
+  if(!list) return;
+  const entries = Object.entries(STATE.colaboradores||{}).filter(([,c])=>c?.status!=='inativo');
+  if(!entries.length) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">Nenhum colaborador cadastrado.</div>'; return; }
+  list.innerHTML = entries.map(([uid,c]) => {
+    const init = getIniciais(c?.nome||uid);
+    const cor  = COR_MAP[c?.cor||'blue'];
+    const r = byColab[uid] || null;
+    const email = (r && r.email) || c?.email || '';
+    const role  = (r && r.role)  || c?.role || 'colaborador';
+    const opts = (sel) => ['colaborador','supervisao','gestor'].map(x=>`<option value="${x}" ${x===sel?'selected':''}>${x}</option>`).join('');
+    if(email) {
+      return `<div class="item-row">
+        <div class="item-av" style="background:${cor.bg};color:${cor.txt}">${init}</div>
+        <div class="item-info"><div class="item-name">${c?.nome||uid}</div><div class="item-sub">${email}</div>
+          <div class="item-badges"><span class="badge bg">● com acesso</span></div></div>
+        <div class="item-actions" style="gap:6px;flex-wrap:wrap">
+          <select class="fi" style="width:auto;padding:6px 8px" onchange="mudarPapel('${uid}','${email}',this.value)">${opts(role)}</select>
+          <button class="btn btn-ghost btn-sm" onclick="resetarAcesso('${email}')">🔐 Senha</button>
+        </div></div>`;
+    }
+    const sugest = guessEmail(uid, c?.nome);
+    const defRole = (uid+' '+(c?.nome||'')).toLowerCase().includes('ludmila') ? 'supervisao' : 'colaborador';
+    return `<div class="item-row">
+      <div class="item-av" style="background:${cor.bg};color:${cor.txt}">${init}</div>
+      <div class="item-info"><div class="item-name">${c?.nome||uid}</div><div class="item-sub">${uid} · sem login ainda</div></div>
+      <div class="item-actions" style="gap:6px;flex-wrap:wrap">
+        <input type="email" class="fi" id="ac-email-${uid}" value="${sugest}" placeholder="email@..." style="width:230px;padding:6px 8px">
+        <select class="fi" id="ac-role-${uid}" style="width:auto;padding:6px 8px"><option value="colaborador" ${defRole==='colaborador'?'selected':''}>colaborador</option><option value="supervisao" ${defRole==='supervisao'?'selected':''}>supervisao</option></select>
+        <button class="btn btn-primary btn-sm" onclick="criarAcessoColab('${uid}')">Salvar acesso</button>
+      </div></div>`;
+  }).join('');
+}
+
+window.criarAcessoGestor = async function() {
+  const email = document.getElementById('ac-gestor-email')?.value?.trim();
+  const msg = document.getElementById('msg-ac-gestor');
+  if(!email) { showMsg(msg,'Informe o e-mail.','err'); return; }
+  const senha = gerarSenhaTemp();
+  let nova = false, aviso = '';
+  try { await criarContaAuth(email, senha); nova = true; }
+  catch(e){ aviso = (e&&e.code||'').includes('email-already-in-use') ? ' (conta já existia)' : ' (aviso: '+erroAuth(e)+')'; }
+  try {
+    await update(ref(db), { ['roles_by_email/'+emailKey(email)]:{role:'gestor',colabId:'',email}, 'acesso_gestor':{email} });
+    showMsg(msg, nova ? '✓ Conta criada! Senha temporária: '+senha+' — guarde e troque depois.' : '✓ Conta de gestor salva'+aviso+'. Use "Resetar senha" se precisar definir a senha.', 'ok');
+    setTimeout(renderCfgAcessos, 800);
+  } catch(e2){ showMsg(msg, 'Erro ao salvar o papel: '+erroAuth(e2), 'err'); }
+};
+
+window.criarAcessoColab = async function(colabUid) {
+  const email = document.getElementById('ac-email-'+colabUid)?.value?.trim();
+  const role  = document.getElementById('ac-role-'+colabUid)?.value || 'colaborador';
+  if(!email) { alert('Informe o e-mail.'); return; }
+  const senha = gerarSenhaTemp();
+  let nova = false;
+  try { await criarContaAuth(email, senha); nova = true; }
+  catch(e){ if(!((e&&e.code||'').includes('email-already-in-use'))) { alert(erroAuth(e)); return; } }
+  await update(ref(db), {
+    ['roles_by_email/'+emailKey(email)]:{role,colabId:colabUid,email},
+    ['colaboradores/'+colabUid+'/email']:email,
+    ['colaboradores/'+colabUid+'/role']:role
+  });
+  if(nova){
+    const nome = (STATE.colaboradores[colabUid]?.nome) || email;
+    const cred = msgCredencial(nome, email, senha);
+    const ok = await copiarTxt(cred);
+    alert((ok ? '✓ Acesso criado! Mensagem COPIADA — é só colar no WhatsApp da pessoa:' : '✓ Acesso criado! Copie a mensagem abaixo para o WhatsApp:') + '\n\n' + cred);
+  } else {
+    alert('Essa conta já existe e a senha é desconhecida.\n\nPara mandar as credenciais por WhatsApp: exclua a conta no Firebase (Authentication → Usuários → excluir ' + email + ') e clique em "Salvar acesso" de novo — aí a senha aparece para copiar.');
+  }
+  renderCfgAcessos();
+};
+
+window.mudarPapel = async function(colabUid, email, role) {
+  try { await update(ref(db), { ['roles_by_email/'+emailKey(email)+'/role']:role, ['colaboradores/'+colabUid+'/role']:role }); }
+  catch(e){ alert(erroAuth(e)); }
+};
+
+window.resetarAcesso = async function(email) {
+  try { await sendPasswordResetEmail(auth, email); alert('Link de redefinição de senha enviado para '+email); }
+  catch(e){ alert(erroAuth(e)); }
+};
 
 window.gerarSenhaColab = function() {
   const uid = document.getElementById('nc-user')?.value?.trim();
