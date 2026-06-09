@@ -933,77 +933,105 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
     <!-- ═══════════ VIEW: FINANCEIRO ═══════════ -->
     <div class="view active" id="view-fin">
 
-      <!-- ── HEADER EXECUTIVO ── -->
+      <!-- HEADER -->
       <div class="zone-header">
         <span class="zone-tag z1">💰</span>
-        <span class="zone-desc">Painel Financeiro · Visão Executiva</span>
+        <span class="zone-desc">Painel Financeiro · <span id="fin-mes-label">Junho 2026</span></span>
         <div class="zone-line"></div>
-        <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
-          <span id="fin-sync-status" style="font-size:9px;font-family:var(--mono);color:var(--text3)">--:--</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+          <span id="fin-sync-status" style="font-size:9px;font-family:var(--mono);color:var(--text3)"></span>
           <button class="btn btn-ghost btn-sm" onclick="sincronizarOmie()" id="btn-sync-omie">↻ Omie</button>
           <button class="btn btn-ghost btn-sm" onclick="sincronizarOmieForcar()" id="btn-sync-force" style="font-size:8px;padding:5px 9px;opacity:.7" title="Forçar atualização">⚡</button>
           <button class="btn btn-primary btn-sm" onclick="abrirModalSaldo()">＋ Saldo</button>
         </div>
       </div>
 
-      <!-- ── KPIs LINHA 1: 4 cards principais ── -->
-      <div class="grid-4" style="margin-bottom:12px">
-        <div class="kpi-card blue">
-          <div class="kpi-label">💳 Saldo em Caixa</div>
-          <div class="kpi-value" id="fk-saldo" style="color:var(--blue2)">R$ --</div>
-          <div class="kpi-sub" id="fk-saldo-data">Aguardando lançamento</div>
-          <div class="kpi-badge bg" id="fk-saldo-badge">→ Manual</div>
-        </div>
-        <div class="kpi-card green">
-          <div class="kpi-label">📥 A Receber · Pendente</div>
-          <div class="kpi-value" id="fk-car" style="color:var(--green)">R$ --</div>
-          <div class="kpi-sub" style="display:flex;align-items:center;justify-content:space-between">
-            <span id="fk-car-qtd" style="font-size:9px">-- títulos</span>
-            <span style="font-size:9px;color:var(--text3)">Recebido: <span id="fk-car-recebido" style="color:var(--green)">R$ --</span></span>
+      <!-- ALERTA GLOBAL -->
+      <div id="alert-bar" style="display:none;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:8px;padding:10px 16px;margin-bottom:12px;font-size:11px;font-family:var(--mono);color:#f87171">
+        <span id="alert-bar-text"></span>
+      </div>
+
+      <!-- BLOCO 1: RESUMO EXECUTIVO -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:9px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Resumo Executivo</div>
+        <div class="grid-4" style="margin-bottom:8px">
+          <div class="kpi-card blue">
+            <div class="kpi-label">💳 Saldo Atual</div>
+            <div class="kpi-value" id="fk-saldo" style="color:var(--blue2)">R$ --</div>
+            <div class="kpi-sub" id="fk-saldo-data">Lançar saldo</div>
+            <div class="kpi-badge bg" id="fk-saldo-badge">→ Manual</div>
           </div>
-          <div class="kpi-badge bc" id="fk-car-total-badge" style="margin-top:6px">Total: R$ --</div>
-        </div>
-        <div class="kpi-card amber">
-          <div class="kpi-label">📤 A Pagar · Pendente</div>
-          <div class="kpi-value" id="fk-cap" style="color:var(--amber)">R$ --</div>
-          <div class="kpi-sub" style="display:flex;align-items:center;justify-content:space-between">
-            <span id="fk-cap-qtd" style="font-size:9px">-- títulos</span>
-            <span style="font-size:9px;color:var(--text3)">Pago: <span id="fk-cap-pago" style="color:var(--amber)">R$ --</span></span>
+          <div class="kpi-card green">
+            <div class="kpi-label">📥 A Receber no Mês</div>
+            <div class="kpi-value" id="fk-car" style="color:var(--green)">R$ --</div>
+            <div class="kpi-sub">
+              <span id="fk-car-qtd" style="font-size:9px">-- títulos</span>
+              <span style="font-size:9px;color:var(--text3)"> · Recebido: <span id="fk-car-recebido" style="color:var(--green)">R$ --</span></span>
+            </div>
+            <div class="kpi-badge bc" id="fk-car-total-badge">Total mês: R$ --</div>
           </div>
-          <div class="kpi-badge ba" id="fk-cap-total-badge" style="margin-top:6px">Total: R$ --</div>
+          <div class="kpi-card amber">
+            <div class="kpi-label">📤 A Pagar no Mês</div>
+            <div class="kpi-value" id="fk-cap" style="color:var(--amber)">R$ --</div>
+            <div class="kpi-sub">
+              <span id="fk-cap-qtd" style="font-size:9px">-- títulos</span>
+              <span style="font-size:9px;color:var(--text3)"> · Pago: <span id="fk-cap-pago" style="color:var(--amber)">R$ --</span></span>
+            </div>
+            <div class="kpi-badge ba" id="fk-cap-total-badge">Total mês: R$ --</div>
+          </div>
+          <div class="kpi-card purple">
+            <div class="kpi-label">📊 Saldo Final Projetado</div>
+            <div class="kpi-value" id="fk-proj" style="color:var(--purple)">R$ --</div>
+            <div class="kpi-sub">Saldo + CAR - CAP</div>
+            <div class="kpi-badge bp" id="fk-proj-badge">calculando...</div>
+          </div>
         </div>
-        <div class="kpi-card purple">
-          <div class="kpi-label">📊 Projeção Fim do Mês</div>
-          <div class="kpi-value" id="fk-proj" style="color:var(--purple)">R$ --</div>
-          <div class="kpi-sub">Saldo + CAR - CAP</div>
-          <div class="kpi-badge bp" id="fk-proj-badge">calculando...</div>
+        <!-- KPIs secundários -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px">
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px">Saldo livre</div>
+            <div style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--green)" id="fk-saldo-livre">R$ --</div>
+            <div style="font-size:9px;color:var(--text3);margin-top:2px">após pagar vencidos</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px">
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px">Geração líquida</div>
+            <div style="font-size:14px;font-weight:700;font-family:var(--mono)" id="fk-geracao">R$ --</div>
+            <div style="font-size:9px;color:var(--text3);margin-top:2px">CAR - CAP pendente</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px">
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px">Recebido no mês</div>
+            <div style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--green)" id="fk-recebido">R$ --</div>
+            <div class="kpi-prog-track" style="margin-top:6px"><div class="kpi-prog-fill" id="fk-prog-rec" style="background:var(--green);width:0%"></div></div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px">
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px">Pago no mês</div>
+            <div style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--amber)" id="fk-pago">R$ --</div>
+            <div class="kpi-prog-track" style="margin-top:6px"><div class="kpi-prog-fill" id="fk-prog-pag" style="background:var(--amber);width:0%"></div></div>
+          </div>
         </div>
       </div>
 
-      <!-- ── ALERTAS DE VENCIMENTO ── -->
-      <div id="alert-bar" style="display:none;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
-        <span style="color:#f87171;font-size:13px">⚠</span>
-        <span id="alert-bar-text" style="font-size:11px;font-family:var(--mono);color:#f87171"></span>
-      </div>
-
-      <!-- ── GRÁFICO + MÉTRICAS MÊS ── -->
-      <div class="grid-2" style="margin-bottom:12px">
-        <div class="card">
+      <!-- BLOCO 2: FLUXO DE CAIXA DIA A DIA -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:9px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Fluxo de Caixa · Dia a Dia do Mês</div>
+        <div class="card" style="padding:14px 16px">
           <div class="card-accent" style="background:var(--blue)"></div>
-          <div class="sec-header">
-            <span class="sec-title">📈 Fluxo de Caixa · Dia a Dia</span>
-            <div style="display:flex;gap:6px;align-items:center">
-              <span id="fk-vencidos-badge" style="display:none;font-size:9px;font-family:var(--mono);color:#f87171;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.2);padding:2px 8px;border-radius:4px"></span>
-              <div class="period-filter">
-                <button class="pf-btn active" onclick="filtroProjecao('mes')">Mês</button>
-                <button class="pf-btn" onclick="filtroProjecao('15d')">15d</button>
-                <button class="pf-btn" onclick="filtroProjecao('7d')">7d</button>
-              </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="display:flex;gap:12px;font-size:10px;color:var(--text3);font-family:var(--mono)">
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:2px;background:var(--blue2);display:inline-block;border-radius:1px"></span>Saldo projetado</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:var(--green);display:inline-block;border-radius:50%"></span>Entrada</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:var(--amber);display:inline-block;border-radius:50%"></span>Saída</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:#f87171;display:inline-block;border-radius:50%"></span>Risco</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="pf-btn active" onclick="filtroProjecao('mes',this)">Mês</button>
+              <button class="pf-btn" onclick="filtroProjecao('15d',this)">15d</button>
+              <button class="pf-btn" onclick="filtroProjecao('7d',this)">7d</button>
             </div>
           </div>
-          <div class="chart-area" style="position:relative">
-            <canvas id="chart-caixa" width="600" height="200" style="width:100%;height:200px;cursor:crosshair"></canvas>
-            <div id="chart-tooltip" style="display:none;position:absolute;pointer-events:none;background:var(--bg4);border:1px solid var(--bdr3);border-radius:8px;padding:8px 12px;font-family:var(--mono);font-size:10px;color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,0.4);white-space:nowrap;z-index:10">
+          <div style="position:relative">
+            <canvas id="chart-caixa" style="width:100%;height:200px;cursor:crosshair"></canvas>
+            <div id="chart-tooltip" style="display:none;position:absolute;pointer-events:none;background:var(--bg4);border:1px solid var(--bdr3);border-radius:8px;padding:8px 12px;font-family:var(--mono);font-size:10px;color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,.4);white-space:nowrap;z-index:10">
               <div id="tt-dia" style="font-weight:600;color:var(--blue2);margin-bottom:4px"></div>
               <div id="tt-saldo"></div>
               <div id="tt-entradas" style="color:var(--green)"></div>
@@ -1011,153 +1039,115 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
               <div id="tt-alerta" style="color:#f87171;margin-top:2px"></div>
             </div>
           </div>
-          <div class="proj-legend" style="margin-top:8px">
-            <span><span style="display:inline-block;width:10px;height:2px;background:var(--blue);border-radius:1px"></span> Saldo</span>
-            <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green)"></span> Entrada</span>
-            <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber)"></span> Saída</span>
-            <span><span style="display:inline-block;width:10px;height:1px;background:#f87171;border-bottom:1px dashed #f87171"></span> Alerta</span>
-          </div>
-          <div style="margin-top:8px;font-size:9px;font-family:var(--mono);color:var(--text3);text-align:right" id="fk-proj-end">calculando...</div>
+          <div id="fk-proj-end" style="font-size:9px;font-family:var(--mono);color:var(--text3);text-align:right;margin-top:6px">calculando...</div>
         </div>
+      </div>
 
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div class="kpi-card green" style="flex:1">
-            <div class="kpi-label">✅ Recebido no Mês</div>
-            <div class="kpi-value" id="fk-recebido" style="color:var(--green);font-size:22px">R$ --</div>
-            <div class="kpi-sub">pagamentos confirmados</div>
-            <div class="kpi-prog-track" style="margin-top:8px">
-              <div class="kpi-prog-fill" id="fk-prog-rec" style="background:var(--green);width:0%"></div>
+      <!-- BLOCO 3: SEMÁFORO DE CAIXA -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:9px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Semáforo de Caixa · Tenho dinheiro para pagar?</div>
+        <div id="semaforo-lista" style="display:flex;flex-direction:column;gap:6px">
+          <div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;font-family:var(--mono)">Calculando...</div>
+        </div>
+        <div style="margin-top:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Folga necessária para cobrir os próximos dias</span>
+          <span style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--amber)" id="fk-folga-necessaria">R$ --</span>
+        </div>
+      </div>
+
+      <!-- BLOCO 4: AÇÃO IMEDIATA (ATRASADOS) -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:9px;font-weight:600;letter-spacing:.08em;color:#f87171;text-transform:uppercase;margin-bottom:8px">🚨 Ação Imediata · Títulos Vencidos</div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-accent" style="background:#f87171"></div>
+            <div class="sec-header">
+              <span class="sec-title">📥 A Receber · Vencidos</span>
+              <span class="sec-count" id="car-atrasado-qtd" style="color:#f87171">0</span>
             </div>
-            <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:4px">
-              <span>% do previsto</span><span id="fk-mrr-pct">0%</span>
+            <div id="list-car-atrasado" style="display:flex;flex-direction:column;gap:5px">
+              <div style="text-align:center;padding:12px;color:var(--text3);font-size:11px;font-family:var(--mono)">Carregando...</div>
+            </div>
+            <div style="margin-top:8px;padding:8px 10px;background:rgba(248,113,113,.08);border-radius:6px;display:flex;justify-content:space-between">
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Total vencido</span>
+              <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:#f87171" id="car-atrasado-val">R$ --</span>
             </div>
           </div>
-          <div class="kpi-card amber" style="flex:1">
-            <div class="kpi-label">✅ Pago no Mês</div>
-            <div class="kpi-value" id="fk-pago" style="color:var(--amber);font-size:22px">R$ --</div>
-            <div class="kpi-sub">pagamentos realizados</div>
-            <div class="kpi-prog-track" style="margin-top:8px">
-              <div class="kpi-prog-fill" id="fk-prog-pag" style="background:var(--amber);width:0%"></div>
+          <div class="card">
+            <div class="card-accent" style="background:#f87171"></div>
+            <div class="sec-header">
+              <span class="sec-title">📤 A Pagar · Vencidos</span>
+              <span class="sec-count" id="cap-atrasado-qtd" style="color:#f87171">0</span>
             </div>
-            <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:4px">
-              <span>% do total</span><span id="fk-burn-pct">0%</span>
+            <div id="list-cap-atrasado" style="display:flex;flex-direction:column;gap:5px">
+              <div style="text-align:center;padding:12px;color:var(--text3);font-size:11px;font-family:var(--mono)">Carregando...</div>
+            </div>
+            <div style="margin-top:8px;padding:8px 10px;background:rgba(248,113,113,.08);border-radius:6px;display:flex;justify-content:space-between">
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Total vencido</span>
+              <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:#f87171" id="cap-atrasado-val">R$ --</span>
             </div>
           </div>
-          <div class="kpi-card red" style="flex:1">
-            <div class="kpi-label">📉 Resultado do Mês</div>
-            <div class="kpi-value" id="fk-lucro" style="font-size:22px">R$ --</div>
-            <div class="kpi-sub" id="fk-margem-sub">Margem --</div>
+        </div>
+      </div>
+
+      <!-- BLOCO 5: TÍTULOS DO MÊS -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:9px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Títulos do Mês · A Receber e A Pagar</div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-accent" style="background:var(--green)"></div>
+            <div class="sec-header">
+              <span class="sec-title">📥 A Receber</span>
+              <span class="sec-count" id="car-count" style="color:var(--green)">0 títulos</span>
+            </div>
+            <div id="car-list" style="display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto">
+              <div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;font-family:var(--mono)">Carregando...</div>
+            </div>
+            <div style="margin-top:8px;padding:8px 10px;background:rgba(16,214,122,.08);border-radius:6px;display:flex;justify-content:space-between">
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Total pendente</span>
+              <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--green)" id="car-pendente-val">R$ --</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-accent" style="background:var(--amber)"></div>
+            <div class="sec-header">
+              <span class="sec-title">📤 A Pagar</span>
+              <span class="sec-count" id="cap-count" style="color:var(--amber)">0 títulos</span>
+            </div>
+            <div id="cap-list" style="display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto">
+              <div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;font-family:var(--mono)">Carregando...</div>
+            </div>
+            <div style="margin-top:8px;padding:8px 10px;background:rgba(245,166,35,.08);border-radius:6px;display:flex;justify-content:space-between">
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Total pendente</span>
+              <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--amber)" id="cap-avencer-val">R$ --</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- ── ZONA ATRASADOS (vermelho, ação imediata) ── -->
-      <div class="zone-header" style="margin-top:0">
-        <span class="zone-tag" style="background:rgba(248,113,113,0.15);color:#f87171;border-color:rgba(248,113,113,0.3)">🚨</span>
-        <span class="zone-desc" style="color:#f87171">Ação Imediata · Títulos Vencidos</span>
-        <div class="zone-line"></div>
-        <span style="font-size:9px;font-family:var(--mono);color:#f87171" id="atrasados-resumo">--</span>
-      </div>
-
-      <div class="grid-2" style="margin-bottom:12px">
-        <!-- Atrasados a RECEBER -->
-        <div class="card">
-          <div class="card-accent" style="background:#f87171"></div>
-          <div class="sec-header">
-            <span class="sec-title">📥 A Receber · Vencidos</span>
-            <span class="sec-count" id="car-atrasado-qtd" style="color:#f87171">0 títulos</span>
-          </div>
-          <div id="list-car-atrasado" style="display:flex;flex-direction:column;gap:6px">
-            <div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;font-family:var(--mono)">Carregando...</div>
-          </div>
-          <div style="margin-top:10px;padding:8px 10px;background:rgba(248,113,113,0.08);border-radius:6px;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Total vencido a receber</span>
-            <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:#f87171" id="car-atrasado-val">R$ --</span>
-          </div>
-        </div>
-
-        <!-- Atrasados a PAGAR -->
-        <div class="card">
-          <div class="card-accent" style="background:#f87171"></div>
-          <div class="sec-header">
-            <span class="sec-title">📤 A Pagar · Vencidos</span>
-            <span class="sec-count" id="cap-atrasado-qtd" style="color:#f87171">0 títulos</span>
-          </div>
-          <div id="list-cap-atrasado" style="display:flex;flex-direction:column;gap:6px">
-            <div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;font-family:var(--mono)">Carregando...</div>
-          </div>
-          <div style="margin-top:10px;padding:8px 10px;background:rgba(248,113,113,0.08);border-radius:6px;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Total vencido a pagar</span>
-            <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:#f87171" id="cap-atrasado-val">R$ --</span>
-          </div>
+      <!-- BLOCO 6: CONTROLLER VIRTUAL -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:9px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px">🤖 Controller Virtual · Insights Automáticos</div>
+        <div id="insights-lista" style="display:flex;flex-direction:column;gap:6px">
+          <div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;font-family:var(--mono)">Calculando insights...</div>
         </div>
       </div>
 
-      <!-- ── ZONA PRÓXIMOS 15 DIAS ── -->
-      <div class="zone-header" style="margin-top:0">
-        <span class="zone-tag z2">📅</span>
-        <span class="zone-desc">Próximos 15 dias · A Receber e A Pagar</span>
-        <div class="zone-line"></div>
-      </div>
-
-      <div class="grid-2" style="margin-bottom:12px">
-        <!-- CAR próximos -->
-        <div class="card">
-          <div class="card-accent" style="background:var(--green)"></div>
-          <div class="sec-header">
-            <span class="sec-title">📥 A Receber · Próximos</span>
-            <span class="sec-count" id="car-count" style="color:var(--green)">0 títulos</span>
-          </div>
-          <div id="car-list" style="display:flex;flex-direction:column;gap:5px;max-height:320px;overflow-y:auto">
-            <div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;font-family:var(--mono)">Carregando do Omie...</div>
-          </div>
-          <div style="margin-top:10px;padding:8px 10px;background:rgba(16,214,122,0.08);border-radius:6px;display:flex;justify-content:space-between">
-            <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Total pendente</span>
-            <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--green)" id="car-pendente-val">R$ --</span>
-          </div>
-        </div>
-
-        <!-- CAP próximos -->
-        <div class="card">
-          <div class="card-accent" style="background:var(--amber)"></div>
-          <div class="sec-header">
-            <span class="sec-title">📤 A Pagar · Próximos</span>
-            <span class="sec-count" id="cap-count" style="color:var(--amber)">0 títulos</span>
-          </div>
-          <div id="cap-list" style="display:flex;flex-direction:column;gap:5px;max-height:320px;overflow-y:auto">
-            <div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;font-family:var(--mono)">Carregando do Omie...</div>
-          </div>
-          <div style="margin-top:10px;padding:8px 10px;background:rgba(245,166,35,0.08);border-radius:6px;display:flex;justify-content:space-between">
-            <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Total pendente</span>
-            <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--amber)" id="cap-avencer-val">R$ --</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── ZONA ALERTAS DE CAIXA ── -->
-      <div class="zone-header" style="margin-top:0">
-        <span class="zone-tag" style="background:rgba(245,166,35,0.15);color:var(--amber);border-color:rgba(245,166,35,0.3)">⚠</span>
-        <span class="zone-desc">Alertas de Caixa · Dias com saldo insuficiente</span>
-        <div class="zone-line"></div>
-        <span id="alertas-count" style="font-size:9px;font-family:var(--mono);color:var(--text3)">--</span>
-      </div>
-      <div id="alertas-caixa-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
-        <div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;font-family:var(--mono)">Calculando...</div>
-      </div>
-
-      <!-- IDs de compatibilidade (invisíveis) -->
+      <!-- IDs de compatibilidade invisíveis -->
       <div style="display:none">
-        <span id="car-pendente-qtd"></span>
-        <span id="car-recebido-val"></span>
-        <span id="car-total-val"></span>
-        <span id="car-total-pct"></span>
-        <span id="car-atrasado-val-old"></span>
-        <span id="cap-atrasado-val-old"></span>
-        <span id="cap-pago-val"></span>
-        <span id="cap-parcial-val"></span>
-        <span id="cap-parcial-qtd"></span>
-        <span id="cap-resumo-count"></span>
-        <div id="cap-resumo-list"></div>
+        <span id="fk-lucro"></span><span id="fk-margem-sub"></span>
+        <span id="fk-mrr-pct"></span><span id="fk-burn-pct"></span>
+        <span id="fk-vencidos-badge"></span><span id="car-pendente-qtd"></span>
+        <span id="car-atrasado-qtd-old"></span><span id="cap-atrasado-val-old"></span>
+        <span id="cap-pago-val"></span><span id="cap-parcial-val"></span>
+        <span id="cap-parcial-qtd"></span><span id="cap-resumo-count"></span>
+        <span id="cap-avencer-qtd"></span><span id="cap-atrasado-qtd-compat"></span>
+        <div id="cap-resumo-list"></div><div id="alertas-caixa-list"></div>
+        <span id="alertas-count"></span>
+        <span id="car-recebido-val"></span><span id="car-total-val"></span><span id="car-total-pct"></span>
+        <span id="car-atrasado-qtd-compat"></span>
+        <span id="cap-atrasado-qtd-compat2"></span>
+        <span id="cap-avencer-val-compat"></span>
       </div>
 
     </div><!-- /view-fin -->
@@ -2390,209 +2380,296 @@ window.sincronizarOmieForcar = async function() {
 
 
 // ─── FINANCEIRO ───────────────────────────────────────────
+// ─── FINANCEIRO ───────────────────────────────────────────
 function renderFinanceiro() {
-  const o      = STATE.omie || {};
-  const saldo  = STATE.saldoManual?.valor || 0;
-  const isCache= o._cache || false;
-  const set2   = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  const o     = STATE.omie || {};
+  const saldo = STATE.saldoManual?.valor || 0;
+  const set2  = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
 
-  // ── Saldo ──────────────────────────────────────────────
-  const saldoData = STATE.saldoManual?.data
-    ? 'Lançado em ' + new Date(STATE.saldoManual.data+'T12:00:00').toLocaleDateString('pt-BR')
-    : 'Clique em "Lançar Saldo"';
+  // Mês label
+  const agora = new Date();
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  set2('fin-mes-label', meses[agora.getMonth()] + ' ' + agora.getFullYear());
+
+  // ── Saldo ──
   set2('fk-saldo', fmtBRL0(saldo));
-  set2('fk-saldo-data', saldoData);
-  const saldoBadge = document.getElementById('fk-saldo-badge');
-  if(saldoBadge) saldoBadge.textContent = STATE.saldoManual?.obs || (STATE.saldoManual ? '✓ Atualizado' : '→ Lançar saldo');
+  set2('fk-saldo-data', STATE.saldoManual?.data
+    ? 'Lançado em ' + new Date(STATE.saldoManual.data+'T12:00:00').toLocaleDateString('pt-BR')
+    : 'Clique em "Lançar Saldo"');
+  const sb = document.getElementById('fk-saldo-badge');
+  if(sb) sb.textContent = STATE.saldoManual ? '✓ Atualizado' : '→ Lançar saldo';
 
-  // ── Totais CAR / CAP ───────────────────────────────────
-  const apagarFuturo  = o.a_pagar_futuro || 0;
-  const apagarTotal   = (o.a_pagar || 0) + apagarFuturo;
-  const aReceberTotal = (o.a_receber || 0) + (o.recebido_mes || 0);
-  STATE._apagarTotal  = apagarTotal;
-  STATE._apagarFuturo = apagarFuturo;
+  // ── Totais CAR / CAP ──
+  const carPend  = o.a_receber      || 0;
+  const carRec   = o.recebido_mes   || 0;
+  const carTotal = o.total_mes_car  || (carPend + carRec);
+  const carAtras = o.a_receber_atras|| 0;
+  const carFut   = o.a_receber_fut  || 0;
 
-  set2('fk-car', fmtBRL0(o.a_receber));
-  set2('fk-car-recebido', fmtBRL0(o.recebido_mes));
-  set2('fk-car-qtd', (o.qtd_car || 0) + ' pendentes');
-  const carTotalBadge = document.getElementById('fk-car-total-badge');
-  if(carTotalBadge) carTotalBadge.textContent = 'Total: ' + fmtBRL0(aReceberTotal);
+  const capPend  = o.a_pagar_total  || ((o.a_pagar||0) + (o.a_pagar_futuro||0));
+  const capPago  = o.pago_mes       || 0;
+  const capTotal = o.total_mes_cap  || (capPend + capPago);
+  const capAtras = o.a_pagar        || 0;
+  const capFut   = o.a_pagar_futuro || 0;
 
-  set2('fk-cap', fmtBRL0(apagarTotal));
-  set2('fk-cap-pago', fmtBRL0(o.pago_mes));
-  set2('fk-cap-qtd', (o.qtd_cap || 0) + ' pendentes');
-  const capTotalBadge = document.getElementById('fk-cap-total-badge');
-  if(capTotalBadge) capTotalBadge.textContent = 'Total: ' + fmtBRL0(apagarTotal + (o.pago_mes||0));
+  STATE._apagarTotal  = capPend;
+  STATE._apagarFuturo = capFut;
 
-  set2('fk-recebido', fmtBRL0(o.recebido_mes));
-  set2('fk-pago',     fmtBRL0(o.pago_mes));
+  // Cards principais
+  set2('fk-car', fmtBRL0(carPend));
+  set2('fk-car-recebido', fmtBRL0(carRec));
+  set2('fk-car-qtd', (o.qtd_car||0) + ' pendentes');
+  const ctb = document.getElementById('fk-car-total-badge');
+  if(ctb) ctb.textContent = 'Total mês: ' + fmtBRL0(carTotal);
 
-  // Barras de progresso
-  const pctRec = aReceberTotal > 0 ? Math.min(Math.round((o.recebido_mes||0)/aReceberTotal*100),100) : 0;
-  const pctPag = (apagarTotal+(o.pago_mes||0)) > 0 ? Math.min(Math.round((o.pago_mes||0)/(apagarTotal+(o.pago_mes||0))*100),100) : 0;
-  const progRec = document.getElementById('fk-prog-rec');
-  const progPag = document.getElementById('fk-prog-pag');
-  if(progRec) setTimeout(()=>progRec.style.width=pctRec+'%', 200);
-  if(progPag) setTimeout(()=>progPag.style.width=pctPag+'%', 200);
-  set2('fk-mrr-pct', pctRec + '% recebido');
-  set2('fk-burn-pct', pctPag + '% pago');
+  set2('fk-cap', fmtBRL0(capPend));
+  set2('fk-cap-pago', fmtBRL0(capPago));
+  set2('fk-cap-qtd', ((o.qtd_car_atras||0)+(o.qtd_cap_futuro||0)) + ' pendentes');
+  const cptb = document.getElementById('fk-cap-total-badge');
+  if(cptb) cptb.textContent = 'Total mês: ' + fmtBRL0(capTotal);
 
-  // Lucro
-  const lucro  = (o.recebido_mes||0) - (o.pago_mes||0);
-  const margem = (o.recebido_mes||0) > 0 ? Math.round(lucro/(o.recebido_mes||0)*100) : 0;
-  set2('fk-lucro', fmtBRL0(lucro));
-  set2('fk-margem-sub', 'Margem: ' + margem + '%');
-  const lucroEl = document.getElementById('fk-lucro');
-  if(lucroEl) lucroEl.style.color = lucro >= 0 ? 'var(--green)' : '#f87171';
+  set2('fk-recebido', fmtBRL0(carRec));
+  set2('fk-pago', fmtBRL0(capPago));
 
-  // Status sync
-  const syncEl = document.getElementById('fin-sync-status');
-  if(syncEl && isCache) {
-    const ts = o._salvo ? new Date(o._salvo).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '--';
-    syncEl.textContent = '⚡ Cache · ' + ts;
-  }
+  // KPIs secundários
+  const saldoLivre = saldo - capAtras;
+  const geracao    = carPend - capPend;
+  set2('fk-saldo-livre', fmtBRL0(Math.max(saldoLivre, 0)));
+  const geEl = document.getElementById('fk-geracao');
+  if(geEl) { geEl.textContent = fmtBRL0(geracao); geEl.style.color = geracao>=0 ? 'var(--green)' : '#f87171'; }
+
+  // Barras progresso
+  const pctR = carTotal>0 ? Math.min(Math.round(carRec/carTotal*100),100) : 0;
+  const pctP = capTotal>0 ? Math.min(Math.round(capPago/capTotal*100),100) : 0;
+  const pr = document.getElementById('fk-prog-rec');
+  const pp = document.getElementById('fk-prog-pag');
+  if(pr) setTimeout(()=>pr.style.width=pctR+'%',200);
+  if(pp) setTimeout(()=>pp.style.width=pctP+'%',200);
 
   // Projeção e gráfico
   calcularProjecao();
   desenharGrafico();
 
-  // ── LISTAS DE TÍTULOS ──────────────────────────────────
-  const hoje2 = new Date().toISOString().split('T')[0];
+  // ── Listas de títulos ──
+  const hoje2   = new Date().toISOString().split('T')[0];
+  const titCar  = o.titulos_car || [];
+  const titCap  = o.titulos_cap || [];
+  const titVenc = o.titulos_vencidos || [];
 
-  // Separar CAR por situação
-  const titCar = o.titulos_car || [];
-  const carAtrasados = titCar.filter(t => t.vencimento && t.vencimento < hoje2);
-  const carPendentes = titCar.filter(t => t.vencimento && t.vencimento >= hoje2);
+  const carAtrasLst = titCar.filter(t => t.vencimento && t.vencimento < hoje2);
+  const carPendLst  = titCar.filter(t => t.vencimento && t.vencimento >= hoje2);
+  const capAtrasLst = titCap.filter(t => t.vencimento && t.vencimento < hoje2);
+  const capPendLst  = titCap.filter(t => t.vencimento && t.vencimento >= hoje2);
 
-  // Separar CAP por situação
-  const titCap = o.titulos_cap || [];
-  const capAtrasados = titCap.filter(t => (t.vencimento && t.vencimento < hoje2) || t.atrasado);
-  const capPendentes = titCap.filter(t => t.vencimento && t.vencimento >= hoje2 && !t.atrasado);
+  const carAtrasVal = carAtrasLst.reduce((s,t)=>s+(t.valor||0),0) || carAtras;
+  const carPendVal  = carPendLst.reduce((s,t)=>s+(t.valor||0),0)  || carFut;
+  const capAtrasVal = capAtrasLst.reduce((s,t)=>s+(t.valor||0),0) || capAtras;
+  const capPendVal  = capPendLst.reduce((s,t)=>s+(t.valor||0),0)  || capFut;
 
-  // Totais
-  const carAtrasadoVal = carAtrasados.reduce((s,t)=>s+(t.valor||0), 0) || (o.vencido_car || 0);
-  const carPendenteVal = carPendentes.reduce((s,t)=>s+(t.valor||0), 0) || (o.a_receber || 0);
-  const capAtrasadoVal = capAtrasados.reduce((s,t)=>s+(t.valor||0), 0) || (o.vencido || o.a_pagar || 0);
-  const capAvencerVal  = capPendentes.reduce((s,t)=>s+(t.valor||0), 0) || (apagarFuturo || 0);
-
-  set2('car-atrasado-val', fmtBRL0(carAtrasadoVal));
-  set2('car-atrasado-qtd', carAtrasados.length + ' títulos');
-  set2('car-pendente-val', fmtBRL0(carPendenteVal));
-  set2('car-count', carPendentes.length + ' títulos');
-  set2('cap-atrasado-val', fmtBRL0(capAtrasadoVal));
-  set2('cap-atrasado-qtd', capAtrasados.length + ' títulos');
-  set2('cap-avencer-val', fmtBRL0(capAvencerVal));
-  set2('cap-count', capPendentes.length + ' títulos');
-
-  // Resumo atrasados
-  const totalAtrasado = carAtrasadoVal + capAtrasadoVal;
-  set2('atrasados-resumo', totalAtrasado > 0
-    ? '⚠ ' + fmtBRL0(carAtrasadoVal) + ' a receber · ' + fmtBRL0(capAtrasadoVal) + ' a pagar'
-    : '✓ Sem títulos vencidos');
+  set2('car-atrasado-val', fmtBRL0(carAtrasVal));
+  set2('car-atrasado-qtd', (titVenc.length || carAtrasLst.length) + ' títulos');
+  set2('cap-atrasado-val', fmtBRL0(capAtrasVal));
+  set2('cap-atrasado-qtd', capAtrasLst.length + ' títulos');
+  set2('car-pendente-val', fmtBRL0(carPendVal));
+  set2('car-count', carPendLst.length + ' títulos');
+  set2('cap-avencer-val', fmtBRL0(capPendVal));
+  set2('cap-count', capPendLst.length + ' títulos');
 
   // Alert bar
   const alertBar = document.getElementById('alert-bar');
   const alertTxt = document.getElementById('alert-bar-text');
-  if(alertBar && alertTxt && (o.vencido > 0 || carAtrasadoVal > 0 || capAtrasadoVal > 0)) {
-    alertBar.style.display = 'flex';
-    alertTxt.textContent = '⚠ Vencidos: ' + fmtBRL0(carAtrasadoVal) + ' a receber · ' + fmtBRL0(capAtrasadoVal) + ' a pagar — ação imediata!';
+  if(alertBar && alertTxt && (carAtrasVal > 0 || capAtrasVal > 0)) {
+    alertBar.style.display = 'block';
+    alertTxt.textContent = '⚠ Atenção: ' + fmtBRL0(carAtrasVal) + ' a receber vencido · ' + fmtBRL0(capAtrasVal) + ' a pagar vencido — resolver hoje!';
   } else if(alertBar) alertBar.style.display = 'none';
 
-  // Renderizar listas
-  renderListaAtrasados('list-car-atrasado', carAtrasados, 'car');
-  renderListaAtrasados('list-cap-atrasado', capAtrasados, 'cap');
-  renderListaTitulos('car-list', carPendentes, 'green');
-  renderListaTitulos('cap-list', capPendentes, 'amber');
+  // Renderiza listas
+  renderListaAtrasados('list-car-atrasado', titVenc.length ? titVenc : carAtrasLst, 'car');
+  renderListaAtrasados('list-cap-atrasado', capAtrasLst, 'cap');
+  renderListaTitulos('car-list', carPendLst, 'green');
+  renderListaTitulos('cap-list', capPendLst, 'amber');
 
-  // Alertas de caixa
-  renderAlertasCaixaDiario();
+  // Semáforo e insights
+  renderSemaforo();
+  renderInsights();
+
+  // Sync status
+  const isCache = o._cache;
+  const syncEl  = document.getElementById('fin-sync-status');
+  if(syncEl && isCache) {
+    const ts = o._salvo ? new Date(o._salvo).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '--';
+    syncEl.textContent = '⚡ Cache · ' + ts;
+  } else if(syncEl) syncEl.textContent = '';
 
   // Ticker
   const t2 = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   t2('tick-caixa', fmtBRL0(saldo));
-  t2('tick-car',   fmtBRL0(o.a_receber));
-  t2('tick-cap',   fmtBRL0(o.a_pagar));
+  t2('tick-car', fmtBRL0(carPend));
+  t2('tick-cap', fmtBRL0(capPend));
 }
 
-// ── Renderiza lista de atrasados (com dias de atraso) ──
-function renderListaAtrasados(listId, titulos, tipo) {
-  const el = document.getElementById(listId);
+// ── Semáforo de caixa dia a dia ───────────────────────────
+function renderSemaforo() {
+  const el    = document.getElementById('semaforo-lista');
+  const folEl = document.getElementById('fk-folga-necessaria');
   if(!el) return;
-  if(!titulos || !titulos.length) {
-    el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--green);font-family:var(--mono);font-size:11px">✓ Nenhum título vencido</div>';
+
+  const saldo0  = STATE.saldoManual?.valor || 0;
+  const projArr = STATE._projDiaria || STATE.omie?.projecao_diaria || [];
+  const agora   = new Date();
+  const mes     = agora.getMonth();
+  const ano     = agora.getFullYear();
+  const diaH    = agora.getDate();
+  const totalDias = new Date(ano, mes+1, 0).getDate();
+
+  // Reconstrói saldo acumulado dia a dia
+  let acum = saldo0;
+  const diasData = [];
+  for(let d = 1; d <= totalDias; d++) {
+    const dp = projArr.find(p => p.dia === d) || {};
+    const ent = dp.entradas || 0;
+    const sai = dp.saidas   || 0;
+    if(d >= diaH) acum += ent - sai;
+    diasData.push({ dia: d, saldo: Math.round(acum), entradas: ent, saidas: sai, passado: d < diaH });
+  }
+
+  // Calcula folga necessária (maior déficit)
+  let maxDeficit = 0;
+  diasData.filter(d => !d.passado).forEach(d => {
+    if(d.saldo < 0) maxDeficit = Math.max(maxDeficit, Math.abs(d.saldo));
+  });
+  if(folEl) folEl.textContent = maxDeficit > 0 ? fmtBRL0(maxDeficit) : '✓ Nenhuma — caixa positivo';
+
+  // Filtra dias relevantes: hoje em diante com movimentação ou risco
+  const diasRel = diasData.filter(d => !d.passado && (d.entradas > 0 || d.saidas > 0 || d.saldo < 0));
+
+  if(!diasRel.length) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--green);font-family:var(--mono);font-size:11px">✓ Sem movimentações previstas para os próximos dias</div>';
     return;
   }
-  const cor = tipo === 'car' ? '#f87171' : '#f87171';
-  el.innerHTML = titulos.map(t => {
-    const vencDate = t.vencimento ? new Date(t.vencimento+'T12:00:00') : null;
-    const diasAtraso = vencDate ? Math.round((new Date()-vencDate)/86400000) : 0;
-    const vencStr = vencDate ? vencDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '--';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.25);border-radius:8px;border-left:3px solid #f87171">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.nome||'—'}</div>
-        <div style="font-size:9px;font-family:var(--mono);color:#f87171;margin-top:2px">
-          ⚠ Venceu ${vencStr} · <strong>${diasAtraso} dia${diasAtraso!==1?'s':''} em atraso</strong>
-        </div>
-      </div>
-      <div style="font-size:12px;font-weight:700;font-family:var(--mono);color:#f87171;flex-shrink:0;margin-left:8px">${fmtBRL0(t.valor)}</div>
-    </div>`;
-  }).join('');
-}
 
-// ── Renderiza lista de títulos a vencer ──
-function renderListaTitulos(listId, titulos, cor) {
-  const el = document.getElementById(listId);
-  if(!el) return;
-  const o = STATE.omie || {};
-  const hoje2 = new Date().toISOString().split('T')[0];
-  const corHex = cor === 'green' ? 'var(--green)' : 'var(--amber)';
-  const corBrd = cor === 'green' ? 'rgba(16,214,122,0.4)' : 'rgba(245,166,35,0.4)';
-  const label  = cor === 'green' ? 'A receber (Omie)' : 'A pagar (Omie)';
-
-  if(!titulos || !titulos.length) {
-    // Sem títulos individuais — mostra total do Omie
-    const totalVal = cor === 'green' ? (o.a_receber||0) : (STATE._apagarTotal||0);
-    if(totalVal > 0) {
-      el.innerHTML = `<div style="padding:12px 14px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;border-left:3px solid ${corBrd}">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <div style="font-size:11px;font-weight:600">${label}</div>
-            <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px">Proxy não retornou títulos individuais. Total consolidado do Omie.</div>
-          </div>
-          <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:${corHex};margin-left:12px">${fmtBRL0(totalVal)}</div>
-        </div>
-      </div>`;
+  el.innerHTML = diasRel.map(d => {
+    const dataFmt = new Date(ano, mes, d.dia).toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit'});
+    let cor, ico, status;
+    if(d.saldo < 0) {
+      cor = '#f87171'; ico = '🔴'; status = 'CAIXA INSUFICIENTE';
+    } else if(d.saidas > 0 && d.saldo < d.saidas * 1.2) {
+      cor = 'var(--amber)'; ico = '🟡'; status = 'Atenção — folga pequena';
     } else {
-      el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-family:var(--mono);font-size:11px">Nenhum título pendente</div>';
+      cor = 'var(--green)'; ico = '🟢'; status = 'Caixa OK';
     }
-    return;
-  }
 
-  const sorted = [...titulos].sort((a,b) => (a.vencimento||'') < (b.vencimento||'') ? -1 : 1);
-  el.innerHTML = sorted.map(t => {
-    const vencida = t.vencimento && t.vencimento < hoje2;
-    const vencDate = t.vencimento ? new Date(t.vencimento+'T12:00:00') : null;
-    const dias = vencDate ? Math.round((vencDate - new Date())/86400000) : null;
-    const vencStr = vencDate ? vencDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '--';
-    const diasLabel = dias !== null
-      ? (dias < 0 ? `<span style="color:#f87171">venceu há ${Math.abs(dias)}d</span>`
-        : dias === 0 ? `<span style="color:var(--amber)">vence hoje</span>`
-        : dias <= 3 ? `<span style="color:var(--amber)">em ${dias}d ⚡</span>`
-        : `<span style="color:var(--text3)">em ${dias}d</span>`)
-      : '';
-    const borda = dias !== null && dias <= 3 ? '#f5a623' : corBrd;
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;border-left:3px solid ${borda}">
+    const entStr = d.entradas > 0 ? '<span style="color:var(--green)">+'+fmtBRL0(d.entradas)+'</span>' : '';
+    const saiStr = d.saidas > 0   ? '<span style="color:var(--amber)">-'+fmtBRL0(d.saidas)+'</span>' : '';
+    const movStr = [entStr, saiStr].filter(Boolean).join(' · ');
+
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;border-left:3px solid ${cor}">
+      <div style="font-size:16px;flex-shrink:0">${ico}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.nome||'—'}</div>
-        <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px;display:flex;gap:8px">
-          <span>📅 ${vencStr}</span>${diasLabel}${t.numero?'<span>Nº '+t.numero+'</span>':''}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:600;font-family:var(--mono)">${dataFmt}</span>
+          <span style="font-size:10px;color:${cor};font-family:var(--mono)">${status}</span>
         </div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">${movStr}</div>
       </div>
-      <div style="font-size:12px;font-weight:700;font-family:var(--mono);color:${corHex};flex-shrink:0;margin-left:8px">${fmtBRL0(t.valor)}</div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:13px;font-weight:700;font-family:var(--mono);color:${d.saldo<0?'#f87171':'var(--text)'}">${fmtBRL0(d.saldo)}</div>
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">saldo proj.</div>
+      </div>
     </div>`;
   }).join('');
 }
 
+// ── Controller Virtual — Insights automáticos ─────────────
+function renderInsights() {
+  const el = document.getElementById('insights-lista');
+  if(!el) return;
+
+  const o      = STATE.omie || {};
+  const saldo  = STATE.saldoManual?.valor || 0;
+  const carPend = o.a_receber      || 0;
+  const capPend = o.a_pagar_total  || 0;
+  const carAtras = o.a_receber_atras || 0;
+  const capAtras = o.a_pagar        || 0;
+  const projArr  = STATE._projDiaria || o.projecao_diaria || [];
+  const titCar   = o.titulos_car || [];
+  const titCap   = o.titulos_cap || [];
+
+  const insights = [];
+
+  // Dias com caixa negativo
+  const agora = new Date();
+  const mes   = agora.getMonth();
+  const ano   = agora.getFullYear();
+  const diaH  = agora.getDate();
+  let acum = saldo;
+  const diasNegativos = [];
+  const totalDias = new Date(ano, mes+1, 0).getDate();
+  for(let d = diaH; d <= totalDias; d++) {
+    const dp  = projArr.find(p => p.dia === d) || {};
+    acum += (dp.entradas||0) - (dp.saidas||0);
+    if(acum < 0) diasNegativos.push({ dia: d, saldo: Math.round(acum) });
+  }
+
+  if(diasNegativos.length > 0) {
+    const d0 = diasNegativos[0];
+    const dt = new Date(ano, mes, d0.dia).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+    insights.push({ tipo:'danger', ico:'⚠️', txt: `Caixa ficará negativo no dia ${dt} (${fmtBRL0(d0.saldo)}). Antecipe recebimentos ou postergue pagamentos para cobrir esse período.` });
+  } else {
+    insights.push({ tipo:'ok', ico:'✅', txt: `Projeção positiva: empresa encerra o mês com saldo estimado de ${fmtBRL0(saldo + carPend - capPend)}.` });
+  }
+
+  // Atrasados a receber
+  if(carAtras > 0) {
+    const qtd = o.qtd_venc || o.qtd_car_atras || 0;
+    insights.push({ tipo:'danger', ico:'🔴', txt: `${qtd} título(s) com R$ ${fmtBRL0(carAtras)} em atraso para receber. Acione cobrança imediatamente — cada dia de atraso compromete o caixa.` });
+  }
+
+  // Concentração de recebimento
+  if(titCar.length > 0) {
+    const sorted = [...titCar].sort((a,b) => (b.valor||0)-(a.valor||0));
+    const top = sorted[0];
+    if(top && carPend > 0) {
+      const pct = Math.round((top.valor||0)/carPend*100);
+      if(pct >= 20) {
+        insights.push({ tipo:'warn', ico:'📊', txt: `${top.nome} representa ${pct}% do CAR pendente (${fmtBRL0(top.valor)}). Alta concentração — risco se esse recebimento atrasar.` });
+      }
+    }
+  }
+
+  // Maior despesa do mês
+  if(titCap.length > 0) {
+    const sorted = [...titCap].sort((a,b) => (b.valor||0)-(a.valor||0));
+    const top = sorted[0];
+    if(top) {
+      const venc = top.vencimento ? new Date(top.vencimento+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '--';
+      insights.push({ tipo:'info', ico:'💡', txt: `Maior saída do mês: ${top.nome} — ${fmtBRL0(top.valor)} vence dia ${venc}. Garanta saldo disponível nesta data.` });
+    }
+  }
+
+  // Saldo vs próxima semana
+  const proxSemana = projArr.filter(p => p.dia >= diaH && p.dia <= diaH+7).reduce((s,p) => s - (p.saidas||0) + (p.entradas||0), 0);
+  if(saldo + proxSemana < 0) {
+    insights.push({ tipo:'danger', ico:'🚨', txt: `Próximos 7 dias: saldo projetado insuficiente (${fmtBRL0(saldo+proxSemana)}). Necessidade de caixa imediata de ${fmtBRL0(Math.abs(saldo+proxSemana))}.` });
+  }
+
+  // Resultado do mês
+  const resultado = carPend - capPend;
+  if(resultado > 0) {
+    insights.push({ tipo:'ok', ico:'💰', txt: `Geração líquida do mês: ${fmtBRL0(resultado)}. Melhor janela para distribuição de lucros: após garantir pagamentos das despesas críticas.` });
+  } else {
+    insights.push({ tipo:'warn', ico:'⚠️', txt: `CAP (${fmtBRL0(capPend)}) supera CAR (${fmtBRL0(carPend)}) em ${fmtBRL0(Math.abs(resultado))}. Mês com consumo de caixa — reforçar cobrança.` });
+  }
+
+  const cores = { danger:'#f87171', warn:'var(--amber)', ok:'var(--green)', info:'var(--blue2)' };
+  const bgs   = { danger:'rgba(248,113,113,.07)', warn:'rgba(245,166,35,.07)', ok:'rgba(16,214,122,.07)', info:'rgba(59,130,246,.07)' };
+
+  el.innerHTML = insights.map(ins => `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:${bgs[ins.tipo]};border-left:3px solid ${cores[ins.tipo]};border-radius:8px">
+      <span style="font-size:15px;flex-shrink:0;margin-top:1px">${ins.ico}</span>
+      <span style="font-size:12px;color:var(--text);line-height:1.5">${ins.txt}</span>
+    </div>`).join('');
+}
 
 
 function calcularProjecao() {
@@ -2897,138 +2974,72 @@ window.filtroProjecao = function(p) {
 };
 
 // ─── RESUMO CAP POR SITUAÇÃO ──────────────────────────────
-function renderCapResumo(avencer, atrasado, pago, parcial, totalPendente) {
-  const el = document.getElementById('cap-resumo-list');
-  const ct = document.getElementById('cap-resumo-count');
+// ── Lista de atrasados ────────────────────────────────────
+function renderListaAtrasados(listId, titulos, tipo) {
+  const el = document.getElementById(listId);
   if(!el) return;
-  const total = avencer + atrasado + pago + parcial;
-  if(ct) ct.textContent = fmtBRL0(totalPendente) + ' pendente';
-
-  const linhas = [
-    { label:'📅 A Vencer',         val: avencer,  cor:'var(--amber)', pct: total>0?Math.round(avencer/total*100):0 },
-    { label:'🔴 Atrasado',          val: atrasado, cor:'#f87171',      pct: total>0?Math.round(atrasado/total*100):0 },
-    { label:'✓ Pago no mês',        val: pago,     cor:'var(--green)', pct: total>0?Math.round(pago/total*100):0 },
-    { label:'½ Pago Parcialmente',  val: parcial,  cor:'var(--purple)',pct: total>0?Math.round(parcial/total*100):0 },
-  ];
-
-  el.innerHTML = linhas.map(l => `
-    <div style="display:flex;align-items:center;justify-content:space-between;
-      padding:10px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px">
-      <div style="flex:1">
-        <div style="font-size:10px;font-weight:600;color:var(--text)">${l.label}</div>
-        <div style="height:4px;background:var(--bg4);border-radius:2px;margin-top:6px;overflow:hidden">
-          <div style="height:100%;width:${l.pct}%;background:${l.cor};border-radius:2px;transition:width .4s"></div>
-        </div>
-        <div style="font-size:8px;font-family:var(--mono);color:var(--text3);margin-top:3px">${l.pct}% do total</div>
-      </div>
-      <div style="font-size:14px;font-weight:700;font-family:var(--mono);color:${l.cor};margin-left:16px;flex-shrink:0">${fmtBRL0(l.val)}</div>
-    </div>`).join('');
-}
-
-// ─── ALERTAS DE CAIXA INSUFICIENTE POR DIA ───────────────
-function renderAlertasCaixaDiario() {
-  const el  = document.getElementById('alertas-caixa-list');
-  const ct  = document.getElementById('alertas-count');
-  if(!el) return;
-
-  const saldo0   = STATE.saldoManual?.valor || 0;
-  const projArr  = STATE._projDiaria || STATE.omie?.projecao_diaria || [];
-  const now      = new Date();
-  const totalDias= new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const diaH     = now.getDate();
-
-  // Reconstrói saldos acumulados
-  let acum = saldo0;
-  const diasData = [];
-  for(let d = 1; d <= totalDias; d++) {
-    const dp = projArr.find(p => p.dia === d) || {};
-    if(d >= diaH) acum += (dp.entradas||0) - (dp.saidas||0);
-    diasData.push({
-      dia: d,
-      saldo: Math.round(acum),
-      entradas: dp.entradas || 0,
-      saidas:   dp.saidas   || 0,
-      futuro:   d > diaH
-    });
-  }
-
-  // Filtra dias com problema: saldo negativo OU saldo < saídas do dia OU saldo < 15% do saldo inicial
-  const limite = saldo0 * 0.15;
-  const alertas = diasData.filter(d => d.futuro && (
-    d.saldo < 0 ||
-    (d.saidas > 0 && d.saldo < d.saidas) ||
-    d.saldo < limite
-  ));
-
-  if(ct) ct.textContent = alertas.length > 0 ? alertas.length + ' dia(s)' : '✓ Sem alertas';
-
-  if(!alertas.length) {
-    el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--green);font-family:var(--mono);font-size:11px">
-      ✓ Caixa suficiente em todos os dias projetados</div>`;
+  if(!titulos || !titulos.length) {
+    el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--green);font-family:var(--mono);font-size:11px">✓ Nenhum título vencido</div>';
     return;
   }
-
-  el.innerHTML = alertas.map(d => {
-    const cor    = d.saldo < 0 ? '#f87171' : 'var(--amber)';
-    const ico    = d.saldo < 0 ? '🔴' : '⚠';
-    const status = d.saldo < 0 ? 'Caixa negativo' : 'Saldo no limite';
-    const dataFmt= new Date(now.getFullYear(), now.getMonth(), d.dia)
-      .toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-    return `<div style="padding:10px 12px;background:rgba(240,62,62,0.06);
-      border:1px solid rgba(240,62,62,0.2);border-left:3px solid ${cor};
-      border-radius:8px">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:10px;font-weight:700;color:${cor}">${ico} Dia ${d.dia} — ${dataFmt} · ${status}</div>
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px;display:flex;gap:10px">
-            ${d.saidas > 0 ? '<span>↓ Saídas: '+fmtBRL0(d.saidas)+'</span>' : ''}
-            ${d.entradas > 0 ? '<span>↑ Entradas: '+fmtBRL0(d.entradas)+'</span>' : ''}
-          </div>
-        </div>
-        <div style="font-size:13px;font-weight:700;font-family:var(--mono);color:${cor};flex-shrink:0;margin-left:8px">
-          ${fmtBRL0(d.saldo)}
-        </div>
+  el.innerHTML = titulos.map(t => {
+    const vd  = t.vencimento ? new Date(t.vencimento+'T12:00:00') : null;
+    const dias = vd ? Math.round((new Date()-vd)/86400000) : 0;
+    const vStr = vd ? vd.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '--';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:8px;border-left:3px solid #f87171">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.nome||'—'}</div>
+        <div style="font-size:9px;font-family:var(--mono);color:#f87171;margin-top:2px">⚠ Venceu ${vStr} · ${dias} dia${dias!==1?'s':''} em atraso</div>
       </div>
+      <div style="font-size:12px;font-weight:700;font-family:var(--mono);color:#f87171;flex-shrink:0;margin-left:8px">${fmtBRL0(t.valor)}</div>
     </div>`;
   }).join('');
 }
 
-// ─── SALDO MANUAL ────────────────────────────────────────
-window.abrirModalSaldo = function() {
-  const input = document.getElementById('saldo-input');
-  const dt = document.getElementById('saldo-data');
-  if(input && STATE.saldoManual) input.value = STATE.saldoManual.valor || '';
-  if(dt) dt.value = STATE.saldoManual?.data || hoje();
-  const sub = document.getElementById('modal-saldo-sub');
-  if(sub) {
-    const atual = STATE.saldoManual ? ` · Atual: ${fmtBRL0(STATE.saldoManual.valor)}` : '';
-    sub.textContent = 'Informe o saldo atual em conta'+atual;
+// ── Lista de títulos a vencer ─────────────────────────────
+function renderListaTitulos(listId, titulos, cor) {
+  const el = document.getElementById(listId);
+  if(!el) return;
+  const o = STATE.omie || {};
+  const corHex = cor==='green' ? 'var(--green)' : 'var(--amber)';
+  const corBrd = cor==='green' ? 'rgba(16,214,122,.4)' : 'rgba(245,166,35,.4)';
+  const hoje2  = new Date().toISOString().split('T')[0];
+
+  if(!titulos || !titulos.length) {
+    const val = cor==='green' ? (o.a_receber||0) : (STATE._apagarTotal||0);
+    if(val > 0) {
+      el.innerHTML = `<div style="padding:12px 14px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;border-left:3px solid ${corBrd}">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;color:var(--text3)">Total Omie (sem títulos individuais)</div>
+          <div style="font-size:16px;font-weight:700;font-family:var(--mono);color:${corHex}">${fmtBRL0(val)}</div>
+        </div></div>`;
+    } else {
+      el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;font-family:var(--mono)">Nenhum título pendente</div>';
+    }
+    return;
   }
-  abrirModal('modal-saldo');
-  setTimeout(()=>document.getElementById('saldo-input')?.focus(),200);
-};
 
-window.salvarSaldo = async function() {
-  const valor = parseFloat(document.getElementById('saldo-input')?.value || 0);
-  const data  = document.getElementById('saldo-data')?.value || hoje();
-  const obs   = document.getElementById('saldo-obs')?.value || '';
-  const msg   = document.getElementById('msg-saldo');
-  if(isNaN(valor)) { showMsg(msg,'Informe um valor válido.','err'); return; }
-  const payload = { valor, data, obs, lancadoPor:'Robson', lancadoEm:Date.now() };
-  await set(ref(db,'config/saldo_manual'), payload);
-  STATE.saldoManual = payload;
-  renderSaldoKPI();
-  renderFinanceiro();
-  showMsg(msg,'✓ Saldo salvo com sucesso!','ok');
-  setTimeout(()=>fecharModal('modal-saldo'),1500);
-};
-
-function renderSaldoKPI() {
-  if(!STATE.saldoManual) return;
-  const el = document.getElementById('fk-saldo');
-  const dt = document.getElementById('fk-saldo-data');
-  if(el) el.textContent = fmtBRL0(STATE.saldoManual.valor);
-  if(dt) dt.textContent = `Lançado ${new Date(STATE.saldoManual.lancadoEm).toLocaleDateString('pt-BR')}`;
+  const sorted = [...titulos].sort((a,b) => (a.vencimento||'') < (b.vencimento||'') ? -1 : 1);
+  el.innerHTML = sorted.map(t => {
+    const vd   = t.vencimento ? new Date(t.vencimento+'T12:00:00') : null;
+    const dias = vd ? Math.round((vd-new Date())/86400000) : null;
+    const vStr = vd ? vd.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '--';
+    const diasLabel = dias !== null
+      ? (dias < 0  ? `<span style="color:#f87171">venceu há ${Math.abs(dias)}d</span>`
+       : dias === 0 ? `<span style="color:var(--amber)">vence hoje!</span>`
+       : dias <= 3  ? `<span style="color:var(--amber)">em ${dias}d ⚡</span>`
+       : `<span style="color:var(--text3)">em ${dias}d</span>`) : '';
+    const borda = dias !== null && dias <= 3 ? 'var(--amber)' : corBrd;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;border-left:3px solid ${borda}">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.nome||'—'}</div>
+        <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px;display:flex;gap:8px">
+          <span>📅 ${vStr}</span>${diasLabel}
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:700;font-family:var(--mono);color:${corHex};flex-shrink:0;margin-left:8px">${fmtBRL0(t.valor)}</div>
+    </div>`;
+  }).join('');
 }
 
 // ─── EQUIPE ───────────────────────────────────────────────
