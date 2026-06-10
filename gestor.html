@@ -2223,25 +2223,35 @@ window.sincronizarOmie = async function sincronizarOmie() {
     // Proxy retornou erro explícito
     if(d && d.erro) throw new Error(d.msg || 'Proxy retornou erro');
 
-    // Monta STATE.omie com a estrutura exata do proxy v10
+    // Monta STATE.omie com a estrutura completa do proxy v27
     STATE.omie = {
-      // Totais em aberto
-      a_receber:    d.a_receber    || 0,
-      a_pagar:      d.a_pagar      || 0,
+      // Totais a receber
+      a_receber:       d.a_receber       || 0,   // pendente (atrasado + a vencer)
+      a_receber_atras: d.a_receber_atras || 0,
+      a_receber_fut:   d.a_receber_fut   || 0,
+      // Totais a pagar
+      a_pagar:         d.a_pagar         || 0,   // só atrasados
+      a_pagar_futuro:  d.a_pagar_futuro  || 0,   // a vencer
+      a_pagar_total:   d.a_pagar_total   || ((d.a_pagar||0) + (d.a_pagar_futuro||0)),
+      // Totais gerais do mês
+      total_mes_car:   d.total_mes_car   || 0,
+      total_mes_cap:   d.total_mes_cap   || 0,
       // Movimento do mês
       recebido_mes: d.recebido_mes || 0,
       pago_mes:     d.pago_mes     || 0,
       // Quantidades
-      qtd_car:      d.qtd_car      || 0,
-      qtd_cap:      d.qtd_cap      || 0,
-      qtd_venc:     d.qtd_venc     || 0,
-      vencido:      d.vencido      || 0,
-      // Títulos individuais (até 15 de cada)
+      qtd_car:        d.qtd_car        || 0,
+      qtd_car_atras:  d.qtd_car_atras  || 0,
+      qtd_cap:        d.qtd_cap        || 0,
+      qtd_cap_futuro: d.qtd_cap_futuro || 0,
+      qtd_venc:       d.qtd_venc       || 0,
+      vencido:        d.vencido        || 0,
+      // Títulos individuais
       titulos_car:      d.titulos_car      || [],
       titulos_cap:      d.titulos_cap      || [],
       titulos_vencidos: d.titulos_vencidos || [],
-      // Projeção dia a dia (gerada pelo proxy com datas reais de vencimento)
-      projecao_diaria: d.projecao_diaria || buildProjecaoSimples(d.a_receber||0, d.a_pagar||0),
+      // Projeção dia a dia — SEMPRE reconstruída no frontend a partir dos títulos
+      projecao_diaria: construirProjecaoDosTitulos(d.titulos_car || [], d.titulos_cap || []),
       // Metadados
       _sync:      d._sync  || new Date().toISOString(),
       _salvo:     d._salvo || Date.now(),
@@ -2306,25 +2316,47 @@ window.sincronizarOmie = async function sincronizarOmie() {
 
 // Projeção simples quando o proxy não fornece títulos individuais:
 // distribui CAR uniformemente nos dias futuros e CAP nos dias perto do fim
-function buildProjecaoSimples(totalCar, totalCap) {
+// Constrói projeção dia a dia a partir dos títulos REAIS (datas de vencimento)
+// Esta é a fonte confiável — não depende da projecao_diaria do proxy
+function construirProjecaoDosTitulos(titulosCar, titulosCap) {
   const now    = new Date();
   const ano    = now.getFullYear();
   const mes    = now.getMonth();
   const totD   = new Date(ano, mes+1, 0).getDate();
   const diaH   = now.getDate();
-  const diasFut= totD - diaH;
-  if(diasFut <= 0) return [];
-  const carDia = diasFut > 0 ? totalCar / diasFut : 0;
-  const capDia = diasFut > 0 ? totalCap / diasFut : 0;
-  const dias   = [];
-  for(let d = diaH+1; d <= totD; d++) {
-    dias.push({ dia:d, futuro:true, entradas: Math.round(carDia), saidas: Math.round(capDia) });
-  }
-  return dias;
-}
 
-// buildProjecaoLocal removida — proxy não fornece títulos individuais.
-// Usa buildProjecaoSimples definida acima (distribuição uniforme de CAR/CAP).
+  // Inicializa todos os dias do mês
+  const porDia = {};
+  for(let d = 1; d <= totD; d++) porDia[d] = { dia:d, futuro: d >= diaH, entradas:0, saidas:0 };
+
+  // Soma entradas (CAR) por dia de vencimento
+  (titulosCar || []).forEach(t => {
+    if(!t.vencimento) return;
+    const p = t.vencimento.split('-'); // formato ISO: yyyy-mm-dd
+    if(p.length !== 3) return;
+    const anoT = parseInt(p[0]), mesT = parseInt(p[1])-1, diaT = parseInt(p[2]);
+    if(mesT === mes && anoT === ano && porDia[diaT]) {
+      porDia[diaT].entradas += (t.valor || 0);
+    }
+  });
+
+  // Soma saídas (CAP) por dia de vencimento
+  (titulosCap || []).forEach(t => {
+    if(!t.vencimento) return;
+    const p = t.vencimento.split('-');
+    if(p.length !== 3) return;
+    const anoT = parseInt(p[0]), mesT = parseInt(p[1])-1, diaT = parseInt(p[2]);
+    if(mesT === mes && anoT === ano && porDia[diaT]) {
+      porDia[diaT].saidas += (t.valor || 0);
+    }
+  });
+
+  return Object.values(porDia).map(d => ({
+    dia: d.dia, futuro: d.futuro,
+    entradas: Math.round(d.entradas*100)/100,
+    saidas:   Math.round(d.saidas*100)/100
+  }));
+}
 
 // Força busca ignorando cache do proxy (passa refresh=1)
 window.sincronizarOmieForcar = async function() {
@@ -2347,13 +2379,21 @@ window.sincronizarOmieForcar = async function() {
     if(d && d.erro) throw new Error(d.msg);
 
     STATE.omie = {
-      a_receber: d.a_receber||0, a_pagar: d.a_pagar||0,
+      a_receber: d.a_receber||0,
+      a_receber_atras: d.a_receber_atras||0,
+      a_receber_fut: d.a_receber_fut||0,
+      a_pagar: d.a_pagar||0,
+      a_pagar_futuro: d.a_pagar_futuro||0,
+      a_pagar_total: d.a_pagar_total||((d.a_pagar||0)+(d.a_pagar_futuro||0)),
+      total_mes_car: d.total_mes_car||0,
+      total_mes_cap: d.total_mes_cap||0,
       recebido_mes: d.recebido_mes||0, pago_mes: d.pago_mes||0,
-      qtd_car: d.qtd_car||0, qtd_cap: d.qtd_cap||0,
+      qtd_car: d.qtd_car||0, qtd_car_atras: d.qtd_car_atras||0,
+      qtd_cap: d.qtd_cap||0, qtd_cap_futuro: d.qtd_cap_futuro||0,
       qtd_venc: d.qtd_venc||0, vencido: d.vencido||0,
       titulos_car: d.titulos_car||[], titulos_cap: d.titulos_cap||[],
       titulos_vencidos: d.titulos_vencidos||[],
-      projecao_diaria: d.projecao_diaria || buildProjecaoSimples(d.a_receber||0, d.a_pagar||0),
+      projecao_diaria: construirProjecaoDosTitulos(d.titulos_car||[], d.titulos_cap||[]),
       _sync: d._sync||new Date().toISOString(), _salvo: Date.now(),
       _demo: false, _cache: false
     };
@@ -2677,35 +2717,19 @@ function calcularProjecao() {
   const saldo = STATE.saldoManual?.valor || 0;
   const proj  = o.projecao_diaria || [];
 
-  // Usa o total real a pagar (vencido + a vencer) calculado no renderFinanceiro
-  const apagarTotal  = STATE._apagarTotal  || (o.a_pagar || 0);
-  const apagarFuturo = STATE._apagarFuturo || 0;
-
-  // Acumula saldo dia a dia a partir do saldo manual
-  let acum = saldo;
-  let projFinal = saldo;
-  if(proj.length) {
-    // O proxy fornece projeção diária com entradas/saídas por dia
-    // Mas pode estar sem os títulos a vencer — complementa com a_pagar_futuro se houver
-    const totalSaidasProj = proj.reduce((s,d)=>s+(d.saidas||0),0);
-    proj.forEach(d => { acum += (d.entradas||0) - (d.saidas||0); });
-    // Se a projeção cobre só o vencido e há futuros, desconta a diferença do saldo final
-    if(apagarFuturo > 0 && totalSaidasProj < apagarTotal * 0.5) {
-      acum -= apagarFuturo;
-    }
-    projFinal = acum;
-  } else {
-    // Fallback: usa totais completos (a_receber pendente + saldo - total a pagar)
-    projFinal = saldo + (o.a_receber||0) - apagarTotal;
-  }
+  // PROJEÇÃO FIM DO MÊS = saldo atual + tudo a receber pendente - tudo a pagar pendente
+  // Lógica simples e correta: o que tenho + o que vou receber - o que vou pagar
+  const carPendente = o.a_receber    || 0;
+  const capPendente = o.a_pagar_total || ((o.a_pagar||0) + (o.a_pagar_futuro||0));
+  const projFinal   = saldo + carPendente - capPendente;
 
   const set2 = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   set2('fk-proj', fmtBRL0(projFinal));
 
   const badge = document.getElementById('fk-proj-badge');
   if(badge) {
-    badge.textContent   = projFinal >= 0 ? '✓ Caixa positivo' : '⚠ Risco de caixa negativo';
-    badge.className     = 'kpi-badge ' + (projFinal >= 0 ? 'bg' : 'br');
+    badge.textContent = projFinal >= 0 ? '✓ Caixa positivo' : '⚠ Risco de caixa negativo';
+    badge.className   = 'kpi-badge ' + (projFinal >= 0 ? 'bg' : 'br');
   }
 
   const now    = new Date();
@@ -2713,7 +2737,7 @@ function calcularProjecao() {
   const totD   = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
   const projEnd= document.getElementById('fk-proj-end');
   if(projEnd) {
-    projEnd.textContent = 'Projeção dia ' + diaH + '/' + totD + ': ' + fmtBRL0(projFinal);
+    projEnd.textContent = 'Saldo projetado para fim do mês: ' + fmtBRL0(projFinal);
     projEnd.style.color = projFinal >= 0 ? 'var(--green)' : '#f87171';
   }
 
@@ -2723,18 +2747,8 @@ function calcularProjecao() {
     tickProj.style.color = projFinal >= 0 ? 'var(--green)' : '#f87171';
   }
 
-  // Guarda para o gráfico usar
   STATE._projFinal  = projFinal;
   STATE._projDiaria = proj;
-
-  // Badge vencidos
-  const vBadge = document.getElementById('fk-vencidos-badge');
-  if(vBadge) {
-    const qtdVenc = STATE.omie?.qtd_venc || 0;
-    const vlVenc  = STATE.omie?.vencido   || 0;
-    if(qtdVenc > 0) { vBadge.style.display='inline'; vBadge.textContent='⚠ '+qtdVenc+' vencido(s): '+fmtBRL0(vlVenc); }
-    else { vBadge.style.display='none'; }
-  }
 }
 
 
@@ -2755,7 +2769,7 @@ function desenharGrafico() {
   let acum = saldo0;
 
   for(let d = 1; d <= totalDias; d++) {
-    if(d > diaH) {
+    if(d >= diaH) {
       const dp = projArr.find(p => p.dia === d);
       if(dp) acum += (dp.entradas||0) - (dp.saidas||0);
     }
