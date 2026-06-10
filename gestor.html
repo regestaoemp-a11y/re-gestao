@@ -2662,7 +2662,7 @@ function renderInsights() {
   // Atrasados a receber
   if(carAtras > 0) {
     const qtd = o.qtd_venc || o.qtd_car_atras || 0;
-    insights.push({ tipo:'danger', ico:'🔴', txt: `${qtd} título(s) com R$ ${fmtBRL0(carAtras)} em atraso para receber. Acione cobrança imediatamente — cada dia de atraso compromete o caixa.` });
+    insights.push({ tipo:'danger', ico:'🔴', txt: `${qtd} título(s) com ${fmtBRL0(carAtras)} em atraso para receber. Acione cobrança imediatamente — cada dia de atraso compromete o caixa.` });
   }
 
   // Concentração de recebimento
