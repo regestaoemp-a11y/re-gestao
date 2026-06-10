@@ -275,18 +275,9 @@ body.light .kbprog{background:rgba(37,99,235,0.08);}
     <div class="lct">Acesso restrito · Equipe</div>
     <div class="conn" id="conn"><span class="conn-dot"></span><span id="conn-txt">Conectando ao Firebase…</span></div>
 
-    <div id="step1">
-      <div class="fl" style="margin-bottom:10px">Quem é você?</div>
-      <div class="colab-grid" id="colab-grid"><div class="l-loading">Carregando…</div></div>
-    </div>
-
-    <div id="step2" style="display:none">
-      <button class="lback" onclick="voltarStep1()">‹ Trocar de pessoa</button>
-      <div class="lsel-user">
-        <div class="lsel-av" id="lsel-av">?</div>
-        <div><div class="lsel-name" id="lsel-name">—</div><div class="lsel-lbl">Digite sua senha</div></div>
-      </div>
-      <div class="fg"><label class="fl">Senha</label><input class="fi lpw" type="password" id="lip" placeholder="••••" autocomplete="off"></div>
+    <div id="step-login">
+      <div class="fg"><label class="fl">E-mail</label><input class="fi" type="email" id="li-email" placeholder="seu.nome@regestaoempresarial.com.br" autocomplete="username"></div>
+      <div class="fg"><label class="fl">Senha</label><input class="fi lpw" type="password" id="lip" placeholder="••••••" autocomplete="current-password"></div>
       <button class="lb" onclick="login()">Entrar →</button>
       <div class="le" id="le"></div>
     </div>
@@ -405,6 +396,8 @@ body.light .kbprog{background:rgba(37,99,235,0.08);}
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, get, set, push, remove, onValue }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const FB_CFG = {
   apiKey:"AIzaSyB6Bs7sp88C1sfvZMXkUUPCaee1XHON3IM",
@@ -417,6 +410,7 @@ const FB_CFG = {
 };
 const app = getApps().length ? getApps()[0] : initializeApp(FB_CFG);
 const db  = getDatabase(app);
+const auth = getAuth(app);
 
 /* ─── ESTADO ─── */
 let CU=null, myEmp=[], myActs=[];
@@ -460,47 +454,90 @@ function applyTheme(){document.body.classList.toggle('light',isLight);const b=do
 applyTheme();
 window.toggleTheme=()=>{isLight=!isLight;applyTheme();};
 
-/* ═══ LOGIN ═══ */
-let todosColabs={}, colabSel=null;
-async function carregarColabs(){
-  const grid=document.getElementById('colab-grid');
+/* ═══ LOGIN — Firebase Auth (e-mail + senha) ═══ */
+let todosColabs={};
+
+// Atualiza status de conexão
+(function initConn(){
   const conn=document.getElementById('conn'), ctxt=document.getElementById('conn-txt');
   const setConn=(cls,msg)=>{if(conn)conn.className='conn '+cls;if(ctxt)ctxt.textContent=msg;};
-  const tmo=setTimeout(()=>setConn('err','Sem resposta do Firebase. Abra num NAVEGADOR (não no preview) e confira a internet.'),8000);
-  try{
-    const snap=await get(ref(db,'colaboradores'));clearTimeout(tmo);
+  const tmo=setTimeout(()=>setConn('err','Sem resposta do Firebase. Confira a internet.'),8000);
+  get(ref(db,'colaboradores')).then(snap=>{
+    clearTimeout(tmo);
     todosColabs=snap.val()||{};
-    const ativos=Object.entries(todosColabs).filter(([,c])=>c&&c.status!=='inativo'&&c.nome);
-    if(!ativos.length){setConn('err','Conectado, mas nenhum colaborador ativo.');grid.innerHTML='<div class="l-loading">Nenhum colaborador ativo.<br>Cadastre no painel do gestor.</div>';return;}
-    setConn('ok',`Firebase conectado · ${ativos.length} colaborador(es)`);
-    grid.innerHTML=ativos.map(([id,c])=>{
-      const[bg,txt]=avColor(c.cor);const semSenha=!(c.senha&&String(c.senha).trim());
-      return`<button class="colab-btn" onclick="selecionarColab('${id}')"><div class="cb-av" style="background:${bg};color:${txt}">${ini(c.nome)}</div><div><div class="cb-name">${esc(c.nome)}${semSenha?' ⚠':''}</div><div class="cb-role">${esc(c.cargo||c.role||'Colaboradora')}</div></div></button>`;
-    }).join('');
-  }catch(e){clearTimeout(tmo);const m=(e&&e.message||'').toLowerCase();setConn('err',m.includes('permission')?'Permissão negada nas regras do Realtime Database.':'Erro: '+(e&&e.message||'desconhecido'));grid.innerHTML='<div class="l-loading">Não foi possível carregar.<br>Veja o status acima.</div>';console.error(e);}
-}
-carregarColabs();
+    setConn('ok','Firebase conectado · acesse com e-mail e senha');
+  }).catch(e=>{
+    clearTimeout(tmo);
+    setConn('err','Erro de conexão: '+(e&&e.message||'desconhecido'));
+  });
+})();
 
-window.selecionarColab=id=>{
-  colabSel={id,...todosColabs[id]};document.getElementById('le').textContent='';
-  const[bg,txt]=avColor(colabSel.cor);const av=document.getElementById('lsel-av');av.textContent=ini(colabSel.nome);av.style.background=bg;av.style.color=txt;
-  document.getElementById('lsel-name').textContent=colabSel.nome;
-  document.getElementById('step1').style.display='none';document.getElementById('step2').style.display='block';
-  setTimeout(()=>document.getElementById('lip')?.focus(),100);
-};
-window.voltarStep1=()=>{colabSel=null;document.getElementById('le').textContent='';document.getElementById('lip').value='';document.getElementById('step2').style.display='none';document.getElementById('step1').style.display='block';};
+// Busca colaborador pelo e-mail autenticado
+function acharColabPorEmail(email){
+  const alvo=(email||'').toLowerCase().trim();
+  for(const [id,c] of Object.entries(todosColabs)){
+    if(!c) continue;
+    const ce=(c.email||'').toLowerCase().trim();
+    if(ce && ce===alvo) return {id,...c};
+  }
+  return null;
+}
+
 window.login=async()=>{
   const le=document.getElementById('le');
-  if(!colabSel){le.textContent='Selecione seu nome primeiro.';return;}
-  const p=(document.getElementById('lip').value||'').trim();le.textContent='';
-  const ok=(colabSel.senha!=null?String(colabSel.senha):'').trim();
-  if(!ok){le.textContent='Sem senha cadastrada. Defina uma no painel do gestor.';return;}
-  if(!p){le.textContent='Digite sua senha.';return;}
-  if(p!==ok&&p.toLowerCase()!==ok.toLowerCase()){le.textContent='Senha incorreta. Tente novamente.';const lip=document.getElementById('lip');lip.value='';lip.focus();return;}
-  CU=colabSel;await iniciar();
+  const email=(document.getElementById('li-email').value||'').trim();
+  const senha=(document.getElementById('lip').value||'').trim();
+  le.textContent='';
+  if(!email){le.textContent='Digite seu e-mail.';return;}
+  if(!senha){le.textContent='Digite sua senha.';return;}
+  le.textContent='Entrando…';
+  try{
+    await signInWithEmailAndPassword(auth, email, senha);
+    // onAuthStateChanged cuida do resto
+  }catch(e){
+    const m=(e&&e.code||'').toString();
+    if(m.includes('invalid-credential')||m.includes('wrong-password')||m.includes('user-not-found'))
+      le.textContent='E-mail ou senha incorretos.';
+    else if(m.includes('invalid-email'))
+      le.textContent='E-mail inválido.';
+    else if(m.includes('too-many-requests'))
+      le.textContent='Muitas tentativas. Aguarde alguns minutos.';
+    else
+      le.textContent='Erro ao entrar: '+(e&&e.message||m);
+  }
 };
+
 document.getElementById('lip').addEventListener('keydown',e=>{if(e.key==='Enter')window.login();});
-window.sair=async()=>{try{if(CU)await set(ref(db,`logins/${hoje()}/${CU.id}/hora_saida`),Date.now());}catch(e){}location.reload();};
+document.getElementById('li-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('lip').focus();});
+
+// Reage ao estado de autenticação
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){ CU=null; return; }
+  // Garante que a lista de colaboradores está carregada
+  if(!Object.keys(todosColabs).length){
+    try{ todosColabs=(await get(ref(db,'colaboradores'))).val()||{}; }catch(e){}
+  }
+  const colab=acharColabPorEmail(user.email);
+  const le=document.getElementById('le');
+  if(!colab){
+    if(le)le.textContent='Seu e-mail ('+user.email+') não está cadastrado como colaborador. Avise o gestor.';
+    try{ await signOut(auth); }catch(e){}
+    return;
+  }
+  if(colab.status==='inativo'){
+    if(le)le.textContent='Seu acesso está inativo. Fale com o gestor.';
+    try{ await signOut(auth); }catch(e){}
+    return;
+  }
+  CU=colab;
+  await iniciar();
+});
+
+window.sair=async()=>{
+  try{if(CU)await set(ref(db,`logins/${hoje()}/${CU.id}/hora_saida`),Date.now());}catch(e){}
+  try{await signOut(auth);}catch(e){}
+  location.reload();
+};
 
 /* ═══ INICIAR ═══ */
 async function iniciar(){
@@ -511,10 +548,11 @@ async function iniciar(){
   document.getElementById('tb-role').textContent=CU.cargo||'Colaboradora';
   try{await set(ref(db,`logins/${hoje()}/${CU.id}`),{ts:Date.now(),id:CU.id});}catch(e){}
 
-  // cargo supervisão → painel separado (em construção)
+  // cargo supervisão → painel de fiscalização real
   const nivel=(CU.nivel||CU.cargo||'').toString().toLowerCase();
   if(nivel.includes('supervis')){
-    document.getElementById('mb').innerHTML='<div class="emptystate"><div class="ico">🔎</div><h3>Painel de Supervisão</h3><p>Seu painel de fiscalização (resumo por empresa, por colaborador e tarefas personalizadas) está sendo preparado e chega na próxima atualização.</p></div>';
+    document.getElementById('tb-role').textContent='Supervisora';
+    await renderPainelSupervisao();
     return;
   }
 
@@ -522,6 +560,99 @@ async function iniciar(){
   carregarActs();
   await verificarAlertas();
   initCal();
+}
+
+/* ═══ PAINEL DE SUPERVISÃO ═══ */
+async function renderPainelSupervisao(){
+  const mb=document.getElementById('mb');
+  mb.innerHTML='<div class="emptystate"><div class="ico">🔎</div><h3>Carregando painel de supervisão…</h3></div>';
+
+  // Carrega colaboradoras, empresas e dados do mês
+  const [csnap, esnap] = await Promise.all([get(ref(db,'colaboradores')), get(ref(db,'empresas'))]);
+  const colabs = csnap.val()||{};
+  const empresas = esnap.val()||{};
+  const ativos = Object.entries(colabs).filter(([,c])=>c&&c.status!=='inativo'&&!(c.nivel||'').toLowerCase().includes('supervis'));
+
+  const now=new Date(), ano=now.getFullYear(), mes=now.getMonth();
+  const chkMes=`${ano}-${S2(mes+1)}`;
+
+  // Para cada colaboradora: conta tarefas pendentes/atrasadas e contatos
+  const dados=[];
+  for(const [uid,c] of ativos){
+    let pend=0, feito=0, total=0;
+    const empsColab = c.empresas||{};
+    try{
+      const ts=(await get(ref(db,`tarefa_status/${uid}`))).val()||{};
+      for(const [eid,porChk] of Object.entries(ts)){
+        if(!porChk) continue;
+        for(const [chk,tarefas] of Object.entries(porChk)){
+          if(!String(chk).startsWith(chkMes)) continue;
+          if(!tarefas||typeof tarefas!=='object') continue;
+          Object.values(tarefas).forEach(st=>{
+            total++;
+            if(st==='feito') feito++; else pend++;
+          });
+        }
+      }
+    }catch(e){}
+    const pct = total>0?Math.round(feito/total*100):0;
+    dados.push({uid, nome:c.nome, cargo:c.cargo, cor:c.cor, pend, feito, total, pct, nClientes:Object.keys(empsColab).length});
+  }
+
+  // Ordena por mais pendências primeiro (prioridade do supervisor)
+  dados.sort((a,b)=>b.pend-a.pend);
+
+  const totalPend = dados.reduce((s,d)=>s+d.pend,0);
+  const totalFeito= dados.reduce((s,d)=>s+d.feito,0);
+
+  const cardColab = d=>{
+    const [bg,txt]=avColor(d.cor);
+    const cor = d.pct>=80?'var(--green)':d.pct>=50?'var(--blue2)':'var(--amber)';
+    return `<div class="uc" style="padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="width:36px;height:36px;border-radius:50%;background:${bg};color:${txt};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">${ini(d.nome)}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${esc(d.nome)}</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${esc(d.cargo||'Colaboradora')} · ${d.nClientes} clientes</div>
+        </div>
+        ${d.pend>0?`<span style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--amber);background:rgba(245,166,35,0.12);padding:4px 10px;border-radius:6px">${d.pend} pendente${d.pend!==1?'s':''}</span>`:`<span style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--green);background:rgba(16,214,122,0.12);padding:4px 10px;border-radius:6px">✓ em dia</span>`}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;height:6px;background:var(--bg4);border-radius:99px;overflow:hidden">
+          <div style="height:100%;border-radius:99px;background:${cor};width:${d.pct}%"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;font-family:var(--mono);color:${cor}">${d.pct}%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:5px">
+        <span>${d.feito} concluídas</span><span>${d.total} no total do mês</span>
+      </div>
+    </div>`;
+  };
+
+  mb.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div class="uc" style="padding:14px 16px;text-align:center">
+        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:var(--amber)">${totalPend}</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px">Tarefas pendentes na equipe</div>
+      </div>
+      <div class="uc" style="padding:14px 16px;text-align:center">
+        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:var(--green)">${totalFeito}</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px">Tarefas concluídas no mês</div>
+      </div>
+      <div class="uc" style="padding:14px 16px;text-align:center">
+        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:var(--blue2)">${dados.length}</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px">Colaboradoras ativas</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text3);text-transform:uppercase;margin-bottom:10px;font-family:var(--mono)">
+      👥 Equipe · ordenada por pendências
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${dados.length?dados.map(cardColab).join(''):'<div class="emptystate"><div class="ico">👥</div><h3>Nenhuma colaboradora ativa</h3><p>Cadastre colaboradoras no painel do gestor.</p></div>'}
+    </div>
+    <div style="margin-top:18px;padding:12px 16px;background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;font-size:11px;color:var(--text2);line-height:1.6">
+      💡 Este painel mostra o status das tarefas de cada colaboradora no mês atual. Quem tem mais pendências aparece no topo, para você priorizar o acompanhamento.
+    </div>`;
 }
 
 async function carregarBase(){

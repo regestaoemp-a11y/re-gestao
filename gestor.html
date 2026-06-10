@@ -1376,7 +1376,7 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
               <div class="form-row fr3">
                 <div><label class="fl">Nome completo</label><input type="text" class="fi" id="nc-nome" placeholder="Ana Paula Silva"></div>
                 <div><label class="fl">Cargo / função</label><input type="text" class="fi" id="nc-cargo" placeholder="Analista Financeiro"></div>
-                <div><label class="fl">Usuário de acesso</label><input type="text" class="fi" id="nc-user" placeholder="ana.paula" oninput="gerarSenhaColab()"></div>
+                <div><label class="fl">E-mail de acesso</label><input type="email" class="fi" id="nc-user" placeholder="ana.paula@regestaoempresarial.com.br" oninput="gerarSenhaColab()"></div>
               </div>
               <div class="form-row fr3">
                 <div>
@@ -1386,6 +1386,19 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
                     <span class="badge ba">Temporária</span>
                   </div>
                 </div>
+                <div>
+                  <label class="fl">Nível de acesso</label>
+                  <select class="fi" id="nc-nivel">
+                    <option value="colaboradora">Colaboradora</option>
+                    <option value="supervisora">Supervisora</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="fl">Salário fixo mensal (R$)</label>
+                  <input type="number" class="fi" id="nc-salario" placeholder="3000.00" step="0.01" min="0">
+                </div>
+              </div>
+              <div class="form-row fr3">
                 <div>
                   <label class="fl">Cor de identificação</label>
                   <select class="fi" id="nc-cor">
@@ -1399,8 +1412,9 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
                 </div>
                 <div>
                   <label class="fl">Meta de pontos/mês</label>
-                  <input type="number" class="fi" id="nc-meta" value="100" min="10" max="500">
+                  <input type="number" class="fi" id="nc-meta" value="1000" min="100" max="2000">
                 </div>
+                <div></div>
               </div>
               <div style="display:flex;justify-content:flex-end;gap:8px">
                 <button class="btn btn-ghost" onclick="limparFormColab()">Cancelar</button>
@@ -1534,7 +1548,10 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
       <div class="tab-panel" id="cfg-atribuicoes">
         <div class="sec-header" style="margin-bottom:14px">
           <span class="sec-title">Atribuir empresas às colaboradoras</span>
-          <button class="btn btn-ghost btn-sm" onclick="salvarAtribuicoes()">💾 Salvar todas</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="limparEmpresasFantasma()" title="Remove empresas que não estão no seu cadastro ativo">🧹 Limpar fantasmas</button>
+            <button class="btn btn-ghost btn-sm" onclick="salvarAtribuicoes()">💾 Salvar todas</button>
+          </div>
         </div>
         <div class="colab-chips" id="atrib-colab-chips"><!-- gerado --></div>
         <div class="cfg-grid">
@@ -3289,6 +3306,21 @@ async function renderEquipe() {
     // Classificação
     c.faixa = c.scoreFinal>=900?'Excelente':c.scoreFinal>=700?'Bom':c.scoreFinal>=500?'Regular':'Atenção';
     c.faixaCor = c.scoreFinal>=900?'var(--green)':c.scoreFinal>=700?'var(--blue2)':c.scoreFinal>=500?'var(--amber)':'#f87171';
+
+    // ── Indicador carteira × salário ──────────────────────
+    // Soma o valor de contrato dos clientes que esta colaboradora atende
+    let valorCarteira = 0;
+    const empsColab = c.empresas || {};
+    for(const eid of Object.keys(empsColab)) {
+      const emp = empresas[eid];
+      if(emp && emp.status!=='inativo') valorCarteira += parseFloat(emp.valor_contrato||0);
+    }
+    c.valorCarteira = valorCarteira;
+    c.salarioFixo   = parseFloat(c.salario_fixo||0);
+    c.ratioCarteira = c.salarioFixo > 0 ? valorCarteira / c.salarioFixo : 0;
+    // 3x ideal (verde), 2x ok (azul), abaixo de 2x atenção (amber/vermelho)
+    c.ratioCor   = c.ratioCarteira>=3?'var(--green)':c.ratioCarteira>=2?'var(--blue2)':c.ratioCarteira>=1?'var(--amber)':'#f87171';
+    c.ratioLabel = c.ratioCarteira>=3?'Ideal':c.ratioCarteira>=2?'OK':c.ratioCarteira>=1?'Baixo':'Crítico';
   }
 
   const lista = Object.values(dados).sort((a,b)=>(b.scoreFinal||0)-(a.scoreFinal||0));
@@ -3368,6 +3400,22 @@ async function renderEquipe() {
           <div class="stat-lbl">Reuniões</div>
         </div>
       </div>
+      ${c.salarioFixo > 0 ? `
+      <div style="margin-top:10px;padding:9px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;border-left:3px solid ${c.ratioCor}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Carteira × Salário</span>
+          <span style="font-size:9px;font-weight:700;font-family:var(--mono);color:${c.ratioCor}">${c.ratioCarteira.toFixed(1)}x · ${c.ratioLabel}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:var(--bg4);border-radius:99px;overflow:hidden">
+            <div style="height:100%;border-radius:99px;background:${c.ratioCor};width:${Math.min(c.ratioCarteira/3*100,100)}%"></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:4px">
+          <span>Atende ${fmtBRL0(c.valorCarteira)}</span>
+          <span>Ganha ${fmtBRL0(c.salarioFixo)}</span>
+        </div>
+      </div>` : ''}
       <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">
         <button class="btn btn-ghost btn-sm" onclick="abrirAvaliacao('${c.uid}','${(c.nome||'').replace(/'/g,'')}')">⭐ Avaliar</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirAjustePts('${c.uid}','${(c.nome||'').replace(/'/g,'')}')">🎯 Ajustar</button>
@@ -4144,34 +4192,59 @@ window.resetarAcesso = async function(email) {
 };
 
 window.gerarSenhaColab = function() {
-  const uid = document.getElementById('nc-user')?.value?.trim();
+  const email = document.getElementById('nc-user')?.value?.trim();
   const sg  = document.getElementById('sg-val');
-  if(sg) sg.textContent = uid ? gerarSenhaTemp() : '—';
+  if(sg) sg.textContent = email ? gerarSenhaTemp() : '—';
 };
 
 window.adicionarColab = async function() {
-  const nome  = document.getElementById('nc-nome')?.value?.trim();
-  const cargo = document.getElementById('nc-cargo')?.value?.trim();
-  const uid   = document.getElementById('nc-user')?.value?.trim().toLowerCase().replace(/\s+/g,'.').replace(/[^a-z0-9.]/g,'');
-  const cor   = document.getElementById('nc-cor')?.value || 'blue';
-  const meta  = parseInt(document.getElementById('nc-meta')?.value || 100);
-  const msg   = document.getElementById('msg-colab');
-  if(!nome||!uid) { showMsg(msg,'Preencha nome e usuário.','err'); return; }
-  const snap = await get(ref(db,'colaboradores/'+uid));
-  if(snap.exists()) { showMsg(msg,'Usuário já existe.','err'); return; }
-  const senha = gerarSenhaTemp();
-  await set(ref(db,'colaboradores/'+uid), {nome,cargo,cor,meta_pontos:meta,status:'ativo',senha,senhaTemporaria:true,criadoEm:Date.now()});
-  const sg  = document.getElementById('sg-val');
-  if(sg) sg.textContent = senha;
+  const nome    = document.getElementById('nc-nome')?.value?.trim();
+  const cargo   = document.getElementById('nc-cargo')?.value?.trim();
+  const email   = document.getElementById('nc-user')?.value?.trim().toLowerCase();
+  const cor     = document.getElementById('nc-cor')?.value || 'blue';
+  const nivel   = document.getElementById('nc-nivel')?.value || 'colaboradora';
+  const salario = parseFloat(document.getElementById('nc-salario')?.value || 0);
+  const meta    = parseInt(document.getElementById('nc-meta')?.value || 1000);
+  const msg     = document.getElementById('msg-colab');
+  if(!nome || !email) { showMsg(msg,'Preencha nome e e-mail.','err'); return; }
+  if(!email.includes('@')) { showMsg(msg,'E-mail inválido.','err'); return; }
+
+  // Gera uid interno a partir do e-mail (parte antes do @)
+  const uid = email.split('@')[0].replace(/[^a-z0-9.]/g,'') + '_' + Date.now().toString().slice(-4);
+  const senha = (document.getElementById('sg-val')?.textContent || '').trim();
+  const senhaFinal = (senha && senha !== '—') ? senha : gerarSenhaTemp();
+
+  // Salva no Realtime Database
+  await set(ref(db,'colaboradores/'+uid), {
+    nome, cargo, email, cor, nivel,
+    salario_fixo: salario,
+    meta_pontos: meta,
+    status:'ativo',
+    senhaTemporaria:true,
+    criadoEm:Date.now()
+  });
+
+  // Cria conta no Firebase Auth (login por e-mail/senha)
+  let avisoAuth = '';
+  try {
+    await criarContaAuth(email, senhaFinal);
+  } catch(e) {
+    const m = (e&&e.code||'').toString();
+    if(m.includes('email-already-in-use')) avisoAuth = ' (conta de e-mail já existia — ok)';
+    else avisoAuth = ' (⚠ criar acesso manualmente: '+(e&&e.message||m)+')';
+  }
+
+  const sg = document.getElementById('sg-val');
+  if(sg) sg.textContent = senhaFinal;
   const notice = document.getElementById('sg-notice');
   if(notice) notice.style.display='block';
-  showMsg(msg,'✓ '+nome+' adicionada! Senha: '+senha,'ok');
-  limparFormColab();
+  showMsg(msg,'✓ '+nome+' adicionada! Login: '+email+' · Senha: '+senhaFinal+avisoAuth,'ok');
 };
 
 window.limparFormColab = function() {
-  ['nc-nome','nc-cargo','nc-user'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['nc-nome','nc-cargo','nc-user','nc-salario'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const sg = document.getElementById('sg-val'); if(sg) sg.textContent='—';
+  const meta = document.getElementById('nc-meta'); if(meta) meta.value='1000';
 };
 
 window.desativarColab = async function(uid) {
@@ -4540,7 +4613,8 @@ function renderAtribResumo() {
     const cor = COR_MAP[c?.cor||'blue'];
     const atrib = c?.empresas || {};
     const nomes = Object.keys(atrib)
-      .map(eid => STATE.empresas?.[eid]?.nome).filter(Boolean)
+      .map(eid => { const e = STATE.empresas?.[eid]; return (e && e.nome && e.status!=='inativo') ? e.nome : null; })
+      .filter(Boolean)
       .map(n => `<span style="font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px;background:var(--blue3);color:var(--blue2);border:1px solid var(--bdr)">${n}</span>`)
       .join('');
     return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr)">
@@ -4559,6 +4633,55 @@ window.salvarAtribuicoes = function() {
   msg.textContent = '✓ Atribuições salvas automaticamente no Firebase';
   document.body.appendChild(msg);
   setTimeout(()=>msg.remove(),2500);
+};
+
+window.limparEmpresasFantasma = async function() {
+  // Identifica empresas no banco que estão inativas ou sem nome (fantasmas/teste)
+  const todasEmp = STATE.empresas || {};
+  const fantasmas = Object.entries(todasEmp).filter(([eid,e]) =>
+    !e || !e.nome || e.status === 'inativo' || e.status === 'demo' || e._demo === true
+  );
+
+  // Também identifica atribuições órfãs (apontam para empresa que não existe)
+  const colabs = STATE.colaboradores || {};
+  let atribOrfas = [];
+  for(const [uid,c] of Object.entries(colabs)) {
+    const emps = c?.empresas || {};
+    for(const eid of Object.keys(emps)) {
+      if(!todasEmp[eid] || fantasmas.some(([fid])=>fid===eid)) {
+        atribOrfas.push({uid, eid, nome: todasEmp[eid]?.nome || eid});
+      }
+    }
+  }
+
+  const totalFant = fantasmas.length;
+  const totalOrf  = atribOrfas.length;
+
+  if(totalFant === 0 && totalOrf === 0) {
+    confirmar('Tudo limpo!', 'Nenhuma empresa fantasma ou atribuição órfã encontrada.', ()=>{});
+    return;
+  }
+
+  const listaFant = fantasmas.map(([,e])=>e?.nome||'(sem nome)').filter(n=>n!=='(sem nome)').slice(0,8).join(', ');
+  confirmar(
+    'Limpar '+totalFant+' empresa(s) e '+totalOrf+' atribuição(ões) órfã(s)?',
+    (listaFant ? 'Empresas a remover: '+listaFant+'. ' : '') + 'Isso remove do banco empresas inativas/teste e desatribui referências quebradas. Ação permanente.',
+    async ()=>{
+      // Remove empresas fantasma
+      for(const [eid] of fantasmas) {
+        try { await set(ref(db,'empresas/'+eid), null); } catch(e){}
+      }
+      // Remove atribuições órfãs
+      for(const {uid,eid} of atribOrfas) {
+        try { await set(ref(db,'colaboradores/'+uid+'/empresas/'+eid), null); } catch(e){}
+      }
+      const msg = document.createElement('div');
+      msg.style.cssText = 'position:fixed;bottom:80px;right:24px;background:var(--green);color:var(--bg);padding:10px 16px;border-radius:8px;font-family:var(--mono);font-size:11px;z-index:999';
+      msg.textContent = '✓ Limpeza concluída: '+totalFant+' empresa(s) e '+totalOrf+' atribuição(ões) removidas';
+      document.body.appendChild(msg);
+      setTimeout(()=>msg.remove(),3500);
+    }
+  );
 };
 
 // ─── CONFIG: ALERTAS ─────────────────────────────────────
