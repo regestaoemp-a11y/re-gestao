@@ -4302,8 +4302,8 @@ window.adicionarColab = async function() {
 
   showMsg(msg,'Salvando…','ok');
 
-  // Gera uid interno a partir do e-mail (parte antes do @)
-  const uid = email.split('@')[0].replace(/[^a-z0-9.]/g,'') + '_' + Date.now().toString().slice(-4);
+  // Gera uid interno a partir do e-mail (Firebase não aceita . # $ [ ] / em caminhos)
+  const uid = email.split('@')[0].replace(/[^a-z0-9]/g,'') + '_' + Date.now().toString().slice(-4);
   const senhaRaw = (document.getElementById('sg-val')?.textContent || '').trim();
   const senhaFinal = (senhaRaw && senhaRaw !== '—') ? senhaRaw : gerarSenhaTemp();
 
