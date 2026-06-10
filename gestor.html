@@ -4300,29 +4300,36 @@ window.adicionarColab = async function() {
   if(!nome || !email) { showMsg(msg,'Preencha nome e e-mail.','err'); return; }
   if(!email.includes('@')) { showMsg(msg,'E-mail inválido.','err'); return; }
 
+  showMsg(msg,'Salvando…','ok');
+
   // Gera uid interno a partir do e-mail (parte antes do @)
   const uid = email.split('@')[0].replace(/[^a-z0-9.]/g,'') + '_' + Date.now().toString().slice(-4);
-  const senha = (document.getElementById('sg-val')?.textContent || '').trim();
-  const senhaFinal = (senha && senha !== '—') ? senha : gerarSenhaTemp();
+  const senhaRaw = (document.getElementById('sg-val')?.textContent || '').trim();
+  const senhaFinal = (senhaRaw && senhaRaw !== '—') ? senhaRaw : gerarSenhaTemp();
 
-  // Salva no Realtime Database
-  await set(ref(db,'colaboradores/'+uid), {
-    nome, cargo, email, cor, nivel,
-    salario_fixo: salario,
-    meta_pontos: meta,
-    status:'ativo',
-    senhaTemporaria:true,
-    criadoEm:Date.now()
-  });
+  // Salva no Realtime Database (com tratamento de erro)
+  try {
+    await set(ref(db,'colaboradores/'+uid), {
+      nome, cargo, email, cor, nivel,
+      salario_fixo: salario,
+      meta_pontos: meta,
+      status:'ativo',
+      senhaTemporaria:true,
+      criadoEm:Date.now()
+    });
+  } catch(e) {
+    showMsg(msg,'❌ Erro ao salvar no banco: '+((e&&e.message)||'verifique as regras do Firebase'),'err');
+    return;
+  }
 
-  // Cria conta no Firebase Auth (login por e-mail/senha)
+  // Cria conta no Firebase Auth (login por e-mail/senha) — não bloqueia o cadastro se falhar
   let avisoAuth = '';
   try {
     await criarContaAuth(email, senhaFinal);
   } catch(e) {
     const m = (e&&e.code||'').toString();
     if(m.includes('email-already-in-use')) avisoAuth = ' (conta de e-mail já existia — ok)';
-    else avisoAuth = ' (⚠ criar acesso manualmente: '+(e&&e.message||m)+')';
+    else avisoAuth = ' (⚠ acesso não criado: '+(e&&e.message||m)+')';
   }
 
   const sg = document.getElementById('sg-val');
