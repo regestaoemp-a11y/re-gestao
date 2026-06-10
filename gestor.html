@@ -1454,6 +1454,24 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
                 <div><label class="fl">E-mail</label><input type="email" class="fi" id="emp-email" placeholder="contato@empresa.com.br"></div>
                 <div><label class="fl">Valor do contrato (R$)</label><input type="number" class="fi" id="emp-valor" placeholder="2500.00" step="0.01"></div>
               </div>
+              <div class="form-row fr2">
+                <div>
+                  <label class="fl">Frequência de contato esperada</label>
+                  <select class="fi" id="emp-frequencia">
+                    <option value="diario">Diário (todo dia útil)</option>
+                    <option value="2xsemana">2x por semana</option>
+                    <option value="semanal" selected>Semanal</option>
+                    <option value="quinzenal">Quinzenal</option>
+                    <option value="mensal">Mensal</option>
+                    <option value="sob_demanda">Sob demanda (sem meta)</option>
+                  </select>
+                </div>
+                <div style="display:flex;align-items:flex-end">
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);line-height:1.5;padding-bottom:8px">
+                    Usado para medir a produtividade da equipe no contato com este cliente.
+                  </div>
+                </div>
+              </div>
               <div style="display:flex;justify-content:flex-end;gap:8px">
                 <button class="btn btn-ghost" onclick="limparFormEmp()">Cancelar</button>
                 <button class="btn btn-primary" onclick="adicionarEmpresa()">＋ Adicionar Empresa</button>
@@ -1773,6 +1791,49 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-avaliacao">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">⭐ Avaliação do Gestor</div>
+        <div class="modal-sub" id="aval-nome">Colaboradora</div>
+      </div>
+      <button class="modal-close-btn" onclick="fecharModal('modal-avaliacao')">✕</button>
+    </div>
+    <input type="hidden" id="aval-uid">
+    <input type="hidden" id="aval-mes">
+    <div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;margin-bottom:16px">
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.6">
+        Sua nota de qualidade vale até <strong style="color:var(--blue2)">50 pontos</strong> no score mensal (5% do total).
+        Avalie a qualidade do trabalho, postura, proatividade — o que os números não capturam.
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div>
+        <label class="fl">Nota de qualidade (0 a 50)</label>
+        <input type="range" id="aval-slider" min="0" max="50" value="40" step="5"
+          oninput="document.getElementById('aval-valor-display').textContent=this.value"
+          style="width:100%">
+        <div style="text-align:center;margin-top:8px">
+          <span id="aval-valor-display" style="font-size:28px;font-weight:700;font-family:var(--mono);color:var(--blue2)">40</span>
+          <span style="font-size:14px;color:var(--text3)">/ 50</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div>
+        <label class="fl">Comentário (opcional)</label>
+        <textarea class="fi" id="aval-comentario" placeholder="Ex: Excelente postura com clientes, sempre proativa..." style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-avaliacao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAvaliacao()">💾 Salvar Avaliação</button>
+    </div>
+    <div class="msg" id="msg-avaliacao" style="margin-top:10px"></div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════════════════
      SCRIPTS: FIREBASE + LÓGICA PRINCIPAL
 ═══════════════════════════════════════════════════════ -->
@@ -1840,6 +1901,16 @@ const ultimoDiaUtil = () => {
 const fmtBRL = n => 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtBRL0 = n => 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
 const gerarSenhaTemp = () => 'RE-'+Math.floor(1000+Math.random()*9000);
+
+// Traduz código de frequência de contato para texto legível
+const freqLabel = (f) => ({
+  diario:'Diário', '2xsemana':'2x/semana', semanal:'Semanal',
+  quinzenal:'Quinzenal', mensal:'Mensal', sob_demanda:'Sob demanda'
+}[f] || 'Semanal');
+// Quantos contatos são esperados no mês para cada frequência (base: ~22 dias úteis, ~4.3 semanas)
+const freqContatosMes = (f) => ({
+  diario:22, '2xsemana':9, semanal:4, quinzenal:2, mensal:1, sob_demanda:0
+}[f] ?? 4);
 
 // ─── COR MAP ──────────────────────────────────────────────
 const COR_MAP = {
@@ -3057,33 +3128,48 @@ function renderListaTitulos(listId, titulos, cor) {
 }
 
 // ─── EQUIPE ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// METODOLOGIA 1.000 PONTOS — Weighted Scorecard
+// Pilares: Tarefas no prazo (400) · Sem pendências (250) ·
+//          Contato na frequência (200) · Reuniões (100) · Avaliação gestor (50)
+// ═══════════════════════════════════════════════════════════
+const PESOS_SCORE = { tarefas:400, semPendencia:250, contato:200, reunioes:100, avaliacao:50 };
+
 async function renderEquipe() {
-  const periodo = STATE.periodoEquipe;
-  let dateRange;
+  const periodo = STATE.periodoEquipe || 'mes';
   const now = new Date();
-  if(periodo==='hoje') dateRange = [hoje(), hoje()];
+  let dateRange, mesRef, anoRef;
+
+  if(periodo==='hoje') { dateRange=[hoje(),hoje()]; mesRef=now.getMonth(); anoRef=now.getFullYear(); }
   else if(periodo==='semana') {
-    const dom = new Date(now); dom.setDate(now.getDate()-now.getDay());
-    dateRange = [dom.toISOString().split('T')[0], hoje()];
+    const dom=new Date(now); dom.setDate(now.getDate()-now.getDay());
+    dateRange=[dom.toISOString().split('T')[0],hoje()]; mesRef=now.getMonth(); anoRef=now.getFullYear();
   } else if(periodo==='mes') {
-    dateRange = [`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`, hoje()];
+    dateRange=[`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`,hoje()];
+    mesRef=now.getMonth(); anoRef=now.getFullYear();
   } else {
-    const ant = new Date(now.getFullYear(), now.getMonth()-1, 1);
-    const fim = new Date(now.getFullYear(), now.getMonth(), 0);
-    dateRange = [ant.toISOString().split('T')[0], fim.toISOString().split('T')[0]];
+    const ant=new Date(now.getFullYear(),now.getMonth()-1,1);
+    const fim=new Date(now.getFullYear(),now.getMonth(),0);
+    dateRange=[ant.toISOString().split('T')[0],fim.toISOString().split('T')[0]];
+    mesRef=ant.getMonth(); anoRef=ant.getFullYear();
   }
 
-  // Coleta atividades do período
-  const colab = STATE.colaboradores || {};
+  const colab  = STATE.colaboradores || {};
   const ativos = Object.entries(colab).filter(([,c])=>c?.status!=='inativo');
+  const empresas = STATE.empresas || {};
 
-  // Para cada colaborador, soma pontos e tarefas
+  // Inicializa dados de cada colaboradora
   const dados = {};
   for(const [uid,c] of ativos) {
-    dados[uid] = { ...c, uid, pts:0, tarefas:0, clientes:new Set(), reunioes:0, horas:0, extras:0 };
+    dados[uid] = { ...c, uid,
+      tarefasFeitas:0, tarefasNoPrazo:0, tarefasAtrasadas:0, tarefasPendentes:0,
+      reunioes:0, horas:0, clientes:new Set(),
+      contatosPorEmp:{},  // {empId: nº de dias com contato}
+      ptsAtividade:0      // pontos brutos das atividades (referência)
+    };
   }
 
-  // Lê atividades de cada dia do período
+  // ── Varre atividades do período ────────────────────────
   const d0 = new Date(dateRange[0]+'T12:00:00');
   const d1 = new Date(dateRange[1]+'T12:00:00');
   for(let d=new Date(d0); d<=d1; d.setDate(d.getDate()+1)) {
@@ -3092,74 +3178,152 @@ async function renderEquipe() {
       const snap = await get(ref(db,`atividades/${key}`));
       const ativs = snap.val() || {};
       for(const [uid,ua] of Object.entries(ativs)) {
+        if(!dados[uid] || !ua || typeof ua!=='object') continue;
+        Object.values(ua).forEach(a => {
+          if(!a) return;
+          dados[uid].ptsAtividade += (a.pontos||0);
+          // Tarefa concluída (vinda do kanban)
+          if(a.tipo==='tarefa' || a.src==='kanban') {
+            dados[uid].tarefasFeitas++;
+            // Considera "no prazo" se concluída (kanban só marca feito quando faz)
+            // Atraso seria marcado separadamente; por ora toda feita conta como no prazo
+            dados[uid].tarefasNoPrazo++;
+          }
+          if(a.tipo==='reuniao_cliente' || a.tipo==='reuniao' || a.tipo==='visita_cliente') dados[uid].reunioes++;
+          if(a.empresa) dados[uid].clientes.add(a.empresa);
+        });
+      }
+      // Contatos registrados (novo: contatos/{dia}/{uid}/{empId})
+      const csnap = await get(ref(db,`contatos/${key}`));
+      const contatos = csnap.val() || {};
+      for(const [uid,emps] of Object.entries(contatos)) {
+        if(!dados[uid] || !emps) continue;
+        Object.keys(emps).forEach(empId => {
+          dados[uid].contatosPorEmp[empId] = (dados[uid].contatosPorEmp[empId]||0) + 1;
+          dados[uid].clientes.add(empId);
+        });
+      }
+      // Logins (horas no sistema)
+      const lsnap = await get(ref(db,`logins/${key}`));
+      const logins = lsnap.val() || {};
+      for(const [uid,login] of Object.entries(logins)) {
         if(!dados[uid]) continue;
-        if(ua && typeof ua==='object') {
-          Object.values(ua).forEach(a => {
-            if(!a) return;
-            dados[uid].pts += (a.pontos || 0);
-            dados[uid].tarefas++;
-            if(a.empresa) dados[uid].clientes.add(a.empresa);
-            if(a.tipo==='reuniao_cliente') dados[uid].reunioes++;
+        if(login?.ts && login?.hora_saida) dados[uid].horas += (login.hora_saida - login.ts)/3600000;
+      }
+    } catch(e){}
+  }
+
+  // ── Tarefas pendentes/atrasadas do mês (tarefa_status) ──
+  // Estrutura: tarefa_status/{uid}/{empId}/{chk}/{tid} = 'feito'|'andamento'|'pendente'
+  const chkMes = `${anoRef}-${String(mesRef+1).padStart(2,'0')}`;
+  for(const uid of Object.keys(dados)) {
+    try {
+      const ts = (await get(ref(db,`tarefa_status/${uid}`))).val() || {};
+      for(const [empId,porChk] of Object.entries(ts)) {
+        if(!porChk) continue;
+        for(const [chk,tarefas] of Object.entries(porChk)) {
+          // Só conta o mês de referência (chk pode ser 'yyyy-mm' ou 'yyyy-mm-dd')
+          if(!String(chk).startsWith(chkMes)) continue;
+          if(!tarefas || typeof tarefas!=='object') continue;
+          Object.values(tarefas).forEach(st => {
+            if(st==='feito') { /* já contado nas atividades */ }
+            else if(st==='andamento') dados[uid].tarefasPendentes++;
+            else dados[uid].tarefasPendentes++;
           });
         }
       }
-      // Logins
-      const lsnap = await get(ref(db,`logins/${key}`));
-      const logins = lsnap.val() || {};
-      for(const [uid, login] of Object.entries(logins)) {
-        if(!dados[uid]) continue;
-        if(login?.timestamp && login?.hora_saida) {
-          dados[uid].horas += (login.hora_saida - login.timestamp) / 3600000;
-        }
-      }
-    } catch(e) {}
+    } catch(e){}
   }
 
-  // Adiciona pontuação do mês (base Firebase)
+  // ── Avaliação do gestor (pontuacao/{mes}/{uid}/avaliacao 0-50) ──
   const ptsMes = STATE.pontuacao || {};
-  for(const [uid, pts] of Object.entries(ptsMes)) {
-    if(dados[uid] && periodo==='mes') {
-      dados[uid].pts_mes_base = pts.pontos_base || 0;
-      dados[uid].pts_extras = pts.pontos_extras || 0;
-      dados[uid].ajuste = pts.ajuste_gestor || 0;
+
+  // ── Calcula score ponderado de cada colaboradora ───────
+  for(const uid of Object.keys(dados)) {
+    const c = dados[uid];
+
+    // 1. Tarefas no prazo (400) — % de tarefas feitas vs (feitas+pendentes)
+    const totalTarefas = c.tarefasFeitas + c.tarefasPendentes;
+    const taxaPrazo = totalTarefas > 0 ? c.tarefasNoPrazo / totalTarefas : 0;
+    const sTarefas = Math.round(PESOS_SCORE.tarefas * taxaPrazo);
+
+    // 2. Sem pendências (250) — penaliza por tarefa pendente
+    const taxaPend = totalTarefas > 0 ? c.tarefasPendentes / totalTarefas : 0;
+    const sSemPend = Math.round(PESOS_SCORE.semPendencia * (1 - taxaPend));
+
+    // 3. Contato na frequência (200) — contatos feitos vs esperados por cliente
+    let contatoEsperado = 0, contatoFeito = 0;
+    for(const [empId,emp] of Object.entries(empresas)) {
+      if(emp?.status==='inativo') continue;
+      const freq = emp.frequencia_contato || 'semanal';
+      const esp  = freqContatosMes(freq);
+      if(esp === 0) continue; // sob demanda não entra na meta
+      // Só conta clientes que esta colaboradora atende (tem contato ou atividade)
+      const feitos = c.contatosPorEmp[empId] || 0;
+      if(feitos > 0 || c.clientes.has(empId)) {
+        contatoEsperado += esp;
+        contatoFeito    += Math.min(feitos, esp); // não passa de 100% por cliente
+      }
     }
+    const taxaContato = contatoEsperado > 0 ? contatoFeito / contatoEsperado : 0;
+    const sContato = Math.round(PESOS_SCORE.contato * taxaContato);
+
+    // 4. Reuniões (100) — cada reunião vale, teto em 4/mês = 100%
+    const metaReunioes = 4;
+    const sReunioes = Math.round(PESOS_SCORE.reunioes * Math.min(c.reunioes/metaReunioes, 1));
+
+    // 5. Avaliação do gestor (50) — nota manual 0-50
+    const aval = ptsMes[uid]?.avaliacao;
+    const sAval = (aval !== undefined && aval !== null) ? Math.min(Math.max(aval,0),50) : 0;
+    c.temAvaliacao = (aval !== undefined && aval !== null);
+
+    c.scoreTarefas  = sTarefas;
+    c.scoreSemPend  = sSemPend;
+    c.scoreContato  = sContato;
+    c.scoreReunioes = sReunioes;
+    c.scoreAval     = sAval;
+    c.scoreTotal    = sTarefas + sSemPend + sContato + sReunioes + sAval;
+    c.ajusteGestor  = ptsMes[uid]?.ajuste_gestor || 0;
+    c.scoreFinal    = Math.max(0, c.scoreTotal + c.ajusteGestor);
+
+    // Classificação
+    c.faixa = c.scoreFinal>=900?'Excelente':c.scoreFinal>=700?'Bom':c.scoreFinal>=500?'Regular':'Atenção';
+    c.faixaCor = c.scoreFinal>=900?'var(--green)':c.scoreFinal>=700?'var(--blue2)':c.scoreFinal>=500?'var(--amber)':'#f87171';
   }
 
-  const lista = Object.values(dados).sort((a,b) => (b.pts||0)-(a.pts||0));
+  const lista = Object.values(dados).sort((a,b)=>(b.scoreFinal||0)-(a.scoreFinal||0));
 
-  // KPIs gerais
-  const totalTarefas = lista.reduce((s,c)=>s+(c.tarefas||0),0);
-  const totalClientes = new Set(lista.flatMap(c=>[...c.clientes])).size;
-  const totalReunioes = lista.reduce((s,c)=>s+(c.reunioes||0),0);
-  const meta = lista.length > 0 ? lista.reduce((s,c)=>s+(c.meta_pontos||100),0)/lista.length : 100;
-  const mediaPts = lista.length > 0 ? lista.reduce((s,c)=>s+(c.pts||0),0)/lista.length : 0;
-  const prodMedia = Math.round(Math.min((mediaPts/meta)*100, 100));
-
+  // ── KPIs gerais da equipe ──────────────────────────────
   const set2 = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  const totalTarefas  = lista.reduce((s,c)=>s+c.tarefasFeitas,0);
+  const totalClientes = new Set(lista.flatMap(c=>[...c.clientes])).size;
+  const totalReunioes = lista.reduce((s,c)=>s+c.reunioes,0);
+  const mediaScore    = lista.length ? Math.round(lista.reduce((s,c)=>s+c.scoreFinal,0)/lista.length) : 0;
   set2('eq-tarefas', totalTarefas);
   set2('eq-clientes', totalClientes);
   set2('eq-reunioes', totalReunioes);
-  set2('eq-prod', prodMedia+'%');
+  set2('eq-prod', mediaScore + ' pts');
+  const prodLbl = document.querySelector('#equipe-kpis .kpi-card.blue .kpi-label');
+  if(prodLbl) prodLbl.textContent = 'Score médio da equipe';
+  const prodSub = document.querySelector('#equipe-kpis .kpi-card.blue .kpi-sub');
+  if(prodSub) prodSub.textContent = 'de 1.000 pontos';
 
-  // Cards individuais
+  // ── Cards individuais ──────────────────────────────────
   const container = document.getElementById('collab-cards-container');
   if(!container) return;
   const filtroUid = STATE.filtroColabUid;
-  const filtrados = filtroUid==='todos' ? lista : lista.filter(c=>c.uid===filtroUid);
+  const filtrados = (!filtroUid || filtroUid==='todos') ? lista : lista.filter(c=>c.uid===filtroUid);
 
   container.innerHTML = filtrados.map(c => {
-    const cor = COR_MAP[c.cor||'blue'];
+    const cor  = COR_MAP[c.cor||'blue'];
     const init = getIniciais(c.nome||'--');
-    const meta2 = c.meta_pontos || 100;
-    const pts = c.pts || 0;
-    const prod = Math.min(Math.round((pts/meta2)*100),100);
-    const circum = 2*Math.PI*32; // r=32
+    const score= c.scoreFinal;
+    const prod = Math.min(Math.round(score/10),100); // % visual sobre 1000
+    const circum = 2*Math.PI*32;
     const offset = circum - (prod/100)*circum;
-    const prodColor = prod>=80?'var(--green)':prod>=50?'var(--amber)':'#f87171';
-    const horas = c.horas.toFixed(1);
 
     return `<div class="collab-card">
-      <div class="card-accent" style="background:${cor.txt}"></div>
+      <div class="card-accent" style="background:${c.faixaCor}"></div>
       <div class="collab-header">
         <div class="collab-av" style="background:${cor.bg};color:${cor.txt}">${init}</div>
         <div>
@@ -3167,42 +3331,36 @@ async function renderEquipe() {
           <div class="collab-role">${c.cargo||'Analista'}</div>
         </div>
         <div class="collab-status">
-          <span class="sdot ${c._online?'on':'off'}"></span>
-          <span style="font-size:9px;font-family:var(--mono);color:${c._online?'var(--green)':'var(--text3)'}">${c._online?'online':'offline'}</span>
+          <span class="badge" style="background:${c.faixaCor}22;color:${c.faixaCor};font-size:9px">${c.faixa}</span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
         <div class="ring-wrap">
           <svg width="80" height="80" class="ring-svg">
             <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="8"/>
-            <circle cx="40" cy="40" r="32" fill="none" stroke="${prodColor}" stroke-width="8"
+            <circle cx="40" cy="40" r="32" fill="none" stroke="${c.faixaCor}" stroke-width="8"
               stroke-linecap="round" stroke-dasharray="${circum}" stroke-dashoffset="${offset}"
-              style="transition:stroke-dashoffset 1s ease;filter:drop-shadow(0 0 6px ${prodColor})"/>
+              style="transition:stroke-dashoffset 1s ease"/>
           </svg>
           <div class="ring-center">
-            <div class="ring-val" style="color:${prodColor};font-size:16px">${prod}%</div>
-            <div class="ring-unit">prod.</div>
+            <div class="ring-val" style="color:${c.faixaCor};font-size:15px">${score}</div>
+            <div class="ring-unit">/ 1000</div>
           </div>
         </div>
-        <div style="flex:1">
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
-            ${pts} pts de ${meta2} meta
-          </div>
-          <div class="kpi-prog-track">
-            <div class="kpi-prog-fill" style="background:${prodColor};width:${prod}%"></div>
-          </div>
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:4px">
-            ${[...c.clientes].length} clientes · ${horas}h no sistema
-          </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+          ${barraPilar('Tarefas no prazo', c.scoreTarefas, PESOS_SCORE.tarefas, 'var(--green)')}
+          ${barraPilar('Sem pendências', c.scoreSemPend, PESOS_SCORE.semPendencia, 'var(--amber)')}
+          ${barraPilar('Contato clientes', c.scoreContato, PESOS_SCORE.contato, 'var(--blue2)')}
+          ${barraPilar('Reuniões', c.scoreReunioes, PESOS_SCORE.reunioes, 'var(--purple)')}
         </div>
       </div>
       <div class="stats-row">
         <div class="stat-box">
-          <div class="stat-val" style="color:var(--cyan)">${c.tarefas}</div>
+          <div class="stat-val" style="color:var(--cyan)">${c.tarefasFeitas}</div>
           <div class="stat-lbl">Tarefas</div>
         </div>
         <div class="stat-box">
-          <div class="stat-val" style="color:var(--green)">${[...c.clientes].length}</div>
+          <div class="stat-val" style="color:var(--green)">${c.clientes.size}</div>
           <div class="stat-lbl">Clientes</div>
         </div>
         <div class="stat-box">
@@ -3211,29 +3369,37 @@ async function renderEquipe() {
         </div>
       </div>
       <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">
-        <button class="btn btn-ghost btn-sm" onclick="abrirAjustePts('${c.uid}','${c.nome.replace("'","")}')">🎯 Ajustar pts</button>
-        <button class="btn btn-ghost btn-sm" onclick="verDetalheColab('${c.uid}')">Ver detalhes</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirAvaliacao('${c.uid}','${(c.nome||'').replace(/'/g,'')}')">⭐ Avaliar</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirAjustePts('${c.uid}','${(c.nome||'').replace(/'/g,'')}')">🎯 Ajustar</button>
       </div>
     </div>`;
   }).join('');
 
-  // Ranking table
   renderRankingTable(filtrados);
-
-  // Feed
   renderFeedEquipe();
+}
+
+// Barra de pilar dentro do card
+function barraPilar(label, valor, max, cor) {
+  const pct = max>0 ? Math.round(valor/max*100) : 0;
+  return `<div>
+    <div style="display:flex;justify-content:space-between;font-size:8px;font-family:var(--mono);color:var(--text3);margin-bottom:2px">
+      <span>${label}</span><span style="color:${cor}">${valor}/${max}</span>
+    </div>
+    <div style="height:4px;background:var(--bg4);border-radius:99px;overflow:hidden">
+      <div style="height:100%;border-radius:99px;background:${cor};width:${pct}%"></div>
+    </div>
+  </div>`;
 }
 
 function renderRankingTable(lista) {
   const tbody = document.getElementById('ranking-tbody');
   if(!tbody) return;
   tbody.innerHTML = lista.map((c,i) => {
-    const cor = COR_MAP[c.cor||'blue'];
+    const cor  = COR_MAP[c.cor||'blue'];
     const init = getIniciais(c.nome||'--');
-    const meta2 = c.meta_pontos||100;
-    const pts = c.pts||0;
-    const prod = Math.min(Math.round((pts/meta2)*100),100);
-    const prodColor = prod>=80?'var(--green)':prod>=50?'var(--amber)':'#f87171';
+    const score= c.scoreFinal;
+    const prod = Math.min(Math.round(score/10),100);
     const rankColors = ['#fbbf24','#dce8ff','#a37c30'];
     const rc = rankColors[i]||'var(--text3)';
     return `<tr>
@@ -3246,26 +3412,24 @@ function renderRankingTable(lista) {
           </div>
         </div>
       </td>
-      <td><span class="badge ${c._online?'bg':''}"><span class="sdot ${c._online?'on':'off'}" style="margin-right:3px"></span>${c._online?'online':'offline'}</span></td>
-      <td style="font-family:var(--mono);font-size:14px;font-weight:700;color:${cor.txt}">${pts}</td>
+      <td><span class="badge" style="background:${c.faixaCor}22;color:${c.faixaCor}">${c.faixa}</span></td>
+      <td style="font-family:var(--mono);font-size:15px;font-weight:700;color:${c.faixaCor}">${score}<span style="font-size:9px;color:var(--text3)">/1000</span></td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <div style="flex:1;height:4px;background:var(--bg4);border-radius:99px;min-width:60px;overflow:hidden">
-            <div style="height:100%;border-radius:99px;background:${prodColor};width:${prod}%"></div>
+            <div style="height:100%;border-radius:99px;background:${c.faixaCor};width:${prod}%"></div>
           </div>
-          <span style="font-size:10px;font-family:var(--mono);color:${prodColor}">${prod}%</span>
+          <span style="font-size:10px;font-family:var(--mono);color:${c.faixaCor}">${prod}%</span>
         </div>
       </td>
-      <td style="font-family:var(--mono);font-size:12px">${c.tarefas||0}</td>
-      <td style="font-family:var(--mono);font-size:12px">${[...c.clientes].length}</td>
+      <td style="font-family:var(--mono);font-size:12px">${c.tarefasFeitas}</td>
+      <td style="font-family:var(--mono);font-size:12px">${c.clientes.size}</td>
       <td style="font-family:var(--mono);font-size:12px">${c.horas.toFixed(1)}h</td>
       <td>
-        <button class="btn btn-ghost btn-sm" onclick="abrirAjustePts('${c.uid}','${c.nome.replace("'","")}')">±</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirAvaliacao('${c.uid}','${(c.nome||'').replace(/'/g,'')}')">⭐</button>
       </td>
       <td>
-        <div style="width:24px;height:24px;border-radius:6px;background:${i<3?rc+'33':'var(--bg4)'};
-          color:${i<3?rc:'var(--text3)'};display:flex;align-items:center;justify-content:center;
-          font-size:11px;font-weight:700;font-family:var(--mono);margin:0 auto">#${i+1}</div>
+        <div style="width:24px;height:24px;border-radius:6px;background:${i<3?rc+'33':'var(--bg4)'};color:${i<3?rc:'var(--text3)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--mono);margin:0 auto">#${i+1}</div>
       </td>
     </tr>`;
   }).join('');
@@ -3365,10 +3529,36 @@ window.salvarAjustePts = async function() {
   await set(ref(db,`pontuacao/${mes}/${uid}/ajuste_gestor`), valor);
   await set(ref(db,`pontuacao/${mes}/${uid}/ajuste_motivo`), motivo);
   showMsg(msg,'✓ Ajuste salvo!','ok');
-  setTimeout(()=>fecharModal('modal-ajuste-pts'),1200);
+  setTimeout(()=>{ fecharModal('modal-ajuste-pts'); renderEquipe(); },1200);
 };
 
-window.verDetalheColab = function(uid) { /* TODO: modal detalhado */ };
+window.abrirAvaliacao = function(uid, nome) {
+  const am = anoMes();
+  document.getElementById('aval-uid').value = uid;
+  document.getElementById('aval-mes').value = am;
+  document.getElementById('aval-nome').textContent = nome;
+  const atual = STATE.pontuacao?.[uid]?.avaliacao;
+  const slider = document.getElementById('aval-slider');
+  const val = (atual !== undefined && atual !== null) ? atual : 40;
+  slider.value = val;
+  document.getElementById('aval-valor-display').textContent = val;
+  document.getElementById('aval-comentario').value = STATE.pontuacao?.[uid]?.avaliacao_comentario || '';
+  abrirModal('modal-avaliacao');
+};
+
+window.salvarAvaliacao = async function() {
+  const uid  = document.getElementById('aval-uid').value;
+  const mes  = document.getElementById('aval-mes').value;
+  const nota = parseInt(document.getElementById('aval-slider').value||0);
+  const com  = document.getElementById('aval-comentario').value;
+  const msg  = document.getElementById('msg-avaliacao');
+  await set(ref(db,`pontuacao/${mes}/${uid}/avaliacao`), nota);
+  await set(ref(db,`pontuacao/${mes}/${uid}/avaliacao_comentario`), com);
+  showMsg(msg,'✓ Avaliação salva!','ok');
+  setTimeout(()=>{ fecharModal('modal-avaliacao'); renderEquipe(); },1200);
+};
+
+window.verDetalheColab = function(uid) { /* reservado para versão futura */ };
 
 // ─── TAREFAS VIEW ─────────────────────────────────────────
 function renderTarefasView() {
@@ -4064,10 +4254,25 @@ function renderCfgEmpresas() {
             `<div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap">` +
               `<span class="badge bb">Contrato: ${fmtBRL0(e.valor_contrato)}</span>` +
               `<span class="badge bg">● Ativa</span>` +
+              `<span class="badge bp">📞 ${freqLabel(e.frequencia_contato)}</span>` +
               (tarefasEsp.length ? `<span class="badge bc">${tarefasEsp.length} tarefa(s) isolada(s)</span>` : '') +
             `</div>` +
           `</div>` +
           `<button class="btn btn-danger btn-sm" onclick="removerEmpresa('${eid}','${nomeEsc}')">Remover</button>` +
+        `</div>` +
+
+        // Edição rápida de frequência
+        `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:var(--bg4);border-radius:6px">` +
+          `<span style="font-size:10px;font-family:var(--mono);color:var(--text3)">📞 Frequência de contato:</span>` +
+          `<select class="fi" id="freq-edit-${eid}" style="padding:4px 8px;font-size:11px;flex:1;max-width:180px" onchange="salvarFrequencia('${eid}',this.value)">` +
+            `<option value="diario"${(e.frequencia_contato==='diario')?' selected':''}>Diário</option>` +
+            `<option value="2xsemana"${(e.frequencia_contato==='2xsemana')?' selected':''}>2x/semana</option>` +
+            `<option value="semanal"${(!e.frequencia_contato||e.frequencia_contato==='semanal')?' selected':''}>Semanal</option>` +
+            `<option value="quinzenal"${(e.frequencia_contato==='quinzenal')?' selected':''}>Quinzenal</option>` +
+            `<option value="mensal"${(e.frequencia_contato==='mensal')?' selected':''}>Mensal</option>` +
+            `<option value="sob_demanda"${(e.frequencia_contato==='sob_demanda')?' selected':''}>Sob demanda</option>` +
+          `</select>` +
+          `<span id="freq-ok-${eid}" style="font-size:10px;color:var(--green);font-family:var(--mono)"></span>` +
         `</div>` +
 
         // Divisor
@@ -4109,6 +4314,17 @@ function renderCfgEmpresas() {
   }).join('');
 }
 
+window.salvarFrequencia = async function(eid, freq) {
+  try {
+    await set(ref(db,`empresas/${eid}/frequencia_contato`), freq);
+    const ok = document.getElementById('freq-ok-'+eid);
+    if(ok) { ok.textContent = '✓ salvo'; setTimeout(()=>{ if(ok) ok.textContent=''; }, 2000); }
+  } catch(e) {
+    const ok = document.getElementById('freq-ok-'+eid);
+    if(ok) ok.textContent = '✕ erro';
+  }
+};
+
 window.adicionarEmpresa = async function() {
   const nome  = document.getElementById('emp-nome')?.value?.trim();
   const cnpj  = document.getElementById('emp-cnpj')?.value?.trim();
@@ -4117,10 +4333,11 @@ window.adicionarEmpresa = async function() {
   const tel   = document.getElementById('emp-tel')?.value?.trim();
   const email = document.getElementById('emp-email')?.value?.trim();
   const valor = parseFloat(document.getElementById('emp-valor')?.value||0);
+  const freq  = document.getElementById('emp-frequencia')?.value || 'semanal';
   const msg   = document.getElementById('msg-emp');
   if(!nome) { showMsg(msg,'Preencha o nome da empresa.','err'); return; }
   const uid = nome.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').substring(0,28)+'_'+Date.now().toString().slice(-4);
-  await set(ref(db,'empresas/'+uid),{nome,cnpj,segmento:seg,contato:cont,telefone:tel,email,valor_contrato:valor,status:'ativo',criadoEm:Date.now()});
+  await set(ref(db,'empresas/'+uid),{nome,cnpj,segmento:seg,contato:cont,telefone:tel,email,valor_contrato:valor,frequencia_contato:freq,status:'ativo',criadoEm:Date.now()});
   showMsg(msg,'✓ Empresa adicionada!','ok');
   limparFormEmp();
 };
