@@ -1682,6 +1682,96 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
   </div>
 </div>
 
+<!-- Modal: Editar colaborador -->
+<div class="modal-overlay" id="modal-edit-colab">
+  <div class="modal-box" style="width:480px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">✏️ Editar colaboradora</div>
+        <div class="modal-sub" id="edit-colab-sub">Atualize os dados e salve</div>
+      </div>
+      <button class="modal-close-btn" onclick="fecharModal('modal-edit-colab')">✕ fechar</button>
+    </div>
+    <input type="hidden" id="ec-uid">
+    <div class="form-row fr2" style="margin-bottom:10px">
+      <div><label class="fl">Nome completo</label><input type="text" class="fi" id="ec-nome"></div>
+      <div><label class="fl">Cargo / função</label><input type="text" class="fi" id="ec-cargo"></div>
+    </div>
+    <div class="form-row fr2" style="margin-bottom:10px">
+      <div><label class="fl">E-mail de acesso</label><input type="email" class="fi" id="ec-email"></div>
+      <div><label class="fl">Nível de acesso</label>
+        <select class="fi" id="ec-nivel">
+          <option value="colaboradora">Colaboradora</option>
+          <option value="supervisora">Supervisora</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row fr3" style="margin-bottom:14px">
+      <div><label class="fl">Salário fixo (R$)</label><input type="number" class="fi" id="ec-salario" step="0.01" min="0"></div>
+      <div><label class="fl">Meta pts/mês</label><input type="number" class="fi" id="ec-meta" min="100" max="2000"></div>
+      <div><label class="fl">Cor</label>
+        <select class="fi" id="ec-cor">
+          <option value="blue">🔵 Azul</option><option value="green">🟢 Verde</option>
+          <option value="amber">🟡 Âmbar</option><option value="purple">🟣 Roxo</option>
+          <option value="red">🔴 Vermelho</option><option value="cyan">🩵 Ciano</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:var(--blue3);border:1px solid var(--bdr);border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:10px;font-family:var(--mono);color:var(--text3)">
+      ℹ️ Alterar o e-mail aqui muda só o cadastro. Se mudar o e-mail de login, crie o novo acesso no Firebase também.
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-edit-colab')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdicaoColab()">💾 Salvar alterações</button>
+    </div>
+    <div class="msg" id="msg-edit-colab" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- Modal: Editar empresa -->
+<div class="modal-overlay" id="modal-edit-emp">
+  <div class="modal-box" style="width:480px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">✏️ Editar empresa</div>
+        <div class="modal-sub" id="edit-emp-sub">Atualize os dados e salve</div>
+      </div>
+      <button class="modal-close-btn" onclick="fecharModal('modal-edit-emp')">✕ fechar</button>
+    </div>
+    <input type="hidden" id="ee-eid">
+    <div class="form-row fr2" style="margin-bottom:10px">
+      <div><label class="fl">Nome da empresa</label><input type="text" class="fi" id="ee-nome"></div>
+      <div><label class="fl">CNPJ</label><input type="text" class="fi" id="ee-cnpj"></div>
+    </div>
+    <div class="form-row fr2" style="margin-bottom:10px">
+      <div><label class="fl">Segmento</label><input type="text" class="fi" id="ee-segmento"></div>
+      <div><label class="fl">Pessoa de contato</label><input type="text" class="fi" id="ee-contato"></div>
+    </div>
+    <div class="form-row fr2" style="margin-bottom:10px">
+      <div><label class="fl">Telefone</label><input type="text" class="fi" id="ee-tel"></div>
+      <div><label class="fl">E-mail</label><input type="email" class="fi" id="ee-email"></div>
+    </div>
+    <div class="form-row fr2" style="margin-bottom:14px">
+      <div><label class="fl">Valor do contrato (R$)</label><input type="number" class="fi" id="ee-valor" step="0.01" min="0"></div>
+      <div><label class="fl">Frequência de contato</label>
+        <select class="fi" id="ee-frequencia">
+          <option value="diario">Diário (todo dia útil)</option>
+          <option value="2xsemana">2x por semana</option>
+          <option value="semanal">Semanal</option>
+          <option value="quinzenal">Quinzenal</option>
+          <option value="mensal">Mensal</option>
+          <option value="sob_demanda">Sob demanda (sem meta)</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-edit-emp')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdicaoEmpresa()">💾 Salvar alterações</button>
+    </div>
+    <div class="msg" id="msg-edit-emp" style="margin-top:10px"></div>
+  </div>
+</div>
+
 <!-- Modal: Reset senha colaborador -->
 <div class="modal-overlay" id="modal-reset">
   <div class="modal-box" style="width:380px">
@@ -4059,12 +4149,13 @@ function renderCfgColaboradores() {
       <div class="item-av" style="background:${cor.bg};color:${cor.txt}">${init}</div>
       <div class="item-info">
         <div class="item-name" style="${inativo?'text-decoration:line-through':''}">${c?.nome||uid}</div>
-        <div class="item-sub">${uid} · ${c?.cargo||''}</div>
-        <div class="item-badges">${stBadge}<span class="badge bc">Meta: ${c?.meta_pontos||100}pts</span></div>
+        <div class="item-sub">${c?.email||uid} · ${c?.cargo||''}${(c?.nivel||'').toLowerCase().includes('supervis')?' · 👁️ Supervisora':''}</div>
+        <div class="item-badges">${stBadge}<span class="badge bc">Meta: ${c?.meta_pontos||1000}pts</span>${c?.salario_fixo?`<span class="badge bb">Salário: ${fmtBRL0(c.salario_fixo)}</span>`:''}</div>
       </div>
       <div class="item-actions">
         ${!inativo
-          ? `<button class="btn btn-ghost btn-sm" onclick="resetarSenha('${uid}','${(c?.nome||uid).replace("'","")}')">🔐 Senha</button>
+          ? `<button class="btn btn-ghost btn-sm" onclick="editarColab('${uid}')">✏️ Editar</button>
+             <button class="btn btn-ghost btn-sm" onclick="resetarSenha('${uid}','${(c?.nome||uid).replace("'","")}')">🔐 Senha</button>
              <button class="btn btn-danger btn-sm" onclick="desativarColab('${uid}')">Desativar</button>`
           : `<button class="btn btn-ghost btn-sm" onclick="reativarColab('${uid}')">Reativar</button>
              <button class="btn btn-danger btn-sm" onclick="excluirColabDef('${uid}')">🗑 Excluir</button>`
@@ -4239,12 +4330,58 @@ window.adicionarColab = async function() {
   const notice = document.getElementById('sg-notice');
   if(notice) notice.style.display='block';
   showMsg(msg,'✓ '+nome+' adicionada! Login: '+email+' · Senha: '+senhaFinal+avisoAuth,'ok');
+
+  // Limpa os campos para o próximo cadastro (mantém a senha à mostra para copiar)
+  ['nc-nome','nc-cargo','nc-user','nc-salario'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const metaEl = document.getElementById('nc-meta'); if(metaEl) metaEl.value='1000';
 };
 
 window.limparFormColab = function() {
   ['nc-nome','nc-cargo','nc-user','nc-salario'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const sg = document.getElementById('sg-val'); if(sg) sg.textContent='—';
   const meta = document.getElementById('nc-meta'); if(meta) meta.value='1000';
+};
+
+window.editarColab = function(uid) {
+  const c = STATE.colaboradores?.[uid];
+  if(!c) return;
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.value = v ?? ''; };
+  set('ec-uid', uid);
+  set('ec-nome', c.nome);
+  set('ec-cargo', c.cargo);
+  set('ec-email', c.email);
+  set('ec-nivel', (c.nivel||'colaboradora'));
+  set('ec-salario', c.salario_fixo||'');
+  set('ec-meta', c.meta_pontos||1000);
+  set('ec-cor', c.cor||'blue');
+  const sub = document.getElementById('edit-colab-sub');
+  if(sub) sub.textContent = 'Editando: '+(c.nome||uid);
+  const msg = document.getElementById('msg-edit-colab'); if(msg) msg.textContent='';
+  abrirModal('modal-edit-colab');
+};
+
+window.salvarEdicaoColab = async function() {
+  const uid = document.getElementById('ec-uid')?.value;
+  const msg = document.getElementById('msg-edit-colab');
+  if(!uid) { showMsg(msg,'Erro: colaboradora não identificada.','err'); return; }
+  const nome    = document.getElementById('ec-nome')?.value?.trim();
+  const cargo   = document.getElementById('ec-cargo')?.value?.trim();
+  const email   = document.getElementById('ec-email')?.value?.trim().toLowerCase();
+  const nivel   = document.getElementById('ec-nivel')?.value || 'colaboradora';
+  const salario = parseFloat(document.getElementById('ec-salario')?.value || 0);
+  const meta    = parseInt(document.getElementById('ec-meta')?.value || 1000);
+  const cor     = document.getElementById('ec-cor')?.value || 'blue';
+  if(!nome) { showMsg(msg,'Nome é obrigatório.','err'); return; }
+  try {
+    // update parcial — preserva empresas atribuídas, status, etc
+    await update(ref(db,'colaboradores/'+uid), {
+      nome, cargo, email, nivel, salario_fixo:salario, meta_pontos:meta, cor
+    });
+    showMsg(msg,'✓ Alterações salvas!','ok');
+    setTimeout(()=>fecharModal('modal-edit-colab'), 800);
+  } catch(e) {
+    showMsg(msg,'Erro ao salvar: '+(e&&e.message||''),'err');
+  }
 };
 
 window.desativarColab = async function(uid) {
@@ -4331,7 +4468,10 @@ function renderCfgEmpresas() {
               (tarefasEsp.length ? `<span class="badge bc">${tarefasEsp.length} tarefa(s) isolada(s)</span>` : '') +
             `</div>` +
           `</div>` +
-          `<button class="btn btn-danger btn-sm" onclick="removerEmpresa('${eid}','${nomeEsc}')">Remover</button>` +
+          `<div style="display:flex;flex-direction:column;gap:5px">` +
+            `<button class="btn btn-ghost btn-sm" onclick="editarEmpresa('${eid}')">✏️ Editar</button>` +
+            `<button class="btn btn-danger btn-sm" onclick="removerEmpresa('${eid}','${nomeEsc}')">Remover</button>` +
+          `</div>` +
         `</div>` +
 
         // Edição rápida de frequência
@@ -4424,6 +4564,49 @@ window.removerEmpresa = async function(eid, nome) {
   confirmar('Remover '+nome+'?','A empresa ficará inativa e poderá ser reativada.',async()=>{
     await set(ref(db,'empresas/'+eid+'/status'),'inativo');
   });
+};
+
+window.editarEmpresa = function(eid) {
+  const e = STATE.empresas?.[eid];
+  if(!e) return;
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.value = v ?? ''; };
+  set('ee-eid', eid);
+  set('ee-nome', e.nome);
+  set('ee-cnpj', e.cnpj);
+  set('ee-segmento', e.segmento);
+  set('ee-contato', e.contato);
+  set('ee-tel', e.telefone);
+  set('ee-email', e.email);
+  set('ee-valor', e.valor_contrato||'');
+  set('ee-frequencia', e.frequencia_contato||'semanal');
+  const sub = document.getElementById('edit-emp-sub');
+  if(sub) sub.textContent = 'Editando: '+(e.nome||eid);
+  const msg = document.getElementById('msg-edit-emp'); if(msg) msg.textContent='';
+  abrirModal('modal-edit-emp');
+};
+
+window.salvarEdicaoEmpresa = async function() {
+  const eid = document.getElementById('ee-eid')?.value;
+  const msg = document.getElementById('msg-edit-emp');
+  if(!eid) { showMsg(msg,'Erro: empresa não identificada.','err'); return; }
+  const nome = document.getElementById('ee-nome')?.value?.trim();
+  if(!nome) { showMsg(msg,'Nome é obrigatório.','err'); return; }
+  try {
+    await update(ref(db,'empresas/'+eid), {
+      nome,
+      cnpj:       document.getElementById('ee-cnpj')?.value?.trim()||'',
+      segmento:   document.getElementById('ee-segmento')?.value?.trim()||'',
+      contato:    document.getElementById('ee-contato')?.value?.trim()||'',
+      telefone:   document.getElementById('ee-tel')?.value?.trim()||'',
+      email:      document.getElementById('ee-email')?.value?.trim()||'',
+      valor_contrato: parseFloat(document.getElementById('ee-valor')?.value||0),
+      frequencia_contato: document.getElementById('ee-frequencia')?.value||'semanal'
+    });
+    showMsg(msg,'✓ Empresa atualizada!','ok');
+    setTimeout(()=>fecharModal('modal-edit-emp'), 800);
+  } catch(e) {
+    showMsg(msg,'Erro ao salvar: '+(e&&e.message||''),'err');
+  }
 };
 
 // ─── TAREFAS ISOLADAS POR EMPRESA ────────────────────────
