@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RE Gestão · Teste de Login</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#0a0e1a;color:#e2e8f0;max-width:600px;margin:0 auto;padding:24px;line-height:1.6}
+  h1{font-size:18px;color:#3b82f6}
+  .box{background:#131a2e;border:1px solid #1e293b;border-radius:10px;padding:16px;margin:12px 0}
+  label{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;margin-top:10px}
+  input{width:100%;padding:10px;border-radius:7px;border:1px solid #1e293b;background:#0a0e1a;color:#e2e8f0;font-size:14px;box-sizing:border-box}
+  button{width:100%;padding:12px;border-radius:7px;border:none;background:#3b82f6;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:14px}
+  button:hover{background:#2563eb}
+  #log{font-family:monospace;font-size:12px;white-space:pre-wrap;background:#0a0e1a;padding:12px;border-radius:7px;margin-top:12px;min-height:60px;border:1px solid #1e293b}
+  .ok{color:#10d67a}.err{color:#f87171}.warn{color:#f5a623}
+</style>
+</head>
+<body>
+<h1>🔍 RE Gestão · Diagnóstico de Login</h1>
+<p style="font-size:13px;color:#94a3b8">Esta página testa se o Firebase Auth está funcionando e se uma conta consegue logar. Use para descobrir por que o login falha.</p>
+
+<div class="box">
+  <label>E-mail da colaboradora</label>
+  <input type="email" id="email" placeholder="cassia.martins@regestaoempresarial.com.br">
+  <label>Senha</label>
+  <input type="text" id="senha" placeholder="RE-8691">
+  <button onclick="testar()">▶ Testar este login</button>
+  <button onclick="listarTudo()" style="background:#475569;margin-top:8px">📋 Listar colaboradores cadastrados no banco</button>
+</div>
+
+<div id="log">Aguardando teste…</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const FB_CFG = {
+  apiKey:"AIzaSyB6Bs7sp88C1sfvZMXkUUPCaee1XHON3IM",
+  authDomain:"re-gestao-online.firebaseapp.com",
+  databaseURL:"https://re-gestao-online-default-rtdb.firebaseio.com",
+  projectId:"re-gestao-online",
+  storageBucket:"re-gestao-online.firebasestorage.app",
+  messagingSenderId:"1234567890",
+  appId:"1:1234567890:web:abcdef"
+};
+
+const app = initializeApp(FB_CFG);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const log = document.getElementById('log');
+const w = (msg,cls='') => { log.innerHTML += '\n'+(cls?`<span class="${cls}">${msg}</span>`:msg); };
+
+// Verifica origem
+if(location.protocol === 'file:') {
+  log.innerHTML = '<span class="err">⚠ ATENÇÃO: Você abriu pelo ARQUIVO (file://).\nO Firebase Auth NÃO funciona assim!\nSuba no GitHub e teste pela URL https://...github.io/</span>';
+} else {
+  log.innerHTML = '<span class="ok">✓ Origem OK: '+location.protocol+'//'+location.host+'</span>\nPronto para testar.';
+}
+
+window.testar = async () => {
+  const email = document.getElementById('email').value.trim().toLowerCase();
+  const senha = document.getElementById('senha').value.trim();
+  log.innerHTML = '';
+  w('🔄 Testando login de: '+email);
+  if(location.protocol==='file:'){ w('❌ Impossível testar em file:// — suba no GitHub primeiro.','err'); return; }
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, senha);
+    w('✅ LOGIN FUNCIONOU!','ok');
+    w('   UID Firebase: '+cred.user.uid,'ok');
+    w('   A conta existe e a senha está correta.','ok');
+    w('\nAgora vou ver se ela está no cadastro de colaboradores…');
+    const snap = await get(ref(db,'colaboradores'));
+    const todos = snap.val()||{};
+    let achou = false;
+    for(const [id,c] of Object.entries(todos)){
+      if(c && (c.email||'').toLowerCase().trim() === email){
+        achou = true;
+        w('✅ Encontrada no banco: '+c.nome+' (nível: '+(c.nivel||'colaboradora')+')','ok');
+      }
+    }
+    if(!achou) w('⚠ A conta loga, mas NÃO está em /colaboradores com esse e-mail. O painel vai bloquear. Verifique o e-mail no cadastro.','warn');
+    else w('\n🎉 TUDO CERTO! Essa colaboradora consegue usar o painel.','ok');
+  } catch(e) {
+    const code = (e&&e.code)||'';
+    w('❌ LOGIN FALHOU','err');
+    w('   Código: '+code,'err');
+    if(code.includes('invalid-credential')||code.includes('wrong-password')||code.includes('user-not-found')){
+      w('\n→ A conta NÃO existe no Auth OU a senha está errada.','warn');
+      w('→ Solução: no gestor, use o botão "🔐 Senha" para resetar,','warn');
+      w('  ou recadastre a colaboradora.','warn');
+    } else if(code.includes('invalid-email')){
+      w('\n→ O e-mail está mal formatado.','warn');
+    } else if(code.includes('too-many-requests')){
+      w('\n→ Muitas tentativas. Aguarde uns minutos.','warn');
+    } else if(code.includes('operation-not-allowed')){
+      w('\n→ E-mail/senha não está ativado no Firebase Authentication.','warn');
+    } else {
+      w('\n→ '+(e&&e.message||''),'warn');
+    }
+  }
+};
+
+window.listarTudo = async () => {
+  log.innerHTML = '';
+  w('📋 Buscando colaboradores no banco…');
+  try {
+    const snap = await get(ref(db,'colaboradores'));
+    const todos = snap.val()||{};
+    const lista = Object.entries(todos);
+    if(!lista.length){ w('Nenhum colaborador cadastrado.','warn'); return; }
+    w('Encontrados '+lista.length+' cadastro(s):\n','ok');
+    lista.forEach(([id,c])=>{
+      if(!c) return;
+      w('• '+(c.nome||'(sem nome)'));
+      w('    e-mail: '+(c.email||'⚠ SEM E-MAIL'), c.email?'':'err');
+      w('    nível: '+(c.nivel||'colaboradora')+' · status: '+(c.status||'?'));
+    });
+    w('\n💡 O e-mail acima precisa ser EXATAMENTE o que a pessoa digita no login.','warn');
+  } catch(e) {
+    w('Erro ao ler banco: '+(e&&e.message),'err');
+  }
+};
+</script>
+</body>
+</html>
