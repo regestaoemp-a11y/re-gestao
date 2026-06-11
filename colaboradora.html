@@ -277,8 +277,17 @@ body.light .kbprog{background:rgba(37,99,235,0.08);}
 
     <div id="step-login">
       <div class="fg"><label class="fl">E-mail</label><input class="fi" type="email" id="li-email" placeholder="seu.nome@regestaoempresarial.com.br" autocomplete="username"></div>
-      <div class="fg"><label class="fl">Senha</label><input class="fi lpw" type="password" id="lip" placeholder="••••••" autocomplete="current-password"></div>
+      <div class="fg">
+        <label class="fl">Senha</label>
+        <div style="position:relative">
+          <input class="fi lpw" type="password" id="lip" placeholder="••••••" autocomplete="current-password" style="padding-right:42px">
+          <button type="button" onclick="toggleSenha()" id="olho-btn" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:4px;opacity:.6" title="Mostrar/ocultar senha">👁️</button>
+        </div>
+      </div>
       <button class="lb" onclick="login()">Entrar →</button>
+      <div style="text-align:center;margin-top:12px">
+        <button type="button" onclick="esqueciSenha()" style="background:none;border:none;color:var(--text3);font-size:11px;font-family:var(--mono);cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
+      </div>
       <div class="le" id="le"></div>
     </div>
   </div>
@@ -396,7 +405,7 @@ body.light .kbprog{background:rgba(37,99,235,0.08);}
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, get, set, push, remove, onValue }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const FB_CFG = {
@@ -482,6 +491,31 @@ function acharColabPorEmail(email){
   }
   return null;
 }
+
+window.toggleSenha=()=>{
+  const inp=document.getElementById('lip');
+  const btn=document.getElementById('olho-btn');
+  if(!inp)return;
+  if(inp.type==='password'){ inp.type='text'; if(btn){btn.textContent='🙈';btn.style.opacity='1';} }
+  else { inp.type='password'; if(btn){btn.textContent='👁️';btn.style.opacity='.6';} }
+};
+
+window.esqueciSenha=async()=>{
+  const le=document.getElementById('le');
+  const email=(document.getElementById('li-email').value||'').trim();
+  if(!email){ le.textContent='Digite seu e-mail acima primeiro, depois clique em "Esqueci minha senha".'; le.style.color='var(--amber)'; return; }
+  try{
+    await sendPasswordResetEmail(auth, email);
+    le.style.color='var(--green)';
+    le.textContent='✓ Enviamos um link para '+email+'. Verifique seu e-mail (e a caixa de spam) para criar uma nova senha.';
+  }catch(e){
+    le.style.color='#f87171';
+    const m=(e&&e.code||'').toString();
+    if(m.includes('user-not-found')) le.textContent='Esse e-mail não está cadastrado. Fale com o gestor.';
+    else if(m.includes('invalid-email')) le.textContent='E-mail inválido.';
+    else le.textContent='Erro ao enviar: '+(e&&e.message||m);
+  }
+};
 
 window.login=async()=>{
   const le=document.getElementById('le');

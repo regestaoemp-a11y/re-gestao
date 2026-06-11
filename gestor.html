@@ -4408,12 +4408,32 @@ window.excluirColabDef = async function(uid) {
 };
 
 window.resetarSenha = async function(uid, nome) {
-  const nova = gerarSenhaTemp();
-  await set(ref(db,'colaboradores/'+uid+'/senha'), nova);
-  await set(ref(db,'colaboradores/'+uid+'/senhaTemporaria'), true);
-  document.getElementById('modal-senha').textContent = nova;
-  document.getElementById('modal-nome').textContent  = nome;
-  abrirModal('modal-reset');
+  const c = STATE.colaboradores?.[uid];
+  const email = c?.email;
+  if(!email) {
+    confirmar('Sem e-mail', nome+' não tem e-mail cadastrado. Edite o cadastro e adicione o e-mail primeiro.', ()=>{});
+    return;
+  }
+  confirmar(
+    'Enviar redefinição de senha para '+nome+'?',
+    'Um e-mail será enviado para '+email+' com um link para ela criar uma nova senha. É o jeito seguro — você não precisa saber a senha dela.',
+    async ()=>{
+      try {
+        await sendPasswordResetEmail(auth, email);
+        const m = document.createElement('div');
+        m.style.cssText='position:fixed;bottom:80px;right:24px;background:var(--green);color:var(--bg);padding:12px 18px;border-radius:8px;font-family:var(--mono);font-size:11px;z-index:9999;max-width:320px';
+        m.textContent='✓ E-mail de redefinição enviado para '+email+'. Avise '+nome+' para verificar a caixa de entrada (e spam).';
+        document.body.appendChild(m);
+        setTimeout(()=>m.remove(),5000);
+      } catch(e) {
+        const m = document.createElement('div');
+        m.style.cssText='position:fixed;bottom:80px;right:24px;background:#f87171;color:#fff;padding:12px 18px;border-radius:8px;font-family:var(--mono);font-size:11px;z-index:9999;max-width:320px';
+        m.textContent='Erro: '+((e&&e.message)||'não foi possível enviar');
+        document.body.appendChild(m);
+        setTimeout(()=>m.remove(),5000);
+      }
+    }
+  );
 };
 
 window.copiarSenha = function() {

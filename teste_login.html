@@ -26,6 +26,7 @@
   <label>Senha</label>
   <input type="text" id="senha" placeholder="RE-8691">
   <button onclick="testar()">▶ Testar este login</button>
+  <button onclick="resetEmail()" style="background:#1D9E75;margin-top:8px">📧 Enviar e-mail para criar/redefinir senha</button>
   <button onclick="listarTudo()" style="background:#475569;margin-top:8px">📋 Listar colaboradores cadastrados no banco</button>
 </div>
 
@@ -34,7 +35,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const FB_CFG = {
   apiKey:"AIzaSyB6Bs7sp88C1sfvZMXkUUPCaee1XHON3IM",
@@ -99,6 +100,24 @@ window.testar = async () => {
     } else {
       w('\n→ '+(e&&e.message||''),'warn');
     }
+  }
+};
+
+window.resetEmail = async () => {
+  const email = document.getElementById('email').value.trim().toLowerCase();
+  log.innerHTML = '';
+  if(location.protocol==='file:'){ w('❌ Impossível em file:// — suba no GitHub primeiro.','err'); return; }
+  if(!email){ w('Digite o e-mail primeiro.','warn'); return; }
+  w('📧 Enviando e-mail de redefinição para '+email+'…');
+  try {
+    await sendPasswordResetEmail(auth, email);
+    w('✅ E-mail enviado!','ok');
+    w('   A pessoa deve abrir o e-mail e clicar no link para criar a senha.','ok');
+    w('   Depois disso, o login vai funcionar com a senha que ela criar.','ok');
+  } catch(e) {
+    w('❌ Erro: '+((e&&e.code)||e.message),'err');
+    if(((e&&e.code)||'').includes('user-not-found'))
+      w('   → Essa conta não existe no Auth. Cadastre a colaboradora no gestor.','warn');
   }
 };
 
