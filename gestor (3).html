@@ -1613,6 +1613,10 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
           <div id="acesso-gestor"></div>
         </div>
         <div class="sec-header" style="margin-bottom:10px"><span class="sec-title" style="font-size:13px">Acessos da equipe</span></div>
+        <div style="background:var(--blue3);border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);max-width:60%">Cria o login de TODA a equipe com a senha inicial <b style="color:var(--text)">123456</b>. No primeiro acesso, cada um troca pela senha pessoal. Use só pela URL https (GitHub Pages), não por file://.</div>
+          <button class="btn btn-primary" onclick="criarTodosAcessos()">🔑 Criar acessos (senha 123456)</button>
+        </div>
         <div id="acessos-list" style="display:flex;flex-direction:column;gap:10px">
           <div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">Carregando...</div>
         </div>
@@ -4050,11 +4054,14 @@ function renderCfgColaboradores() {
     const cor = COR_MAP[c?.cor||'blue'];
     const init = getIniciais(c?.nome||uid);
     const inativo = c?.status==='inativo';
-    const stBadge = inativo
+    const senhaChip = (!inativo && c?.senhaTemporaria && c?.senhaTemp)
+      ? ` <span class="badge bc" style="cursor:pointer;font-family:var(--mono)" title="Copiar credenciais para WhatsApp" onclick="copiarSenhaColab('${c.senhaTemp}','${(c?.nome||uid).replace(/'/g,'')}','${(c?.email||'').replace(/'/g,'')}')">🔑 ${c.senhaTemp} 📋</span>`
+      : '';
+    const stBadge = (inativo
       ? `<span class="badge br">● Desativada</span>`
       : c?.senhaTemporaria
         ? `<span class="badge ba ba-blink">⚠ Senha temp.</span>`
-        : `<span class="badge bg">● Ativa</span>`;
+        : `<span class="badge bg">● Ativa</span>`) + senhaChip;
     return `<div class="item-row" style="${inativo?'opacity:.5':''}">
       <div class="item-av" style="background:${cor.bg};color:${cor.txt}">${init}</div>
       <div class="item-info">
@@ -4143,6 +4150,37 @@ async function renderCfgAcessos() {
   }).join('');
 }
 
+window.criarTodosAcessos = async function() {
+  if(location.protocol === 'file:') {
+    alert('⚠ Você está abrindo por file://\n\nO Firebase Auth NÃO funciona assim — nenhuma conta será criada.\n\nSuba o gestor.html no GitHub Pages e acesse pela URL https://... e clique aqui de novo.');
+    return;
+  }
+  if(!confirm('Criar/garantir o login de toda a equipe com a senha inicial 123456?\n\nQuem já tiver conta NÃO será alterado (aviso no final).')) return;
+  const SENHA = '123456';
+  const colabs = STATE.colaboradores || {};
+  const ativos = Object.entries(colabs).filter(([,c]) => c && c.status!=='inativo' && c.email);
+  if(!ativos.length) { alert('Nenhum colaborador com e-mail cadastrado.'); return; }
+  const criados=[], existiam=[], erros=[];
+  for(const [uid,c] of ativos) {
+    try {
+      await criarContaAuth(c.email, SENHA);
+      await update(ref(db,'colaboradores/'+uid), { senhaTemp:SENHA, senhaTemporaria:true, email:c.email });
+      await update(ref(db,'roles_by_email/'+emailKey(c.email)), { role:(c.nivel||'').toLowerCase().includes('supervis')?'supervisao':'colaborador', colabId:uid, email:c.email });
+      criados.push(c.email);
+    } catch(e) {
+      const m = (e&&e.code||'').toString();
+      if(m.includes('email-already-in-use')) existiam.push(c.email);
+      else erros.push(c.email+' — '+(e&&e.message||m));
+    }
+  }
+  let msg = '';
+  if(criados.length) msg += '✓ Logins criados com senha 123456:\n• '+criados.join('\n• ')+'\n\n';
+  if(existiam.length) msg += '⚠ Já existiam (senha NÃO virou 123456).\nPara zerar para 123456: exclua em Authentication → Usuários e clique no botão de novo:\n• '+existiam.join('\n• ')+'\n\n';
+  if(erros.length) msg += '❌ Erros:\n• '+erros.join('\n• ')+'\n\n';
+  alert(msg + 'Agora cada um entra com a senha 123456 e o sistema pede para criar a senha pessoal.');
+  renderCfgAcessos();
+};
+
 window.criarAcessoGestor = async function() {
   const email = document.getElementById('ac-gestor-email')?.value?.trim();
   const msg = document.getElementById('msg-ac-gestor');
@@ -4224,37 +4262,44 @@ window.adicionarColab = async function() {
   if(!email) { showMsg(msg,'Preencha nome e e-mail.','err'); return; }
   if(!email.includes('@')) { showMsg(msg,'E-mail inválido.','err'); return; }
 
-  const uid = email.split('@')[0].replace(/[^a-z0-9.]/g,'') + '_' + Date.now().toString().slice(-4);
-  const senha = (document.getElementById('sg-val')?.textContent || '').trim();
-  const senhaFinal = (senha && senha !== '—') ? senha : gerarSenhaTemp();
-
-  await set(ref(db,'colaboradores/'+uid), {
-    nome, cargo, email, cor, nivel,
-    salario_fixo: salario,
-    meta_pontos: meta,
-    status:'ativo',
-    senhaTemporaria:true,
-    criadoEm:Date.now()
-  });
-
-  let avisoAuth = '';
   try {
-    await criarContaAuth(email, senhaFinal);
-  } catch(e) {
-    const m = (e&&e.code||'').toString();
-    if(m.includes('email-already-in-use')) avisoAuth = ' (conta de e-mail já existia — ok)';
-    else avisoAuth = ' (⚠ criar acesso manualmente: '+(e&&e.message||m)+')';
+    // uid interno SEM ponto/caracteres especiais (chave do Firebase não aceita '.')
+    const uid = email.split('@')[0].replace(/[^a-z0-9]/g,'') + '_' + Date.now().toString().slice(-4);
+    const senhaCampo = (document.getElementById('sg-val')?.textContent || '').trim();
+    const senhaFinal = (senhaCampo && senhaCampo !== '—') ? senhaCampo : gerarSenhaTemp();
+
+    await set(ref(db,'colaboradores/'+uid), {
+      nome, cargo: cargo||'', email, cor, nivel,
+      salario_fixo: salario||0,
+      meta_pontos: meta||1000,
+      status:'ativo',
+      senhaTemporaria:true,
+      senhaTemp: senhaFinal,
+      criadoEm:Date.now()
+    });
+
+    let avisoAuth = '';
+    try {
+      await criarContaAuth(email, senhaFinal);
+    } catch(e) {
+      const m = (e&&e.code||'').toString();
+      if(m.includes('email-already-in-use')) avisoAuth = ' (conta de e-mail já existia — ok)';
+      else avisoAuth = ' (⚠ criar acesso manualmente: '+(e&&e.message||m)+')';
+    }
+
+    const sg = document.getElementById('sg-val');
+    if(sg) sg.textContent = senhaFinal;
+    const notice = document.getElementById('sg-notice');
+    if(notice) notice.style.display='block';
+    showMsg(msg,'✓ '+nome+' adicionada! Login: '+email+' · Senha: '+senhaFinal+avisoAuth,'ok');
+
+    // limpa campos para o próximo cadastro (mantém a senha visível acima)
+    ['nc-nome','nc-cargo','nc-user','nc-salario'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    const metaEl=document.getElementById('nc-meta'); if(metaEl) metaEl.value='1000';
+  } catch(err) {
+    console.error('Erro ao adicionar colaborador:', err);
+    showMsg(msg,'Erro ao adicionar: '+((err&&err.message)||err),'err');
   }
-
-  const sg = document.getElementById('sg-val');
-  if(sg) sg.textContent = senhaFinal;
-  const notice = document.getElementById('sg-notice');
-  if(notice) notice.style.display='block';
-  showMsg(msg,'✓ '+nome+' adicionada! Login: '+email+' · Senha: '+senhaFinal+avisoAuth,'ok');
-
-  // limpa os campos para o próximo cadastro (mantém a senha visível acima)
-  ['nc-nome','nc-cargo','nc-user','nc-salario'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  const metaEl=document.getElementById('nc-meta'); if(metaEl) metaEl.value='1000';
 };
 
 window.editarColab = function(uid) {
@@ -4301,11 +4346,18 @@ window.excluirColabDef = async function(uid) {
 
 window.resetarSenha = async function(uid, nome) {
   const nova = gerarSenhaTemp();
-  await set(ref(db,'colaboradores/'+uid+'/senha'), nova);
-  await set(ref(db,'colaboradores/'+uid+'/senhaTemporaria'), true);
+  await update(ref(db,'colaboradores/'+uid), { senha: nova, senhaTemp: nova, senhaTemporaria: true });
   document.getElementById('modal-senha').textContent = nova;
   document.getElementById('modal-nome').textContent  = nome;
   abrirModal('modal-reset');
+};
+
+window.copiarSenhaColab = async function(senha, nome, email) {
+  const cred = (typeof msgCredencial==='function')
+    ? msgCredencial(nome, email, senha)
+    : ('Acesso RE Gestão\nE-mail: '+email+'\nSenha: '+senha);
+  let ok=false; try { ok = await (typeof copiarTxt==='function' ? copiarTxt(cred) : navigator.clipboard.writeText(cred).then(()=>true)); } catch(e){}
+  alert((ok ? '✓ Mensagem copiada — cole no WhatsApp:' : 'Copie a mensagem para o WhatsApp:') + '\n\n' + cred);
 };
 
 window.copiarSenha = function() {
