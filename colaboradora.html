@@ -601,7 +601,6 @@ async function renderPainelSupervisao(){
   const mb=document.getElementById('mb');
   mb.innerHTML='<div class="emptystate"><div class="ico">🔎</div><h3>Carregando painel de supervisão…</h3></div>';
 
-  // Carrega colaboradoras, empresas e dados do mês
   const [csnap, esnap] = await Promise.all([get(ref(db,'colaboradores')), get(ref(db,'empresas'))]);
   const colabs = csnap.val()||{};
   const empresas = esnap.val()||{};
@@ -609,12 +608,48 @@ async function renderPainelSupervisao(){
 
   const now=new Date(), ano=now.getFullYear(), mes=now.getMonth();
   const chkMes=`${ano}-${S2(mes+1)}`;
+  const hojeStr=`${ano}-${S2(mes+1)}-${S2(now.getDate())}`;
 
-  // Para cada colaboradora: conta tarefas pendentes/atrasadas e contatos
+  // frequência → dias máximos sem contato antes de virar risco
+  const freqDiasMax = {diario:1,'2xsemana':3,semanal:7,quinzenal:15,mensal:30,sob_demanda:999};
+  const freqLabelMap = {diario:'diário','2xsemana':'2x/semana',semanal:'semanal',quinzenal:'quinzenal',mensal:'mensal',sob_demanda:'sob demanda'};
+
+  // Carrega contatos dos últimos 31 dias (uma leitura por dia seria muito; lemos o nó inteiro)
+  let contatosTudo={};
+  try{ contatosTudo=(await get(ref(db,'contatos'))).val()||{}; }catch(e){}
+
+  // Para cada empresa, descobre o último contato (qualquer colaboradora)
+  function ultimoContatoEmp(eid){
+    let ultima=null;
+    for(const [dia,porUid] of Object.entries(contatosTudo)){
+      if(!porUid) continue;
+      for(const [uid,porEmp] of Object.entries(porUid)){
+        if(porEmp && porEmp[eid]){
+          if(!ultima || dia>ultima) ultima=dia;
+        }
+      }
+    }
+    return ultima; // 'YYYY-MM-DD' ou null
+  }
+  function diasDesde(diaStr){
+    if(!diaStr) return 999;
+    const [a,m,d]=diaStr.split('-').map(Number);
+    const dt=new Date(a,m-1,d);
+    return Math.floor((now - dt)/86400000);
+  }
+
+  // Monta dados por colaboradora + lista de clientes em risco
   const dados=[];
+  const clientesRisco=[];
+  let totalAtrasadas=0, totalFeito=0, totalTarefas=0;
+
   for(const [uid,c] of ativos){
-    let pend=0, feito=0, total=0;
+    let pend=0, feito=0, total=0, atrasadas=0;
     const empsColab = c.empresas||{};
+    const eids = Object.keys(empsColab);
+    let semContato=0;
+
+    // Tarefas do mês
     try{
       const ts=(await get(ref(db,`tarefa_status/${uid}`))).val()||{};
       for(const [eid,porChk] of Object.entries(ts)){
@@ -629,63 +664,126 @@ async function renderPainelSupervisao(){
         }
       }
     }catch(e){}
+
+    // Clientes em risco (contato + tarefas vencidas)
+    let contatosHoje=0;
+    for(const eid of eids){
+      const emp=empresas[eid];
+      if(!emp||emp.status==='inativo') continue;
+      const freq=emp.frequencia_contato||'semanal';
+      const limite=freqDiasMax[freq]??7;
+      if(freq==='sob_demanda') continue;
+      const ult=ultimoContatoEmp(eid);
+      const dias=diasDesde(ult);
+      // contato hoje?
+      if(contatosTudo[hojeStr]?.[uid]?.[eid]) contatosHoje++;
+      if(dias>limite){
+        semContato++;
+        clientesRisco.push({
+          empNome:emp.nome||'(cliente)', colab:c.nome, freq:freqLabelMap[freq]||freq,
+          dias: dias>=999?null:dias, nivel: dias>limite*2?'alto':'medio'
+        });
+      }
+    }
+
     const pct = total>0?Math.round(feito/total*100):0;
-    dados.push({uid, nome:c.nome, cargo:c.cargo, cor:c.cor, pend, feito, total, pct, nClientes:Object.keys(empsColab).length});
+    totalFeito+=feito; totalTarefas+=total;
+    dados.push({uid, nome:c.nome, cargo:c.cargo, cor:c.cor, pend, feito, total, pct,
+      nClientes:eids.length, semContato, contatosHoje, atrasadas});
   }
 
-  // Ordena por mais pendências primeiro (prioridade do supervisor)
-  dados.sort((a,b)=>b.pend-a.pend);
+  // Ordena clientes risco: alto primeiro, depois mais dias
+  clientesRisco.sort((a,b)=>{
+    if(a.nivel!==b.nivel) return a.nivel==='alto'?-1:1;
+    return (b.dias||0)-(a.dias||0);
+  });
+
+  // Ordena equipe: prioridade tarefas pendentes (item 1 do Robson)
+  dados.sort((a,b)=> b.pend-a.pend || b.semContato-a.semContato);
 
   const totalPend = dados.reduce((s,d)=>s+d.pend,0);
-  const totalFeito= dados.reduce((s,d)=>s+d.feito,0);
+  const totalSemContato = dados.reduce((s,d)=>s+d.semContato,0);
+  const pctEquipe = totalTarefas>0?Math.round(totalFeito/totalTarefas*100):0;
 
+  // KPIs (ordem de prioridade do Robson: atrasadas, sem contato, conclusão, equipe)
+  const kpis = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+      <div class="uc" style="padding:13px 15px;display:block">
+        <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">Tarefas pendentes</div>
+        <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${totalPend>0?'var(--amber)':'var(--green)'}">${totalPend}</div>
+      </div>
+      <div class="uc" style="padding:13px 15px;display:block">
+        <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">Clientes sem contato</div>
+        <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${totalSemContato>0?'#f87171':'var(--green)'}">${totalSemContato}</div>
+      </div>
+      <div class="uc" style="padding:13px 15px;display:block">
+        <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">Conclusão da equipe</div>
+        <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--blue2)">${pctEquipe}%</div>
+      </div>
+      <div class="uc" style="padding:13px 15px;display:block">
+        <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">Colaboradoras</div>
+        <div style="font-size:24px;font-weight:700;font-family:var(--mono)">${dados.length}</div>
+      </div>
+    </div>`;
+
+  // Seção: onde atuar primeiro (clientes em risco)
+  const riscoHtml = clientesRisco.length ? clientesRisco.slice(0,10).map(r=>{
+    const cor = r.nivel==='alto'?'#f87171':'var(--amber)';
+    const txt = r.dias===null?'sem contato registrado':`sem contato há ${r.dias} dia${r.dias!==1?'s':''}`;
+    return `<div style="background:var(--bg3);border:1px solid var(--bdr);border-left:3px solid ${cor};border-radius:0 8px 8px 0;padding:9px 13px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <div style="min-width:0;flex:1">
+        <span style="font-size:12px;font-weight:600">${esc(r.empNome)}</span>
+        <span style="font-size:10px;color:var(--text3);font-family:var(--mono)"> · ${esc(r.colab)} · contato ${r.freq}</span>
+      </div>
+      <span style="font-size:10px;font-weight:700;font-family:var(--mono);color:${cor};white-space:nowrap">${txt}</span>
+    </div>`;
+  }).join('') : '<div style="text-align:center;padding:14px;color:var(--green);font-family:var(--mono);font-size:11px">✓ Todos os clientes em dia com a frequência de contato</div>';
+
+  // Cards de colaboradora com detalhe acionável
   const cardColab = d=>{
     const [bg,txt]=avColor(d.cor);
     const cor = d.pct>=80?'var(--green)':d.pct>=50?'var(--blue2)':'var(--amber)';
-    return `<div class="uc" style="padding:14px 16px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="width:36px;height:36px;border-radius:50%;background:${bg};color:${txt};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">${ini(d.nome)}</div>
-        <div style="flex:1">
+    const statusBadge = d.semContato>0
+      ? `<span style="font-size:11px;font-weight:700;font-family:var(--mono);color:#f87171;background:rgba(248,113,113,0.12);padding:4px 10px;border-radius:6px">${d.semContato} cliente(s) sem contato</span>`
+      : d.pend>0
+        ? `<span style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--amber);background:rgba(245,166,35,0.12);padding:4px 10px;border-radius:6px">${d.pend} tarefa(s) pendente(s)</span>`
+        : `<span style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--green);background:rgba(16,214,122,0.12);padding:4px 10px;border-radius:6px">✓ em dia</span>`;
+    return `<div class="uc" style="padding:14px 16px;display:block">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+        <div style="width:34px;height:34px;border-radius:50%;background:${bg};color:${txt};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${ini(d.nome)}</div>
+        <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700">${esc(d.nome)}</div>
           <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${esc(d.cargo||'Colaboradora')} · ${d.nClientes} clientes</div>
         </div>
-        ${d.pend>0?`<span style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--amber);background:rgba(245,166,35,0.12);padding:4px 10px;border-radius:6px">${d.pend} pendente${d.pend!==1?'s':''}</span>`:`<span style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--green);background:rgba(16,214,122,0.12);padding:4px 10px;border-radius:6px">✓ em dia</span>`}
+        ${statusBadge}
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
         <div style="flex:1;height:6px;background:var(--bg4);border-radius:99px;overflow:hidden">
           <div style="height:100%;border-radius:99px;background:${cor};width:${d.pct}%"></div>
         </div>
         <span style="font-size:11px;font-weight:700;font-family:var(--mono);color:${cor}">${d.pct}%</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:5px">
-        <span>${d.feito} concluídas</span><span>${d.total} no total do mês</span>
+      <div style="display:flex;gap:16px;font-size:10px;font-family:var(--mono);color:var(--text3)">
+        <span>✓ ${d.feito}/${d.total} tarefas</span>
+        <span>📞 ${d.contatosHoje}/${d.nClientes} contatos hoje</span>
+        ${d.pend>0?`<span style="color:var(--amber)">⏳ ${d.pend} pendente(s)</span>`:''}
       </div>
     </div>`;
   };
 
-  mb.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-      <div class="uc" style="padding:14px 16px;text-align:center">
-        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:var(--amber)">${totalPend}</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px">Tarefas pendentes na equipe</div>
-      </div>
-      <div class="uc" style="padding:14px 16px;text-align:center">
-        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:var(--green)">${totalFeito}</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px">Tarefas concluídas no mês</div>
-      </div>
-      <div class="uc" style="padding:14px 16px;text-align:center">
-        <div style="font-size:26px;font-weight:700;font-family:var(--mono);color:var(--blue2)">${dados.length}</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px">Colaboradoras ativas</div>
-      </div>
+  mb.innerHTML = kpis + `
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#f87171;text-transform:uppercase;margin-bottom:9px;font-family:var(--mono)">
+      ⚠ Onde atuar primeiro · clientes em risco
     </div>
-    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text3);text-transform:uppercase;margin-bottom:10px;font-family:var(--mono)">
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">${riscoHtml}</div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text3);text-transform:uppercase;margin-bottom:9px;font-family:var(--mono)">
       👥 Equipe · ordenada por pendências
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      ${dados.length?dados.map(cardColab).join(''):'<div class="emptystate"><div class="ico">👥</div><h3>Nenhuma colaboradora ativa</h3><p>Cadastre colaboradoras no painel do gestor.</p></div>'}
+      ${dados.length?dados.map(cardColab).join(''):'<div class="emptystate"><div class="ico">👥</div><h3>Nenhuma colaboradora ativa</h3></div>'}
     </div>
     <div style="margin-top:18px;padding:12px 16px;background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;font-size:11px;color:var(--text2);line-height:1.6">
-      💡 Este painel mostra o status das tarefas de cada colaboradora no mês atual. Quem tem mais pendências aparece no topo, para você priorizar o acompanhamento.
+      💡 "Clientes em risco" são os que passaram do prazo de contato definido no cadastro de cada empresa. Vermelho = muito atrasado · âmbar = atenção. Configure a frequência de cada cliente no painel do gestor (Config → Empresas).
     </div>`;
 }
 
