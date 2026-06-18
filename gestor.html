@@ -865,7 +865,7 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
     </div>
     <div class="lg-foot">
       <span class="sdot-g"></span>
-      Firebase Auth · Acesso seguro por e-mail
+      Acesso restrito · RE Gestão
     </div>
   </div>
 </div>
@@ -1260,6 +1260,10 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
 
     <!-- ═══════════ VIEW: TAREFAS ═══════════ -->
     <div class="view" id="view-tarefas">
+
+      <div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:11px;color:var(--text2);line-height:1.6">
+        📋 <strong>Acompanhamento de tarefas em tempo real.</strong> Aqui você vê, por cliente, quais tarefas suas colaboradoras já concluíram (✓ verde, com o nome de quem fez) e quais ainda estão pendentes. Os números atualizam sozinhos conforme a equipe marca as tarefas no painel delas. Use para saber se cada cliente está sendo atendido como deveria.
+      </div>
 
       <!-- Barra de controle -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap">
@@ -2036,6 +2040,7 @@ let STATE = {
   empresas: {},
   tarefasPadrao: {},
   tarefas: {},
+  tarefaStatus: {},
   crm: {},
   pontuacao: {},
   omie: {},
@@ -2260,7 +2265,7 @@ function carregarDadosBase() {
   get(ref(db,'config/saldo_manual')).then(snap => {
     if(snap.val()) {
       STATE.saldoManual = snap.val();
-      renderSaldoKPI();
+      if(typeof renderFinanceiro === 'function') renderFinanceiro();
     }
   });
 
@@ -2304,6 +2309,14 @@ function carregarTarefasAtivas() {
     atualizarKPIsTarefas();
   });
   STATE.unsubs.push(unT);
+
+  // Status real marcado pelas colaboradoras (tarefa_status/{uid}/{empId}/{chk}/{tid})
+  const unTS = onValue(ref(db,'tarefa_status'), snap => {
+    STATE.tarefaStatus = snap.val() || {};
+    if(STATE.viewAtual==='tarefas') renderTarefasView();
+    atualizarKPIsTarefas();
+  });
+  STATE.unsubs.push(unTS);
 }
 
 // ─── NAVEGAÇÃO ────────────────────────────────────────────
@@ -2372,10 +2385,40 @@ function diasSemana(ds) {
 
 // ─── OMIE SYNC ────────────────────────────────────────────
 // Proxy: DASH RE GESTAO (Google Apps Script)
-// Action principal: financeiro_completo
-// Retorna: { a_receber, a_pagar, recebido_mes, pago_mes,
-//            qtd_car, qtd_cap, titulos_car[], titulos_cap[],
-//            projecao_diaria[], _cache, _salvo, _demo }
+// ─── SALDO MANUAL ─────────────────────────────────────────
+window.abrirModalSaldo = function() {
+  const inp  = document.getElementById('saldo-input');
+  const data = document.getElementById('saldo-data');
+  const obs  = document.getElementById('saldo-obs');
+  const msg  = document.getElementById('msg-saldo');
+  if(msg) msg.textContent = '';
+  // Pré-preenche com o saldo atual, se houver
+  if(inp)  inp.value  = STATE.saldoManual?.valor || '';
+  if(data) data.value = STATE.saldoManual?.data || new Date().toISOString().split('T')[0];
+  if(obs)  obs.value  = STATE.saldoManual?.obs || '';
+  abrirModal('modal-saldo');
+  setTimeout(()=>inp?.focus(), 100);
+};
+
+window.salvarSaldo = async function() {
+  const valor = parseFloat(document.getElementById('saldo-input')?.value || 0);
+  const data  = document.getElementById('saldo-data')?.value || new Date().toISOString().split('T')[0];
+  const obs   = document.getElementById('saldo-obs')?.value?.trim() || '';
+  const msg   = document.getElementById('msg-saldo');
+  if(!valor || valor <= 0) { showMsg(msg,'Informe um valor de saldo válido.','err'); return; }
+  try {
+    const dados = { valor, data, obs, atualizadoEm: Date.now() };
+    await set(ref(db,'config/saldo_manual'), dados);
+    STATE.saldoManual = dados;
+    showMsg(msg,'✓ Saldo salvo: '+fmtBRL0(valor),'ok');
+    renderFinanceiro(); // atualiza os cards e a projeção na hora
+    setTimeout(()=>fecharModal('modal-saldo'), 800);
+  } catch(e) {
+    showMsg(msg,'Erro ao salvar: '+((e&&e.message)||''),'err');
+  }
+};
+
+
 window.sincronizarOmie = async function sincronizarOmie() {
   const dot = document.getElementById('omie-dot');
   const sta = document.getElementById('omie-status');
@@ -3345,6 +3388,16 @@ async function renderEquipe() {
   // ── Avaliação do gestor (pontuacao/{mes}/{uid}/avaliacao 0-50) ──
   const ptsMes = STATE.pontuacao || {};
 
+  // ── Conta quantas colaboradoras ativas atendem cada empresa ──
+  // Usado para dividir o valor da carteira igualmente entre elas
+  const atendentesPorEmp = {};
+  for(const uid of Object.keys(dados)) {
+    const emps = colabs[uid]?.empresas || {};
+    for(const eid of Object.keys(emps)) {
+      atendentesPorEmp[eid] = (atendentesPorEmp[eid] || 0) + 1;
+    }
+  }
+
   // ── Calcula score ponderado de cada colaboradora ───────
   for(const uid of Object.keys(dados)) {
     const c = dados[uid];
@@ -3398,12 +3451,16 @@ async function renderEquipe() {
     c.faixaCor = c.scoreFinal>=900?'var(--green)':c.scoreFinal>=700?'var(--blue2)':c.scoreFinal>=500?'var(--amber)':'#f87171';
 
     // ── Indicador carteira × salário ──────────────────────
-    // Soma o valor de contrato dos clientes que esta colaboradora atende
+    // Soma o valor de contrato dos clientes que esta colaboradora atende.
+    // Se mais de uma colaboradora atende o mesmo cliente, o valor é dividido igualmente.
     let valorCarteira = 0;
     const empsColab = c.empresas || {};
     for(const eid of Object.keys(empsColab)) {
       const emp = empresas[eid];
-      if(emp && emp.status!=='inativo') valorCarteira += parseFloat(emp.valor_contrato||0);
+      if(emp && emp.status!=='inativo') {
+        const nAtend = atendentesPorEmp[eid] || 1;
+        valorCarteira += parseFloat(emp.valor_contrato||0) / nAtend;
+      }
     }
     c.valorCarteira = valorCarteira;
     c.salarioFixo   = parseFloat(c.salario_fixo||0);
@@ -3699,6 +3756,30 @@ window.salvarAvaliacao = async function() {
 window.verDetalheColab = function(uid) { /* reservado para versão futura */ };
 
 // ─── TAREFAS VIEW ─────────────────────────────────────────
+// Verifica se uma tarefa (empId/tid) foi marcada 'feito' por QUALQUER colaboradora
+// no período atual (diária = qualquer dia do mês; semanal/mensal = ano-mês).
+// Retorna {feito:bool, por:[nomes]} agregando tarefa_status de toda a equipe.
+function statusRealTarefa(empId, tid, tipo) {
+  const ts = STATE.tarefaStatus || {};
+  const am = anoMes(); // 'yyyy-mm'
+  let feito = false;
+  const por = [];
+  for(const [uid, porEmp] of Object.entries(ts)) {
+    const chks = porEmp?.[empId];
+    if(!chks) continue;
+    for(const [chk, tarefas] of Object.entries(chks)) {
+      // chk pode ser 'yyyy-mm-dd' (diária) ou 'yyyy-mm' (semanal/mensal)
+      if(!String(chk).startsWith(am)) continue;
+      if(tarefas && tarefas[tid] === 'feito') {
+        feito = true;
+        const nome = STATE.colaboradores?.[uid]?.nome;
+        if(nome && !por.includes(nome)) por.push(nome);
+      }
+    }
+  }
+  return { feito, por };
+}
+
 function renderTarefasView() {
   const am = anoMes();
   const empresas = Object.entries(STATE.empresas||{}).filter(([,e])=>e?.status!=='inativo');
@@ -3725,15 +3806,15 @@ function renderTarefasView() {
   const padraoS = Object.entries(padrao).filter(([,t])=>t?.tipo==='semanal'&&t?.ativa!==false);
   const padraoM = Object.entries(padrao).filter(([,t])=>t?.tipo==='mensal'&&t?.ativa!==false);
 
-  // KPIs globais
+  // KPIs globais — usa o status REAL marcado pelas colaboradoras (tarefa_status)
   let kD=0,kDt=0,kS=0,kSt=0,kM=0,kMt=0,kE=0,kEt=0;
   empsFiltradas.forEach(([eid,e]) => {
     const et = tarefasEmpDb[eid] || {};
     const esp= Object.entries(e.tarefas_especificas||{});
-    padraoD.forEach(([tid])=>{ const desativ=et[tid]?.desativada; if(!desativ){kDt++; if(et[tid]?.status==='feito') kD++;} });
-    padraoS.forEach(([tid])=>{ const desativ=et[tid]?.desativada; if(!desativ){kSt++; if(et[tid]?.status==='feito') kS++;} });
-    padraoM.forEach(([tid])=>{ const desativ=et[tid]?.desativada; if(!desativ){kMt++; if(et[tid]?.status==='feito') kM++;} });
-    esp.forEach(([tid])=>{ kEt++; if(et[tid]?.status==='feito') kE++; });
+    padraoD.forEach(([tid])=>{ const desativ=et[tid]?.desativada; if(!desativ){kDt++; if(statusRealTarefa(eid,tid,'diaria').feito) kD++;} });
+    padraoS.forEach(([tid])=>{ const desativ=et[tid]?.desativada; if(!desativ){kSt++; if(statusRealTarefa(eid,tid,'semanal').feito) kS++;} });
+    padraoM.forEach(([tid])=>{ const desativ=et[tid]?.desativada; if(!desativ){kMt++; if(statusRealTarefa(eid,tid,'mensal').feito) kM++;} });
+    esp.forEach(([tid])=>{ kEt++; if(statusRealTarefa(eid,tid,'especifica').feito) kE++; });
   });
 
   const set2=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
@@ -3759,14 +3840,14 @@ function renderTarefasView() {
     const et  = tarefasEmpDb[eid] || {};
     const esp = Object.entries(e.tarefas_especificas||{});
 
-    // Totais por coluna
+    // Totais por coluna — status REAL das colaboradoras
     const cD = padraoD.filter(([tid])=>!et[tid]?.desativada);
     const cS = padraoS.filter(([tid])=>!et[tid]?.desativada);
     const cM = padraoM.filter(([tid])=>!et[tid]?.desativada);
-    const fD = cD.filter(([tid])=>et[tid]?.status==='feito').length;
-    const fS = cS.filter(([tid])=>et[tid]?.status==='feito').length;
-    const fM = cM.filter(([tid])=>et[tid]?.status==='feito').length;
-    const fE = esp.filter(([tid])=>et[tid]?.status==='feito').length;
+    const fD = cD.filter(([tid])=>statusRealTarefa(eid,tid,'diaria').feito).length;
+    const fS = cS.filter(([tid])=>statusRealTarefa(eid,tid,'semanal').feito).length;
+    const fM = cM.filter(([tid])=>statusRealTarefa(eid,tid,'mensal').feito).length;
+    const fE = esp.filter(([tid])=>statusRealTarefa(eid,tid,'especifica').feito).length;
     const tot = cD.length+cS.length+cM.length+esp.length;
     const feit= fD+fS+fM+fE;
     const pct = tot>0?Math.round(feit/tot*100):0;
@@ -3774,31 +3855,26 @@ function renderTarefasView() {
 
     const renderItem = (tid, t, tipo, desativada=false) => {
       const task = et[tid] || {};
-      const st = desativada ? 'desativada' : (task.status||'pendente');
-      const stCls = {feito:'feito',andamento:'andamento',pendente:'pendente',desativada:'desativada'}[st]||'pendente';
-      const resp  = task.feita_por ? `👤 ${task.feita_por}` : '';
+      // Status REAL: agrega o que as colaboradoras marcaram em tarefa_status
+      const real = statusRealTarefa(eid, tid, t.tipo);
+      const st = desativada ? 'desativada' : (real.feito ? 'feito' : 'pendente');
+      const stCls = {feito:'feito',pendente:'pendente',desativada:'desativada'}[st]||'pendente';
+      const resp  = real.feito && real.por.length ? `✓ ${real.por.join(', ')}` : '';
       const ativo_p = st==='pendente'&&!desativada;
-      const ativo_a = st==='andamento'&&!desativada;
+      const ativo_a = false;
       const ativo_f = st==='feito'&&!desativada;
       return (
         `<div class="ck-item ${stCls}" id="cki-${eid}-${tid}">` +
           (tipo==='padrao'
             ? `<span class="ck-item-toggle" onclick="toggleDesativarTarefa('${eid}','${tid}',${desativada})" ` +
-              `title="${desativada?'Reativar':'Desativar'} para este cliente">${desativada?'◉':'○'}</span>`
+              `title="${desativada?'Reativar esta tarefa para este cliente':'Remover esta tarefa para este cliente'}">${desativada?'↺':'🗙'}</span>`
             : `<span class="ck-item-toggle" onclick="removerTarefaEsp('${eid}','${tid}')" title="Excluir">✕</span>`) +
           `<div class="ck-item-txt">${t.titulo||tid}</div>` +
           `<div class="ck-item-meta">` +
             `<span class="ck-item-resp">${resp}</span>` +
             (desativada
               ? `<span style="font-size:8px;font-family:var(--mono);color:var(--text3)">desativada</span>`
-              : `<div class="ck-item-status">` +
-                  `<button class="ck-status-btn${ativo_p?' active-p':''}" title="Pendente" ` +
-                  `onclick="setStatusTarefa('${eid}','${tid}','pendente')">○</button>` +
-                  `<button class="ck-status-btn${ativo_a?' active-a':''}" title="Em andamento" ` +
-                  `onclick="setStatusTarefa('${eid}','${tid}','andamento')">◑</button>` +
-                  `<button class="ck-status-btn${ativo_f?' active-f':''}" title="Concluída" ` +
-                  `onclick="setStatusTarefa('${eid}','${tid}','feito')">✓</button>` +
-                `</div>`) +
+              : `<span class="ck-status-selo" style="font-size:9px;font-family:var(--mono);padding:2px 8px;border-radius:5px;font-weight:600;${ativo_f?'background:rgba(16,214,122,0.14);color:var(--green)':'background:rgba(255,255,255,0.04);color:var(--text3)'}">${ativo_f?'✓ concluída':'○ pendente'}</span>`) +
           `</div>` +
         `</div>`
       );
@@ -4002,7 +4078,9 @@ function renderCRMBoard() {
     const total = items.reduce((s,[,l])=>s+(l.valor_fechado||l.valor_estimado||0),0);
     const cards = items.map(([lid,l]) => {
       const obs = l.observacoes?.[Object.keys(l.observacoes||{}).slice(-1)[0]]?.texto || l.obs_rapido || '';
-      return `<div class="crm-card" onclick="editarLead('${lid}')">
+      return `<div class="crm-card" draggable="true" data-lid="${lid}"
+        ondragstart="crmDragStart(event,'${lid}')" ondragend="crmDragEnd(event)"
+        onclick="editarLead('${lid}')">
         <div class="crm-drag-handle">⠿</div>
         <div class="crm-card-name">${l.nome||'—'}</div>
         ${l.valor_estimado||l.valor_fechado ? `<div class="crm-card-val">${fmtBRL0(l.valor_fechado||l.valor_estimado)}</div>` : ''}
@@ -4013,7 +4091,8 @@ function renderCRMBoard() {
       </div>`;
     }).join('');
 
-    return `<div class="kanban-col">
+    return `<div class="kanban-col" data-status="${col.id}"
+      ondragover="crmDragOver(event)" ondragleave="crmDragLeave(event)" ondrop="crmDrop(event,'${col.id}')">
       <div class="kanban-col-header">
         <div class="kanban-col-title">
           <span class="kcol-name" style="color:${col.cor}">${col.nome}</span>
@@ -4026,6 +4105,43 @@ function renderCRMBoard() {
     </div>`;
   }).join('');
 }
+
+// ── Drag and drop do CRM ──────────────────────────────────
+let crmDragLid = null;
+window.crmDragStart = function(ev, lid) {
+  crmDragLid = lid;
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.currentTarget.style.opacity = '0.4';
+};
+window.crmDragEnd = function(ev) {
+  ev.currentTarget.style.opacity = '1';
+  document.querySelectorAll('.kanban-col').forEach(c=>c.style.background='');
+};
+window.crmDragOver = function(ev) {
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+  const col = ev.currentTarget;
+  col.style.background = 'rgba(59,127,245,0.06)';
+};
+window.crmDragLeave = function(ev) {
+  ev.currentTarget.style.background = '';
+};
+window.crmDrop = async function(ev, novoStatus) {
+  ev.preventDefault();
+  ev.currentTarget.style.background = '';
+  if(!crmDragLid) return;
+  const lead = STATE.crm?.[crmDragLid];
+  if(!lead || lead.status === novoStatus) { crmDragLid = null; return; }
+  try {
+    await update(ref(db,'crm/'+crmDragLid), { status: novoStatus });
+    if(STATE.crm[crmDragLid]) STATE.crm[crmDragLid].status = novoStatus;
+    renderCRMBoard();
+    atualizarCRMHeader();
+  } catch(e) {
+    console.error('Erro ao mover lead:', e);
+  }
+  crmDragLid = null;
+};
 
 function atualizarCRMHeader() {
   const leads = STATE.crm || {};

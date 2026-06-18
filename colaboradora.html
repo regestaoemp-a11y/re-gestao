@@ -186,13 +186,13 @@ body.light .kbprog{background:rgba(37,99,235,0.08);}
 .tc.fn{opacity:.55;}
 .tc.fn .tcn{text-decoration:line-through;color:var(--text3);}
 .tct{display:flex;align-items:flex-start;gap:8px;}
-.tck{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--bdr2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .18s;cursor:pointer;}
-.tck:hover{border-color:var(--blue);transform:scale(1.1);}
+.tck{width:22px;height:22px;border-radius:6px;border:2px solid var(--blue2);background:rgba(59,127,245,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .18s;cursor:pointer;}
+.tck:hover{border-color:var(--blue);background:rgba(59,127,245,0.18);transform:scale(1.1);}
 .tc.fn .tck{background:var(--green);border-color:var(--green);}
 .tcn{font-size:11.5px;font-weight:500;line-height:1.4;flex:1;cursor:pointer;}
 .tc-pts{font-family:var(--mono);font-size:8px;color:var(--green);flex-shrink:0;font-weight:500;}
 .tc-actions{display:flex;gap:3px;flex-shrink:0;}
-.tc-ico{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--bdr2);background:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;padding:0;}
+.tc-ico{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--blue2);background:rgba(59,127,245,0.06);color:var(--blue2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;padding:0;}
 .tc-ico:hover{border-color:var(--blue);color:var(--blue2);}
 .tc-ico.del:hover{border-color:var(--red);color:var(--red);}
 .tc-ico.on{background:rgba(59,127,245,0.14);color:var(--blue2);border-color:var(--bdr3);}
@@ -273,7 +273,7 @@ body.light .kbprog{background:rgba(37,99,235,0.08);}
   <div class="lc">
     <div class="lcc ltl"></div><div class="lcc ltr"></div><div class="lcc lbl"></div><div class="lcc lbr"></div>
     <div class="lct">Acesso restrito · Equipe</div>
-    <div class="conn" id="conn"><span class="conn-dot"></span><span id="conn-txt">Conectando ao Firebase…</span></div>
+    <div class="conn" id="conn"><span class="conn-dot"></span><span id="conn-txt">Conectando…</span></div>
 
     <div id="step-login">
       <div class="fg"><label class="fl">E-mail</label><input class="fi" type="email" id="li-email" placeholder="seu.nome@regestaoempresarial.com.br" autocomplete="username"></div>
@@ -312,6 +312,9 @@ body.light .kbprog{background:rgba(37,99,235,0.08);}
   </div>
 
   <div class="alb" id="alb"><span>⚠</span><span id="alt">—</span></div>
+  <div id="incentivo" style="display:none;align-items:center;gap:8px;background:rgba(16,214,122,0.1);border:1px solid rgba(16,214,122,0.25);border-radius:10px;padding:10px 16px;margin:0 0 12px;font-size:12px;color:var(--green);font-weight:500">
+    <span id="incentivo-txt"></span>
+  </div>
 
   <div class="mb" id="mb">
     <!-- Sem empresas -->
@@ -361,6 +364,11 @@ body.light .kbprog{background:rgba(37,99,235,0.08);}
       </div>
 
       <!-- Kanban -->
+      <div style="display:flex;align-items:center;gap:16px;padding:8px 14px;margin-bottom:8px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;font-family:var(--mono);font-size:10px;color:var(--text3);flex-wrap:wrap">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:16px;border-radius:5px;border:2px solid var(--blue2);background:rgba(59,127,245,0.08);display:inline-block"></span> Pendente — clique para concluir</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:16px;border-radius:5px;background:var(--green);display:inline-flex;align-items:center;justify-content:center"><svg width="9" height="9" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Concluída — pontos contabilizados</span>
+        <span style="display:flex;align-items:center;gap:6px">📝 Observação · 💬 nota na tarefa</span>
+      </div>
       <div class="kbs" id="kb"></div>
 
       <!-- Feed de hoje -->
@@ -470,11 +478,11 @@ let todosColabs={};
 (function initConn(){
   const conn=document.getElementById('conn'), ctxt=document.getElementById('conn-txt');
   const setConn=(cls,msg)=>{if(conn)conn.className='conn '+cls;if(ctxt)ctxt.textContent=msg;};
-  const tmo=setTimeout(()=>setConn('err','Sem resposta do Firebase. Confira a internet.'),8000);
+  const tmo=setTimeout(()=>setConn('err','Sem resposta. Confira sua internet.'),8000);
   get(ref(db,'colaboradores')).then(snap=>{
     clearTimeout(tmo);
     todosColabs=snap.val()||{};
-    setConn('ok','Firebase conectado · acesse com e-mail e senha');
+    setConn('ok','Conectado · acesse com e-mail e senha');
   }).catch(e=>{
     clearTimeout(tmo);
     setConn('err','Erro de conexão: '+(e&&e.message||'desconhecido'));
@@ -818,6 +826,35 @@ async function verificarAlertas(){
     const sem=myEmp.filter(e=>!movidas.has(e.id));
     if(sem.length){document.getElementById('alb').style.display='flex';document.getElementById('alt').textContent=`${sem.length} empresa(s) sem movimentação no último dia útil: ${sem.slice(0,3).map(e=>e.nome).join(', ')}${sem.length>3?' e mais '+(sem.length-3):''}`;}
   }catch(e){}
+  // Mensagem de incentivo baseada no progresso de hoje
+  mostrarIncentivo();
+}
+
+async function mostrarIncentivo(){
+  const inc=document.getElementById('incentivo');
+  const txt=document.getElementById('incentivo-txt');
+  if(!inc||!txt)return;
+  try{
+    // Conta tarefas diárias concluídas hoje vs total, somando todas as empresas
+    const hojeK=hoje();
+    let feitasHoje=0, pontosHoje=0;
+    const as=(await get(ref(db,`atividades/${hojeK}/${CU.id}`))).val()||{};
+    Object.values(as).forEach(a=>{ if(a.tipo==='tarefa'){feitasHoje++; pontosHoje+=(a.pontos||0);} });
+
+    let msg='';
+    if(feitasHoje===0){
+      msg='👋 Bom trabalho hoje! Conforme você conclui suas tarefas, elas aparecem aqui e viram pontos.';
+      inc.style.background='rgba(59,127,245,0.1)';inc.style.borderColor='rgba(59,127,245,0.25)';inc.style.color='var(--blue2)';
+    } else if(feitasHoje<5){
+      msg=`💪 Você já concluiu ${feitasHoje} tarefa${feitasHoje>1?'s':''} hoje (${pontosHoje} pts)! Continue assim.`;
+      inc.style.background='rgba(16,214,122,0.1)';inc.style.borderColor='rgba(16,214,122,0.25)';inc.style.color='var(--green)';
+    } else {
+      msg=`🎉 Excelente! ${feitasHoje} tarefas concluídas hoje, somando ${pontosHoje} pontos. Você está voando!`;
+      inc.style.background='rgba(16,214,122,0.14)';inc.style.borderColor='rgba(16,214,122,0.35)';inc.style.color='var(--green)';
+    }
+    txt.textContent=msg;
+    inc.style.display='flex';
+  }catch(e){}
 }
 
 /* ═══ CALENDÁRIO ═══ */
@@ -996,6 +1033,7 @@ window.tog=async tid=>{
       if(ja){try{await remove(ref(db,`atividades/${ja.d}/${CU.id}/${ja.k}`));}catch(e){}await set(ref(db,`tarefa_pontos/${base}`),null);}
     }
     refresh();
+    mostrarIncentivo();
   }catch(e){toast('Erro ao salvar.','er');console.error(e);}
 };
 window.toggleObs=tid=>{const f=document.getElementById('obsform-'+tid);if(!f)return;const open=f.classList.toggle('open');if(open)setTimeout(()=>document.getElementById('obsinput-'+tid)?.focus(),50);};
