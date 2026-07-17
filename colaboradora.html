@@ -1104,6 +1104,17 @@ function renderFeed(){
   const fl=document.getElementById('fdl'),fe=document.getElementById('fdem'),ft=document.getElementById('feed-tot');
   if(!fl)return;
   const tot=myActs.reduce((s,a)=>s+(a.pontos||0),0);if(ft)ft.textContent='+'+tot;
+  // Notas emitidas do mês (lançadas pelo gestor) — contam até 100 pts no score mensal
+  (async()=>{try{
+    const am=new Date().toISOString().slice(0,7);
+    const nv=(await get(ref(db,`notas_mensais/${am}/${CU.id}`))).val()||0;
+    const meta=Math.max(Number(CU.meta_notas||30),1);
+    const pts=Math.round(100*Math.min(nv/meta,1));
+    let ch=document.getElementById('notas-chip');
+    if(!ch){ch=document.createElement('div');ch.id='notas-chip';ch.style.cssText='font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px 10px;margin:6px 0;background:rgba(245,166,35,0.07);border:1px solid rgba(245,166,35,0.2);border-radius:8px';
+      const fdt=document.querySelector('.fdt'); if(fdt&&fdt.parentNode) fdt.parentNode.insertBefore(ch,fdt.nextSibling);}
+    ch.innerHTML='📄 Notas emitidas no mês: <b style="color:var(--amber)">'+nv+'</b> de meta '+meta+' · vale <b style="color:var(--green)">+'+pts+'</b>/100 pts no seu score mensal';
+  }catch(e){}})();
   if(!myActs.length){if(fe)fe.style.display='block';fl.innerHTML='';return;}
   if(fe)fe.style.display='none';
   fl.innerHTML=myActs.slice(0,20).map(a=>{
