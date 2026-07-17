@@ -822,6 +822,9 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
   .kanban-col{width:100%;}
 }
 </style>
+<!-- Exportacao de relatorios (PDF / PowerPoint no navegador) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div class="scanline"></div>
@@ -1169,6 +1172,9 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
           </div>
         </div>
         <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="exportarEquipe('pdf')" title="Gerar PDF do periodo/selecao atual">⤓ PDF</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportarEquipe('pptx')" title="Gerar PowerPoint do periodo/selecao atual">⤓ PPT</button>
+          <button class="btn btn-ghost btn-sm" onclick="abrirNotasMes()" title="Lancar notas emitidas do mes">📄 Notas</button>
           <button class="btn btn-ghost btn-sm" onclick="toggleVisaoEquipe()">⊞ Alternar visão</button>
         </div>
       </div>
@@ -3385,6 +3391,11 @@ async function renderEquipe() {
     } catch(e){}
   }
 
+  // ── Notas emitidas no mes (lancadas pelo gestor: notas_mensais/{ano-mes}/{uid}) ──
+  let notasMap = {};
+  try { notasMap = (await get(ref(db,`notas_mensais/${anoRef}-${String(mesRef+1).padStart(2,'0')}`))).val() || {}; } catch(e){}
+  for(const uid of Object.keys(dados)) { dados[uid].notasMes = Number(notasMap[uid]||0); }
+
   // ── Avaliação do gestor (pontuacao/{mes}/{uid}/avaliacao 0-50) ──
   const ptsMes = STATE.pontuacao || {};
 
@@ -3546,6 +3557,10 @@ async function renderEquipe() {
           <div class="stat-val" style="color:var(--purple)">${c.reunioes}</div>
           <div class="stat-lbl">Reuniões</div>
         </div>
+        <div class="stat-box">
+          <div class="stat-val" style="color:var(--amber)">${c.notasMes||0}</div>
+          <div class="stat-lbl">Notas</div>
+        </div>
       </div>
       ${c.salarioFixo > 0 ? `
       <div style="margin-top:10px;padding:9px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;border-left:3px solid ${c.ratioCor}">
@@ -3572,6 +3587,7 @@ async function renderEquipe() {
 
   renderRankingTable(filtrados);
   renderFeedEquipe();
+  STATE.equipeUltima = { periodo, dateRange, lista, filtrados, geradoEm: Date.now() };
 }
 
 // Barra de pilar dentro do card
@@ -3677,6 +3693,128 @@ async function renderFeedEquipe() {
       </div>
     </div>`;
   }).join('');
+}
+
+/* ═══ NOTAS EMITIDAS DO MES (metrica externa lancada pelo gestor) ═══ */
+window.abrirNotasMes = async function(){
+  const now=new Date(); const am=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  let atuais={}; try{ atuais=(await get(ref(db,`notas_mensais/${am}`))).val()||{}; }catch(e){}
+  const colab=STATE.colaboradores||{};
+  const ativos=Object.entries(colab).filter(([,c])=>c&&c.status!=='inativo');
+  const rows=ativos.map(([uid,c])=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--bdr)"><span style="font-size:13px;color:var(--text2)">${c.nome||uid}</span><input type="number" min="0" id="nm-${uid}" value="${Number(atuais[uid]||0)}" style="width:110px;padding:6px 8px;border-radius:6px;border:1px solid var(--bdr2);background:var(--bg3);color:var(--text);font-family:var(--mono);text-align:right"></div>`).join('');
+  let m=document.getElementById('modal-notas'); if(!m){m=document.createElement('div');m.id='modal-notas';document.body.appendChild(m);}
+  m.style.cssText='position:fixed;inset:0;background:rgba(6,10,26,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:9999';
+  m.innerHTML=`<div style="background:var(--bg2);border:1px solid var(--bdr2);border-radius:14px;padding:22px;width:min(440px,92vw);max-height:86vh;overflow:auto"><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px">Notas emitidas · ${am}</div><div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:14px">Lance o nº de notas por colaboradora (resumo do app externo).</div>${rows||'<div style="color:var(--text3);font-size:12px">Nenhuma colaboradora ativa.</div>'}<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-notas').remove()">Cancelar</button><button class="btn btn-sm" style="background:var(--blue2);color:#fff;border:none" onclick="salvarNotasMes('${am}')">Salvar</button></div></div>`;
+};
+window.salvarNotasMes = async function(am){
+  const colab=STATE.colaboradores||{};
+  const ativos=Object.entries(colab).filter(([,c])=>c&&c.status!=='inativo');
+  try{
+    for(const [uid] of ativos){ const el=document.getElementById('nm-'+uid); const v=Number((el&&el.value)||0); await set(ref(db,`notas_mensais/${am}/${uid}`), v); }
+    const m=document.getElementById('modal-notas'); if(m) m.remove();
+    _expToast('Notas do mes salvas.','ok');
+    if(STATE.viewAtual==='equipe') renderEquipe();
+  }catch(e){ _expToast('Erro ao salvar notas: '+(e.message||e),'er'); }
+};
+
+/* ═══ EXPORTACAO DE RELATORIOS (PDF / PPT no navegador) ═══ */
+const EXP_LBL = {hoje:'Hoje', semana:'Esta semana', mes:'Mes atual', mes_ant:'Mes anterior'};
+function _expToast(msg,t){ try{ if(window.toast) return toast(msg,t);}catch(e){} try{ if(window.showMsg) return showMsg('',msg,(t==='er'?'er':'ok'));}catch(e){} alert(msg); }
+function _dstamp(){ const d=new Date(),z=n=>String(n).padStart(2,'0'); return d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'-'+z(d.getHours())+z(d.getMinutes()); }
+function _expDados(){ const eu=STATE.equipeUltima; if(!eu||!eu.filtrados||!eu.filtrados.length){ _expToast('Abra a aba Equipe e aguarde os dados carregarem antes de exportar.','er'); return null;} return eu; }
+
+window.exportarEquipe = async function(fmt){
+  const eu=_expDados(); if(!eu) return;
+  try{
+    if(fmt==='pptx') await _expPptx(eu); else _expPdf(eu);
+    _expToast('Relatorio gerado. Verifique seus downloads.','ok');
+  }catch(err){ console.error('[export]',err); _expToast('Erro ao gerar relatorio: '+(err&&err.message||err),'er'); }
+};
+
+async function _expPptx(eu){
+  const PG=window.PptxGenJS; if(!PG){ _expToast('Biblioteca PPT nao carregou (sem internet?).','er'); return; }
+  const NAVY='12173D',NAVY2='1E2761',CARD='252E5C',ICE='CADCFC',ACC='4EA1FF',WHITE='FFFFFF',MUT='9AA6D0',GREEN='2ECC71',AMBER='F5A623',RED='E74C3C',PURP='A78BFA';
+  const per=EXP_LBL[eu.periodo]||eu.periodo;
+  const corF=v=>v>=900?GREEN:v>=700?ACC:v>=500?AMBER:RED;
+  const pres=new PG(); pres.layout='LAYOUT_WIDE';
+  let s=pres.addSlide(); s.background={color:NAVY};
+  s.addShape('roundRect',{x:0.6,y:0.55,w:0.55,h:0.55,fill:{color:ACC},rectRadius:0.1,line:{type:'none'}});
+  s.addText('RE',{x:0.6,y:0.55,w:0.55,h:0.55,align:'center',valign:'middle',fontFace:'Arial',fontSize:18,bold:true,color:NAVY});
+  s.addText('RE GESTAO EMPRESARIAL · BPO FINANCEIRO',{x:1.3,y:0.6,w:11,h:0.45,valign:'middle',fontFace:'Arial',fontSize:12,bold:true,color:ICE,charSpacing:2});
+  s.addText('Relatorio de Desempenho da Equipe',{x:0.6,y:2.6,w:12,h:1,fontFace:'Arial',fontSize:40,bold:true,color:WHITE});
+  s.addText('Periodo: '+per+'    ·    Gerado em '+new Date().toLocaleString('pt-BR'),{x:0.62,y:3.7,w:12,h:0.5,fontFace:'Arial',fontSize:15,color:MUT});
+  s.addText(eu.filtrados.length+' colaborador(es) neste relatorio',{x:0.62,y:4.2,w:12,h:0.4,fontFace:'Arial',fontSize:13,color:ACC});
+  eu.filtrados.forEach(c=>{
+    const cor=corF(c.scoreFinal||0);
+    const sl=pres.addSlide(); sl.background={color:NAVY2};
+    sl.addText((c.nome||'--'),{x:0.6,y:0.5,w:9,h:0.6,fontFace:'Arial',fontSize:30,bold:true,color:WHITE});
+    sl.addText((c.cargo||'Analista'),{x:0.62,y:1.15,w:9,h:0.4,fontFace:'Arial',fontSize:14,color:MUT});
+    sl.addShape('roundRect',{x:10.0,y:0.55,w:2.7,h:0.7,fill:{color:cor},rectRadius:0.08,line:{type:'none'}});
+    sl.addText((c.faixa||'--'),{x:10.0,y:0.55,w:2.7,h:0.7,align:'center',valign:'middle',fontFace:'Arial',fontSize:16,bold:true,color:NAVY});
+    sl.addShape('roundRect',{x:0.6,y:1.8,w:3.4,h:2.5,fill:{color:CARD},rectRadius:0.06,line:{type:'none'}});
+    sl.addText('PONTUACAO',{x:0.6,y:2.0,w:3.4,h:0.3,align:'center',fontFace:'Arial',fontSize:12,bold:true,color:MUT,charSpacing:1});
+    sl.addText(String(c.scoreFinal||0),{x:0.6,y:2.3,w:3.4,h:1.2,align:'center',fontFace:'Arial',fontSize:60,bold:true,color:cor});
+    sl.addText('de 1.000 pontos',{x:0.6,y:3.6,w:3.4,h:0.4,align:'center',fontFace:'Arial',fontSize:13,color:MUT});
+    const pil=[['Tarefas no prazo',c.scoreTarefas,PESOS_SCORE.tarefas,GREEN],['Sem pendencias',c.scoreSemPend,PESOS_SCORE.semPendencia,AMBER],['Contato clientes',c.scoreContato,PESOS_SCORE.contato,ACC],['Reunioes',c.scoreReunioes,PESOS_SCORE.reunioes,PURP],['Avaliacao gestor',c.scoreAval,50,ICE]];
+    let py=1.8;
+    pil.forEach(p=>{
+      const pct=p[2]>0?Math.min((p[1]||0)/p[2],1):0;
+      sl.addText(p[0],{x:4.3,y:py,w:4,h:0.3,fontFace:'Arial',fontSize:12,bold:true,color:WHITE,margin:0});
+      sl.addText((p[1]||0)+'/'+p[2],{x:8.1,y:py,w:1.2,h:0.3,align:'right',fontFace:'Arial',fontSize:12,color:p[3],margin:0});
+      sl.addShape('roundRect',{x:4.3,y:py+0.34,w:5.0,h:0.14,fill:{color:CARD},rectRadius:0.06,line:{type:'none'}});
+      if(pct>0) sl.addShape('roundRect',{x:4.3,y:py+0.34,w:Math.max(5.0*pct,0.12),h:0.14,fill:{color:p[3]},rectRadius:0.06,line:{type:'none'}});
+      py+=0.62;
+    });
+    if((c.salarioFixo||0)>0){
+      sl.addShape('roundRect',{x:9.6,y:1.8,w:3.1,h:2.5,fill:{color:CARD},rectRadius:0.06,line:{type:'none'}});
+      sl.addText('EFICIENCIA',{x:9.6,y:2.0,w:3.1,h:0.3,align:'center',fontFace:'Arial',fontSize:12,bold:true,color:MUT,charSpacing:1});
+      const rc=(c.ratioCarteira||0)>=3?GREEN:(c.ratioCarteira||0)>=2?ACC:AMBER;
+      sl.addText((c.ratioCarteira||0).toFixed(1)+'x',{x:9.6,y:2.3,w:3.1,h:1.0,align:'center',fontFace:'Arial',fontSize:44,bold:true,color:rc});
+      sl.addText('Carteira '+fmtBRL0(c.valorCarteira||0)+'\nCusto '+fmtBRL0(c.salarioFixo||0),{x:9.6,y:3.45,w:3.1,h:0.7,align:'center',fontFace:'Arial',fontSize:11,color:MUT});
+    }
+    const st=[['Tarefas',c.tarefasFeitas||0],['Clientes',(c.clientes&&c.clientes.size)||0],['Reunioes',c.reunioes||0],['Horas',(c.horas||0).toFixed(1)+'h'],['Notas',c.notasMes||0]];
+    st.forEach((x,i)=>{
+      const bx=0.6+i*2.5;
+      sl.addShape('roundRect',{x:bx,y:4.7,w:2.3,h:1.4,fill:{color:CARD},rectRadius:0.06,line:{type:'none'}});
+      sl.addText(String(x[1]),{x:bx,y:4.9,w:2.3,h:0.7,align:'center',fontFace:'Arial',fontSize:28,bold:true,color:ACC});
+      sl.addText(x[0],{x:bx,y:5.62,w:2.3,h:0.4,align:'center',fontFace:'Arial',fontSize:12,color:MUT});
+    });
+    sl.addText('RE Gestao · '+per,{x:0.6,y:7.0,w:12,h:0.3,fontFace:'Arial',fontSize:10,color:MUT});
+  });
+  await pres.writeFile({fileName:'RE_Gestao_Desempenho_'+_dstamp()+'.pptx'});
+}
+
+function _expPdf(eu){
+  const ns=window.jspdf; if(!ns||!ns.jsPDF){ _expToast('Biblioteca PDF nao carregou (sem internet?).','er'); return; }
+  const doc=new ns.jsPDF({unit:'pt',format:'a4'});
+  const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
+  const per=EXP_LBL[eu.periodo]||eu.periodo;
+  const navy=[18,23,61], acc=[78,161,255], mut=[120,130,160], green=[46,204,113], amber=[245,166,35], red=[231,76,60];
+  const corF=v=>v>=900?green:v>=700?acc:v>=500?amber:red;
+  doc.setFillColor.apply(doc,navy); doc.rect(0,0,W,92,'F');
+  doc.setTextColor(202,220,252); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('RE GESTAO · BPO FINANCEIRO',40,36);
+  doc.setTextColor(255,255,255); doc.setFontSize(19); doc.text('Relatorio de Desempenho da Equipe',40,64);
+  doc.setTextColor.apply(doc,mut); doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text('Periodo: '+per+'   ·   Gerado em '+new Date().toLocaleString('pt-BR'),40,83);
+  let y=120;
+  eu.filtrados.forEach(c=>{
+    if(y>H-150){ doc.addPage(); y=56; }
+    const cor=corF(c.scoreFinal||0);
+    doc.setDrawColor(222,228,238); doc.setFillColor(248,249,252); doc.roundedRect(40,y,W-80,128,6,6,'FD');
+    doc.setTextColor(28,33,58); doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text((c.nome||'--'),56,y+26);
+    doc.setTextColor.apply(doc,mut); doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text((c.cargo||'Analista'),56,y+42);
+    doc.setFillColor.apply(doc,cor); doc.roundedRect(W-210,y+14,150,24,4,4,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text((c.faixa||'--')+'  ·  '+(c.scoreFinal||0)+'/1000',W-135,y+30,{align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(60,66,90);
+    const pil=[['Tarefas',c.scoreTarefas,PESOS_SCORE.tarefas],['Sem pend.',c.scoreSemPend,PESOS_SCORE.semPendencia],['Contato',c.scoreContato,PESOS_SCORE.contato],['Reunioes',c.scoreReunioes,PESOS_SCORE.reunioes],['Aval.',c.scoreAval,50]];
+    pil.forEach((p,i)=>{ doc.text(p[0]+': '+(p[1]||0)+'/'+p[2],56+i*100,y+68); });
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(28,33,58);
+    const efi=(c.salarioFixo||0)>0?('Eficiencia (carteira/custo): '+(c.ratioCarteira||0).toFixed(1)+'x   ('+fmtBRL0(c.valorCarteira||0)+' / '+fmtBRL0(c.salarioFixo||0)+')'):'Eficiencia: cadastre salario e valor de contratos';
+    doc.text(efi,56,y+92);
+    doc.setFont('helvetica','normal'); doc.setTextColor(60,66,90); doc.setFontSize(9);
+    doc.text('Tarefas: '+(c.tarefasFeitas||0)+'    Clientes: '+((c.clientes&&c.clientes.size)||0)+'    Reunioes: '+(c.reunioes||0)+'    Horas: '+((c.horas||0).toFixed(1))+'h    Notas: '+(c.notasMes||0),56,y+112);
+    y+=144;
+  });
+  doc.save('RE_Gestao_Desempenho_'+_dstamp()+'.pdf');
 }
 
 window.filtrarEquipe = function(periodo, btn) {
