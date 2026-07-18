@@ -884,7 +884,7 @@ body.light #modal-ajuste .modal-box{background:#FFFFFF;}
       <div class="h-div"></div>
       <div class="h-brand">
         <div class="h-title">RE<span> Gestão</span></div>
-        <div class="h-sub">Painel C-Level</div>
+        <div class="h-sub">Painel C-Level · <span style="color:var(--green)">v17.5</span></div>
       </div>
     </div>
 
@@ -2746,7 +2746,8 @@ async function renderCLevel(){
     const rec=o.recebido_mes||0, pago=o.pago_mes||0;
     const folha=equipe.reduce((t,[,c])=>t+parseFloat(c.salario_fixo||0),0);
     let margem=null, margemSrc='';
-    if(STATE._despCat&&STATE._despCat.total_despesas>0&&rec>0){ margem=(rec-STATE._despCat.total_despesas)/rec*100; margemSrc='despesas reais (Omie)'; }
+    const _dOper = STATE._despCat && (STATE._despCat.despesas_operacionais_pagas!=null ? STATE._despCat.despesas_operacionais_pagas : STATE._despCat.total_despesas);
+    if(_dOper>0&&rec>0){ margem=(rec-_dOper)/rec*100; margemSrc='caixa real: pago no mês (Omie)'; }
     else if(rec>0){ margem=(rec-pago)/rec*100; margemSrc='recebido vs pago (Omie)'; }
     else if(mrr>0&&folha>0){ margem=(mrr-folha)/mrr*100; margemSrc='MRR vs folha (estimada)'; }
     STATE._margemAtual=margem; STATE._ticketAtual=ticket; STATE._nClientes=n;
@@ -2788,7 +2789,6 @@ async function renderCLevel(){
   }catch(err){ console.warn('[clevel]',err); }
 }
 
-/* Busca despesas por categoria no proxy Omie (se a extensão estiver instalada) */
 async function buscarDespesasCat(){
   if(STATE._despCatTried) return; STATE._despCatTried=true;
   try{
@@ -2797,7 +2797,7 @@ async function buscarDespesasCat(){
     clearTimeout(t);
     const d=await r.json();
     if(d&&!d.erro&&d.total_despesas!=null){ STATE._despCat=d; renderCLevel(); }
-  }catch(e){ /* extensão ainda não instalada — usa fallback */ }
+  }catch(e){ /* extensão ainda não instalada */ }
 }
 
 async function renderCrescimento(){
@@ -2808,19 +2808,25 @@ async function renderCrescimento(){
   set2('cresc-mes',am);
   let cfg={};
   try{ cfg=(await get(ref(db,`config_crescimento/${am}`))).val()||{}; }catch(e){}
-  const mktAuto=STATE._despCat&&STATE._despCat.marketing_vendas>0?STATE._despCat.marketing_vendas:null;
+  // AUTOMATICO: novos = cadastros do mês; cancelados = inativações do mês
+  const emps2=Object.entries(STATE.empresas||{});
+  const [yy,mm2]=am.split('-').map(Number);
+  const ini=new Date(yy,mm2-1,1).getTime(), fim=new Date(yy,mm2,1).getTime();
+  const novosAuto=emps2.filter(([,e])=>e&&e.criadoEm&&e.criadoEm>=ini&&e.criadoEm<fim).length;
+  const cancAuto=emps2.filter(([,e])=>e&&e.inativado_em&&e.inativado_em>=ini&&e.inativado_em<fim).length;
+  const mktAuto=STATE._despCat&&((STATE._despCat.marketing_vendas_pago||STATE._despCat.marketing_vendas)>0)?(STATE._despCat.marketing_vendas_pago||STATE._despCat.marketing_vendas):null;
   const mkt=Number(cfg.mkt_vendas||0)||mktAuto||0;
-  const novos=Number(cfg.novos_clientes||0);
-  const canc=Number(cfg.cancelados||0);
+  const novos=Number(cfg.novos_clientes||0)||novosAuto;
+  const canc=Number(cfg.cancelados||0)||cancAuto;
   const fonte=el('cresc-fonte');
-  if(fonte) fonte.textContent = mktAuto!=null?'· mkt/vendas automático do Omie':'· preencha os dados do mês';
+  if(fonte) fonte.textContent = (mktAuto!=null?'mkt automático (Omie) · ':'')+'novos/cancelados automáticos do cadastro';
   const n=STATE._nClientes||0, ticket=STATE._ticketAtual||0, margem=STATE._margemAtual;
   const cac=novos>0&&mkt>0?mkt/novos:null;
   set2('cr-cac',cac!=null?fmtBRL0(cac):'--');
-  set2('cr-cac-sub',cac!=null?(fmtBRL0(mkt)+' ÷ '+novos+' novos'):'lançar mkt+vendas e novos clientes');
+  set2('cr-cac-sub',cac!=null?(fmtBRL0(mkt)+' ÷ '+novos+' novo(s)'):(novos>0?novos+' novo(s) · lançar gasto mkt+vendas':'lançar gasto e novos clientes'));
   const churn=n>0?canc/n*100:null;
   set2('cr-churn',churn!=null?churn.toFixed(1)+'%':'--%');
-  set2('cr-churn-sub',churn!=null?(canc+' cancelamento(s) de '+n):'lançar cancelamentos');
+  set2('cr-churn-sub',churn!=null?(canc+' cancelamento(s) de '+n):'sem dados');
   let ltv=null;
   if(churn!=null&&churn>0&&margem!=null&&margem>0){ ltv=(ticket*(margem/100))/(churn/100); }
   set2('cr-ltv',ltv!=null?fmtBRL0(ltv):(churn===0?'∞ (sem churn)':'--'));
@@ -2841,13 +2847,13 @@ window.abrirCrescimento=async function(){
   m.style.cssText='position:fixed;inset:0;background:rgba(6,10,26,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:9999';
   m.innerHTML=`<div style="background:var(--bg2);border:1px solid var(--bdr2);border-radius:14px;padding:22px;width:min(430px,92vw)">
     <div style="font-size:16px;font-weight:700;color:var(--text)">Crescimento · ${am}</div>
-    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin:4px 0 14px">Preencha 1x por mês. ${mktAuto?'Mkt+vendas veio do Omie: R$ '+mktAuto:''}</div>
+    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin:4px 0 14px">Novos e cancelados já são automáticos (cadastro de empresas). Preencha só se quiser sobrescrever. ${mktAuto?'Mkt+vendas do Omie: R$ '+mktAuto:''}</div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <label style="font-size:11px;color:var(--text2)">Gasto com marketing + vendas no mês (R$)
         <input type="number" step="0.01" min="0" id="cr-in-mkt" value="${cfg.mkt_vendas||mktAuto||''}" style="width:100%;margin-top:4px;padding:8px;border-radius:6px;border:1px solid var(--bdr2);background:var(--bg3);color:var(--text);font-family:var(--mono)"></label>
-      <label style="font-size:11px;color:var(--text2)">Clientes NOVOS fechados no mês
+      <label style="font-size:11px;color:var(--text2)">Clientes NOVOS no mês (deixe vazio = automático)
         <input type="number" min="0" id="cr-in-novos" value="${cfg.novos_clientes||''}" style="width:100%;margin-top:4px;padding:8px;border-radius:6px;border:1px solid var(--bdr2);background:var(--bg3);color:var(--text);font-family:var(--mono)"></label>
-      <label style="font-size:11px;color:var(--text2)">Clientes que CANCELARAM no mês
+      <label style="font-size:11px;color:var(--text2)">Clientes CANCELADOS no mês (deixe vazio = automático)
         <input type="number" min="0" id="cr-in-canc" value="${cfg.cancelados||''}" style="width:100%;margin-top:4px;padding:8px;border-radius:6px;border:1px solid var(--bdr2);background:var(--bg3);color:var(--text);font-family:var(--mono)"></label>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
@@ -3567,7 +3573,7 @@ async function renderEquipeCore() {
     Promise.all(diasKeys.map(k=>gSafe(get(ref(db,`contatos/${k}`))))),
     Promise.all(diasKeys.map(k=>gSafe(get(ref(db,`logins/${k}`)))))
   ]);
-  const diasComAtv = {}; // uid -> Set(dias)
+  const diasComAtv = {};
   diasKeys.forEach((key,di) => {
     for(const [uid,ua] of Object.entries(atvDias[di])) {
       if(!dados[uid] || !ua || typeof ua!=='object') continue;
@@ -3594,7 +3600,6 @@ async function renderEquipeCore() {
       if(login?.ts && login?.hora_saida) dados[uid].horas += (login.hora_saida - login.ts)/3600000;
     }
   });
-  // ── Home office: dias ativos + streak (dias úteis consecutivos com atividade) ──
   for(const uid of Object.keys(dados)) {
     const setD = diasComAtv[uid] || new Set();
     dados[uid].diasAtivos = setD.size;
@@ -3605,7 +3610,7 @@ async function renderEquipeCore() {
       if(dow!==0 && dow!==6){
         const k = cur.toISOString().split('T')[0];
         if(setD.has(k)) streak++;
-        else if(i>0) break; // hoje ainda sem atividade não zera; ontem sem = quebra
+        else if(i>0) break;
       }
       cur.setDate(cur.getDate()-1);
     }
@@ -3685,7 +3690,6 @@ async function renderEquipeCore() {
     const sAval = (aval !== undefined && aval !== null) ? Math.min(Math.max(aval,0),50) : 0;
     c.temAvaliacao = (aval !== undefined && aval !== null);
 
-    // 6. Notas emitidas (100) — qtd vs meta mensal da colaboradora
     const metaNotas = Math.max(Number(c.meta_notas||30),1);
     const sNotas = Math.round(PESOS_SCORE.notas * Math.min((c.notasMes||0)/metaNotas,1));
 
@@ -3799,7 +3803,16 @@ async function renderEquipeCore() {
         <div class="stat-box">
           <div class="stat-val" style="color:var(--purple)">${c.reunioes}</div>
           <div class="stat-lbl">Reuniões</div>
+          <div class="stat-box">
+          <div class="stat-val" style="color:var(--amber)">${c.notasMes||0}</div>
+          <div class="stat-lbl">Notas</div>
         </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;font-size:9px;font-family:var(--mono)">
+        <span style="padding:3px 8px;border-radius:6px;background:var(--bg3);border:1px solid var(--bdr);color:var(--text2)">🗓 ${c.diasAtivos||0} dia(s) ativo(s)</span>
+        <span style="padding:3px 8px;border-radius:6px;background:var(--bg3);border:1px solid var(--bdr);color:${(c.streak||0)>=3?'var(--green)':'var(--text2)'}">🔥 ${c.streak||0} dia(s) seguidos</span>
+        <span style="padding:3px 8px;border-radius:6px;background:var(--bg3);border:1px solid var(--bdr);color:var(--text2)">⏱ ${(c.horas||0).toFixed(1)}h no sistema</span>
+      </div>
         <div class="stat-box">
           <div class="stat-val" style="color:var(--amber)">${c.notasMes||0}</div>
           <div class="stat-lbl">Notas</div>
@@ -4066,7 +4079,6 @@ function statusRealTarefa(empId, tid, tipo) {
       }
     }
   }
-  // Fallback: conclusões registradas nas atividades (taskRef = empId__tid)
   const viaAtv = STATE.feitosMes && STATE.feitosMes[empId+'__'+tid];
   if(viaAtv){ feito=true; viaAtv.forEach(n=>{ if(!por.includes(n)) por.push(n); }); }
   return { feito, por };
@@ -4999,6 +5011,7 @@ window.limparFormEmp = function() {
 window.removerEmpresa = async function(eid, nome) {
   confirmar('Remover '+nome+'?','A empresa ficará inativa e poderá ser reativada.',async()=>{
     await set(ref(db,'empresas/'+eid+'/status'),'inativo');
+    await set(ref(db,'empresas/'+eid+'/inativado_em'),Date.now()); // carimbo p/ churn automático
   });
 };
 
